@@ -232,6 +232,13 @@ class polynomial {
     terms_ = std::move(merged);
   }
 
+  // Removes the largest term. Used by division to walk down a dividend once
+  // its head has been declared irreducible.
+  void drop_leading_term() {
+    VARIETAS_ASSERT(!terms_.empty());
+    terms_.erase(terms_.begin());
+  }
+
   polynomial& operator/=(const Coeff& c) {
     VARIETAS_ASSERT(!traits::is_zero(c));
     const Coeff inv = traits::inverse(c);
