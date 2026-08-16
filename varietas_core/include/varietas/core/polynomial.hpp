@@ -192,6 +192,75 @@ class polynomial {
     return r;
   }
 
+  // *this -= c * m * g, computed as a single merge. A monomial order is
+  // compatible with multiplication, so the terms of m * g are already sorted
+  // decreasingly and no re-sort is needed; this is the inner loop of every
+  // reduction and is kept linear in the number of terms.
+  void subtract_monomial_multiple(const monomial_type& m, const Coeff& c, const polynomial& g) {
+    if (traits::is_zero(c) || g.is_zero()) {
+      return;
+    }
+    std::vector<term> merged;
+    merged.reserve(terms_.size() + g.terms_.size());
+
+    std::size_t i = 0;
+    std::size_t j = 0;
+    while (i < terms_.size() && j < g.terms_.size()) {
+      const monomial_type shifted = g.terms_[j].mon * m;
+      const int cmp = Order::compare(terms_[i].mon, shifted);
+      if (cmp > 0) {
+        merged.push_back(terms_[i]);
+        ++i;
+      } else if (cmp < 0) {
+        merged.push_back(term{shifted, traits::negate(c * g.terms_[j].coeff)});
+        ++j;
+      } else {
+        const Coeff accumulated = terms_[i].coeff - c * g.terms_[j].coeff;
+        if (!traits::is_zero(accumulated)) {
+          merged.push_back(term{shifted, accumulated});
+        }
+        ++i;
+        ++j;
+      }
+    }
+    for (; i < terms_.size(); ++i) {
+      merged.push_back(terms_[i]);
+    }
+    for (; j < g.terms_.size(); ++j) {
+      merged.push_back(term{g.terms_[j].mon * m, traits::negate(c * g.terms_[j].coeff)});
+    }
+    terms_ = std::move(merged);
+  }
+
+  polynomial& operator/=(const Coeff& c) {
+    VARIETAS_ASSERT(!traits::is_zero(c));
+    const Coeff inv = traits::inverse(c);
+    for (term& t : terms_) {
+      t.coeff = t.coeff * inv;
+    }
+    return *this;
+  }
+
+  friend polynomial operator/(polynomial a, const Coeff& c) {
+    a /= c;
+    return a;
+  }
+
+  // Rescales so that the leading coefficient is one. Gröbner bases are stored
+  // monic so that equality of bases is equality of term lists.
+  polynomial& make_monic() {
+    if (!is_zero()) {
+      *this /= leading_coefficient();
+    }
+    return *this;
+  }
+
+  polynomial monic() const {
+    polynomial r = *this;
+    r.make_monic();
+    return r;
+  }
+
   Coeff evaluate(const std::array<Coeff, N>& point) const {
     Coeff value = traits::zero();
     for (const term& t : terms_) {
