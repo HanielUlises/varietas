@@ -21,6 +21,12 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_algebra test/test_algebra.cpp)
   target_link_libraries(test_algebra ${PROJECT_NAME})
+
+  ament_add_gtest(test_ideal test/test_ideal.cpp)
+  target_link_libraries(test_ideal ${PROJECT_NAME})
+
+  ament_add_gtest(test_solve test/test_solve.cpp)
+  target_link_libraries(test_solve ${PROJECT_NAME})
 endif()
 
 ament_package()
