@@ -12,6 +12,7 @@
 #include <Eigen/Eigenvalues>
 
 #include "varietas/core/config.hpp"
+#include "varietas/core/ideal/division.hpp"
 #include "varietas/core/monomial.hpp"
 #include "varietas/core/polynomial.hpp"
 #include "varietas/core/quotient/action_matrix.hpp"
@@ -28,21 +29,22 @@ enum class solve_status {
   // The quotient is infinite dimensional, so the system has infinitely many
   // solutions and no action matrix exists.
   positive_dimensional,
-  // The standard monomials do not contain 1 and every variable, so the
-  // coordinates of a point cannot be read off an eigenvector directly.
-  basis_lacks_linear_monomials,
   // The eigendecomposition of the action matrix did not converge.
   eigensolver_failed,
+  // Some eigenvector carried no evaluation functional, so fewer points were
+  // recovered than the eigendecomposition should have produced. The points
+  // that were recovered are still returned, but the set is not certified
+  // complete and the caller must treat it as a failure of genericity.
+  deficient_eigenstructure,
 };
 
 constexpr const char* to_string(solve_status status) noexcept {
-  return status == solve_status::ok                    ? "ok"
-         : status == solve_status::empty_variety       ? "empty_variety"
+  return status == solve_status::ok                     ? "ok"
+         : status == solve_status::empty_variety        ? "empty_variety"
          : status == solve_status::positive_dimensional ? "positive_dimensional"
-         : status == solve_status::basis_lacks_linear_monomials
-             ? "basis_lacks_linear_monomials"
-         : status == solve_status::eigensolver_failed ? "eigensolver_failed"
-                                                      : "unknown";
+         : status == solve_status::eigensolver_failed   ? "eigensolver_failed"
+         : status == solve_status::deficient_eigenstructure ? "deficient_eigenstructure"
+                                                            : "unknown";
 }
 
 template <std::size_t N>
@@ -50,6 +52,11 @@ struct solution_set {
   solve_status status = solve_status::ok;
   // All points of the variety over the complex numbers, counted once each.
   std::vector<std::array<std::complex<double>, N>> points;
+  // Dimension of the quotient algebra, which bounds the number of points and
+  // equals it when the ideal is radical.
+  std::size_t quotient_dimension = 0;
+  // Eigenvectors that could not be normalised into a point.
+  std::size_t discarded_eigenvectors = 0;
 
   bool ok() const noexcept { return status == solve_status::ok; }
 
@@ -79,10 +86,16 @@ struct solution_set {
 // The construction is the classical one of Stetter and Möller. For a generic
 // linear form u, the eigenvalues of the multiplication operator m_u are the
 // values of u at the points of the variety, and the left eigenvectors are the
-// evaluation functionals at those points. Since a left eigenvector v satisfies
-// v_m = m(p) v_1 for every standard monomial m, the coordinates of p are read
-// off the entries indexed by 1 and by the variables, after normalising by the
-// entry indexed by 1.
+// evaluation functionals at those points: a left eigenvector v satisfies
+// v_m = m(p) v_1 for every standard monomial m. Consequently, writing the
+// normal form of a variable as a combination sum_m c_m m of standard
+// monomials, its value at p is
+//
+//     x_i(p) = (sum_m c_m v_m) / v_1,
+//
+// which does not require the variable itself to be a standard monomial. It
+// usually is not: an ideal that forces one joint variable to be a function of
+// the others reduces it away.
 //
 // The linear form is taken with fixed pseudo-random coefficients rather than a
 // single variable, because a variable that takes the same value at two distinct
@@ -108,18 +121,24 @@ solution_set<N> solve_zero_dimensional(const std::vector<polynomial<Coeff, N, Or
     return result;
   }
 
+  result.quotient_dimension = quotient.dimension();
+
+  // 1 is a standard monomial for every proper ideal, since no leading monomial
+  // of a nonunit basis is constant.
   const std::size_t one_index = quotient.index_of(monomial<N>::one());
-  std::array<std::size_t, N> variable_index{};
+  VARIETAS_ASSERT(one_index < quotient.dimension());
+
+  // Coordinates of the normal form of each variable in the standard basis.
+  std::vector<std::vector<double>> variable_coordinates(N,
+                                                        std::vector<double>(quotient.dimension(),
+                                                                            0.0));
   for (std::size_t i = 0; i < N; ++i) {
-    variable_index[i] = quotient.index_of(monomial<N>::variable(i));
-    if (variable_index[i] >= quotient.dimension()) {
-      result.status = solve_status::basis_lacks_linear_monomials;
-      return result;
+    const poly reduced = normal_form(poly::variable(i), basis);
+    for (const auto& t : reduced.terms()) {
+      const std::size_t k = quotient.index_of(t.mon);
+      VARIETAS_ASSERT(k < quotient.dimension());
+      variable_coordinates[i][k] = coefficient_traits<Coeff>::to_double(t.coeff);
     }
-  }
-  if (one_index >= quotient.dimension()) {
-    result.status = solve_status::basis_lacks_linear_monomials;
-    return result;
   }
 
   // A fixed generic linear form. The coefficients are deterministic so that
@@ -150,15 +169,26 @@ solution_set<N> solve_zero_dimensional(const std::vector<polynomial<Coeff, N, Or
       // The functional does not evaluate 1 to a nonzero value, which happens
       // when the eigenvalue is repeated and the eigenvector is an arbitrary
       // element of an eigenspace of dimension greater than one. Such a vector
-      // carries no point, so it is dropped rather than reported as a solution.
+      // carries no point, so it is dropped and reported.
+      ++result.discarded_eigenvectors;
       continue;
     }
 
     std::array<std::complex<double>, N> point{};
     for (std::size_t i = 0; i < N; ++i) {
-      point[i] = v(static_cast<Eigen::Index>(variable_index[i])) / scale;
+      std::complex<double> value{0.0, 0.0};
+      for (std::size_t m = 0; m < quotient.dimension(); ++m) {
+        if (variable_coordinates[i][m] != 0.0) {
+          value += variable_coordinates[i][m] * v(static_cast<Eigen::Index>(m));
+        }
+      }
+      point[i] = value / scale;
     }
     result.points.push_back(point);
+  }
+
+  if (result.discarded_eigenvectors > 0) {
+    result.status = solve_status::deficient_eigenstructure;
   }
 
   return result;

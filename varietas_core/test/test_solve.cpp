@@ -20,8 +20,6 @@ using varietas::grevlex;
 using poly2 = varietas::polynomial<double, 2, grevlex>;
 using mon2 = varietas::monomial<2>;
 
-mon2 make(std::uint8_t a, std::uint8_t b) { return mon2(std::array<std::uint8_t, 2>{a, b}); }
-
 poly2 x() { return poly2::variable(0); }
 poly2 y() { return poly2::variable(1); }
 poly2 constant(double c) { return poly2::constant(c); }
@@ -185,6 +183,89 @@ TEST(Spectral, IdealFacadeExposesTheSamePipeline) {
 
   // The statistics of the offline run are available for inspection.
   EXPECT_GT(i.statistics().pairs_generated, 0u);
+}
+
+// Inverse kinematics of a planar two-revolute arm with unit links, posed as a
+// polynomial system in the cosines and sines of the joint angles subject to the
+// Pythagorean relations. This is the smallest instance of the problem the
+// library exists to solve, and it exercises the whole pipeline: ideal, Gröbner
+// basis, finiteness verdict, action matrix, spectral solve.
+//
+// Variables are ordered (c1, s1, c2, s2). The forward map is
+//
+//     px = c1 + (c1 c2 - s1 s2),   py = s1 + (s1 c2 + c1 s2).
+//
+// A reachable interior pose admits exactly two configurations, elbow up and
+// elbow down, and the quotient algebra has dimension two accordingly.
+TEST(Spectral, PlanarTwoLinkInverseKinematics) {
+  using poly4 = varietas::polynomial<double, 4, grevlex>;
+
+  const auto c1 = poly4::variable(0);
+  const auto s1 = poly4::variable(1);
+  const auto c2 = poly4::variable(2);
+  const auto s2 = poly4::variable(3);
+
+  const double px = 1.0;
+  const double py = 1.0;
+
+  const std::vector<poly4> generators{
+      c1 * c1 + s1 * s1 - poly4::constant(1.0),
+      c2 * c2 + s2 * s2 - poly4::constant(1.0),
+      c1 + (c1 * c2 - s1 * s2) - poly4::constant(px),
+      s1 + (s1 * c2 + c1 * s2) - poly4::constant(py),
+  };
+
+  const varietas::ideal<double, 4, grevlex> arm(generators);
+  ASSERT_TRUE(arm.is_zero_dimensional());
+  EXPECT_EQ(arm.quotient().dimension(), 2u);
+
+  const auto solutions = varietas::solve_zero_dimensional(arm.basis());
+  ASSERT_TRUE(solutions.ok()) << varietas::to_string(solutions.status);
+
+  auto real = solutions.real_points(1e-7);
+  ASSERT_EQ(real.size(), 2u);
+
+  for (const auto& q : real) {
+    // The recovered values are genuine sines and cosines.
+    EXPECT_NEAR(q[0] * q[0] + q[1] * q[1], 1.0, 1e-7);
+    EXPECT_NEAR(q[2] * q[2] + q[3] * q[3], 1.0, 1e-7);
+    // And they reproduce the commanded pose.
+    EXPECT_NEAR(q[0] + (q[0] * q[2] - q[1] * q[3]), px, 1e-7);
+    EXPECT_NEAR(q[1] + (q[1] * q[2] + q[0] * q[3]), py, 1e-7);
+  }
+
+  // The two configurations are the reflections of one another in the second
+  // joint: same elbow cosine, opposite elbow sine.
+  EXPECT_NEAR(real[0][2], real[1][2], 1e-7);
+  EXPECT_NEAR(real[0][3], -real[1][3], 1e-7);
+}
+
+// A pose beyond the reach of the arm has no solution over the reals, yet the
+// system remains consistent over the complex numbers: the ideal is proper and
+// the solver returns complex configurations rather than claiming failure.
+TEST(Spectral, UnreachablePoseIsComplexRatherThanInconsistent) {
+  using poly4 = varietas::polynomial<double, 4, grevlex>;
+
+  const auto c1 = poly4::variable(0);
+  const auto s1 = poly4::variable(1);
+  const auto c2 = poly4::variable(2);
+  const auto s2 = poly4::variable(3);
+
+  const std::vector<poly4> generators{
+      c1 * c1 + s1 * s1 - poly4::constant(1.0),
+      c2 * c2 + s2 * s2 - poly4::constant(1.0),
+      c1 + (c1 * c2 - s1 * s2) - poly4::constant(3.0),
+      s1 + (s1 * c2 + c1 * s2),
+  };
+
+  const varietas::ideal<double, 4, grevlex> arm(generators);
+  EXPECT_FALSE(arm.is_unit());
+  ASSERT_TRUE(arm.is_zero_dimensional());
+
+  const auto solutions = varietas::solve_zero_dimensional(arm.basis());
+  ASSERT_TRUE(solutions.ok()) << varietas::to_string(solutions.status);
+  EXPECT_FALSE(solutions.points.empty());
+  EXPECT_TRUE(solutions.real_points(1e-7).empty());
 }
 
 }  // namespace
