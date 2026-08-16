@@ -29,6 +29,7 @@ struct coefficient_traits<double> {
   static constexpr double inverse(double c) noexcept { return 1.0 / c; }
   static constexpr double negate(double c) noexcept { return -c; }
   static constexpr double to_double(double c) noexcept { return c; }
+  static constexpr double from_double(double c) noexcept { return c; }
 };
 
 }  // namespace varietas
