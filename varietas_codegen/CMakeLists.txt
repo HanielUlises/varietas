@@ -47,6 +47,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_exact_groebner test/test_exact_groebner.cpp)
   target_link_libraries(test_exact_groebner ${PROJECT_NAME})
+
+  ament_add_gtest(test_exact_saturation test/test_exact_saturation.cpp)
+  target_link_libraries(test_exact_saturation ${PROJECT_NAME})
 endif()
 
 ament_package()
