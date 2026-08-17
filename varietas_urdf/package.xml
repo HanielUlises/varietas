@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>varietas_urdf</name>
+  <version>0.1.0</version>
+  <description>
+    The URDF front end: a robot description written in decimal becomes a chain
+    over the exact rational field, or is refused with the joint that could not
+    be represented. Rotations are recovered projectively from their quaternions,
+    which makes every multiple of a right angle exact, and every recovery is
+    reported with the angle between the exact robot and the stated one.
+    Offline only; nothing here is needed at runtime.
+  </description>
+  <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>varietas_kinematics</depend>
+  <depend>varietas_codegen</depend>
+  <depend>urdf</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>kdl_parser</test_depend>
+  <test_depend>orocos_kdl</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
