@@ -30,6 +30,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_rationalize test/test_rationalize.cpp)
   target_link_libraries(test_rationalize ${PROJECT_NAME} varietas_codegen::varietas_codegen)
+
+  ament_add_gtest(test_workspace test/test_workspace.cpp TIMEOUT 300)
+  target_link_libraries(test_workspace ${PROJECT_NAME} varietas_codegen::varietas_codegen)
 endif()
 
 ament_package()

@@ -15,6 +15,39 @@
 
 namespace varietas {
 
+// The elements of a Gröbner basis that do not involve the first Split
+// variables. By the Elimination Theorem these generate the elimination ideal
+// I ∩ k[x_Split, ..., x_{N-1}], and are a Gröbner basis of it under the order
+// induced on the remaining variables, provided Order is an elimination order
+// for that split.
+//
+// Free of the ideal class because a basis is often already in hand — saturation
+// returns one, and so does any earlier elimination — and rebuilding an ideal
+// around it only to have Buchberger walk the critical pairs of a set that is
+// already a Gröbner basis is pure waste.
+template <class Coeff, std::size_t N, class Order>
+std::vector<polynomial<Coeff, N, Order>> eliminated_generators(
+    const std::vector<polynomial<Coeff, N, Order>>& basis, std::size_t split) {
+  VARIETAS_ASSERT(split <= N);
+
+  std::vector<polynomial<Coeff, N, Order>> eliminated;
+  for (const polynomial<Coeff, N, Order>& g : basis) {
+    bool free_of_leading_block = true;
+    for (const auto& t : g.terms()) {
+      for (std::size_t i = 0; i < split && free_of_leading_block; ++i) {
+        free_of_leading_block = t.mon[i] == 0;
+      }
+      if (!free_of_leading_block) {
+        break;
+      }
+    }
+    if (free_of_leading_block) {
+      eliminated.push_back(g);
+    }
+  }
+  return eliminated;
+}
+
 // An ideal given by generators, with its reduced Gröbner basis computed on
 // first demand and cached afterwards. Every question that needs the basis goes
 // through basis(), so no caller can accidentally ask a membership question
@@ -71,25 +104,8 @@ class ideal {
   // only guard the runtime can offer, and varietas_codegen is responsible for
   // choosing the order.
   std::vector<polynomial_type> eliminate(std::size_t split) const {
-    VARIETAS_ASSERT(split <= N);
     VARIETAS_ASSERT(Order::id == order_id::lex || Order::id == order_id::block);
-
-    std::vector<polynomial_type> eliminated;
-    for (const polynomial_type& g : basis()) {
-      bool free_of_leading_block = true;
-      for (const auto& t : g.terms()) {
-        for (std::size_t i = 0; i < split && free_of_leading_block; ++i) {
-          free_of_leading_block = t.mon[i] == 0;
-        }
-        if (!free_of_leading_block) {
-          break;
-        }
-      }
-      if (free_of_leading_block) {
-        eliminated.push_back(g);
-      }
-    }
-    return eliminated;
+    return eliminated_generators(basis(), split);
   }
 
  private:
