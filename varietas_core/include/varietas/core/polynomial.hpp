@@ -277,8 +277,13 @@ class polynomial {
   }
 
   // Drops terms whose coefficient is negligible. Only meaningful for inexact
-  // coefficients, and never applied implicitly by the arithmetic above.
+  // coefficients, and never applied implicitly by the arithmetic above. Over an
+  // exact field a nonzero coefficient is nonzero and discarding it would change
+  // the ideal, so the call is rejected at compile time rather than at runtime.
   void prune(const Coeff& tolerance) {
+    static_assert(!traits::is_exact,
+                  "prune is a floating point remedy: over an exact coefficient field a term with "
+                  "a small coefficient is still a term of the polynomial");
     terms_.erase(std::remove_if(terms_.begin(), terms_.end(),
                                 [&](const term& t) {
                                   return !(t.coeff > tolerance || t.coeff < -tolerance);
