@@ -1,0 +1,22 @@
+# Build trees
+build/
+install/
+log/
+cmake-build-*/
+compile_commands.json
+
+# Local tooling and document sources (not part of the distributed library)
+tools/
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.out
+*.toc
+
+# Editor and OS artefacts
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
