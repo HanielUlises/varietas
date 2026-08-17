@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>varietas_kinematics</name>
+  <version>0.1.0</version>
+  <description>
+    The robot description the algebra consumes: chains of revolute, prismatic
+    and fixed joints with exact rigid placements, independent of any file
+    format. The tangent half-angle rationalisation, the workspace
+    implicitization and the singular locus are built on this structure, and a
+    URDF front end is later a translation into it rather than a dependency of
+    the pipeline. Header-only; needs nothing but varietas_core.
+  </description>
+  <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>varietas_core</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>varietas_codegen</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
