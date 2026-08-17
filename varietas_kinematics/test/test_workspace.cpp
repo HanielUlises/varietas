@@ -106,7 +106,7 @@ void expect_vanishes_on_workspace(const std::vector<relation>& relations,
 
 TEST(workspace, a_one_joint_arm_traces_a_circle) {
   const chain<rational> robot = one_link();
-  const auto relations = varietas::workspace_relations<1>(robot);
+  const auto relations = varietas::workspace_relations<2>(robot);
 
   EXPECT_FALSE(varietas::workspace_is_dense(relations));
 
@@ -123,7 +123,7 @@ TEST(workspace, a_one_joint_arm_traces_a_circle) {
 // the only relation that survives is the one that holds identically.
 TEST(workspace, a_planar_two_joint_arm_yields_only_its_plane) {
   const chain<rational> robot = planar_two_link();
-  const auto relations = varietas::workspace_relations<2>(robot);
+  const auto relations = varietas::workspace_relations<4>(robot);
 
   const varietas::ideal<rational, 3, grevlex> expected({z()});
   EXPECT_EQ(relations, expected.basis());
@@ -145,7 +145,7 @@ TEST(workspace, a_planar_two_joint_arm_yields_only_its_plane) {
 // surface, and elimination produces the quartic that cuts it out.
 TEST(workspace, perpendicular_axes_trace_a_torus) {
   const chain<rational> robot = torus_arm();
-  const auto relations = varietas::workspace_relations<2>(robot);
+  const auto relations = varietas::workspace_relations<4>(robot);
 
   EXPECT_FALSE(varietas::workspace_is_dense(relations));
   ASSERT_EQ(relations.size(), 1u) << "a hypersurface has one equation";

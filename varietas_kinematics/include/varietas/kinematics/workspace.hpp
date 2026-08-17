@@ -13,6 +13,7 @@
 #include "varietas/core/polynomial.hpp"
 #include "varietas/kinematics/chain.hpp"
 #include "varietas/kinematics/rationalize.hpp"
+#include "varietas/kinematics/trigonometric.hpp"
 
 namespace varietas {
 
@@ -50,14 +51,12 @@ namespace varietas {
 //
 // The saving is smaller than that argument suggests: on the torus below it is
 // about a tenth, seventy-eight seconds against seventy. The cost lies in the
-// parameterisation rather than in the arrangement of the passes. Presenting the
-// same torus with two variables per joint and the relation c^2 + s^2 = 1, which
-// needs no denominators and hence no saturation at all, eliminates in ten
-// milliseconds and returns the identical quartic. That is a factor of several
-// thousand, and it is a fact about implicitization specifically: the half-angle
-// substitution buys one variable per joint instead of two, which is what
-// matters for the zero-dimensional inverse kinematics the library is built
-// around, and pays for it with a denominator, which is what matters here.
+// parameterisation rather than in the arrangement of the passes, which is why
+// this path is no longer the one workspace_relations takes — see the
+// trigonometric construction further down, where the same torus eliminates in
+// sixty milliseconds and returns the identical quartic. It is kept because the
+// agreement of the two is a test rather than an assumption, and because the
+// contrast is the clearest statement of what each formulation costs.
 template <std::size_t N>
 using workspace_order = block_order<N + 1, grevlex, grevlex>;
 
@@ -107,7 +106,7 @@ std::vector<workspace_polynomial<Coeff, N>> workspace_residuals(
 // and projecting those would contribute components to the answer that no
 // configuration of the arm reaches.
 template <std::size_t N, class Coeff>
-std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations(
+std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations_half_angle(
     const chain<Coeff>& robot, buchberger_statistics* statistics = nullptr) {
   using enlarged = workspace_polynomial<Coeff, N>;
   using order = workspace_order<N>;
@@ -135,6 +134,77 @@ std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations(
 
   // The elements free of the eliminated block generate the elimination ideal,
   // and are already a Gröbner basis of it under the trailing block's order.
+  const auto eliminated = eliminated_generators(graph, layout::eliminated_block);
+
+  std::vector<polynomial<Coeff, 3, grevlex>> relations;
+  relations.reserve(eliminated.size());
+  for (const auto& g : eliminated) {
+    relations.push_back(project_polynomial<grevlex, 3>(g, layout::first_pose));
+  }
+  reduce_groebner_basis(relations);
+  return relations;
+}
+
+// The same construction in the trigonometric formulation, which is the one the
+// library uses.
+//
+// The enlarged ring holds the joint variables first and the three pose
+// coordinates after, with a block order eliminating the former. There is no
+// Rabinowitsch variable and no saturation, because there is no denominator to
+// have cleared: the circle relations enter as ordinary generators and the
+// spurious components the half-angle substitution has to be cleaned of are
+// never created. What is eliminated is exactly the parameter block, and the
+// Closure Theorem applies verbatim.
+//
+// V is the size of the joint block — two variables per revolute joint and one
+// per prismatic, which trigonometric_variable_count computes from the chain.
+template <std::size_t V>
+using trigonometric_workspace_order = block_order<V, grevlex, grevlex>;
+
+template <class Coeff, std::size_t V>
+using trigonometric_workspace_polynomial =
+    polynomial<Coeff, V + 3, trigonometric_workspace_order<V>>;
+
+template <std::size_t V>
+struct trigonometric_workspace_layout {
+  static constexpr std::size_t first_joint = 0;
+  static constexpr std::size_t first_pose = V;
+  static constexpr std::size_t eliminated_block = V;
+};
+
+// The residuals with the pose left symbolic. Nothing is cleared, so each is
+// simply the tool coordinate minus the pose variable, and their zero set
+// together with the circle relations is the graph of the forward kinematics map
+// over the actual parameter space of the joints.
+template <std::size_t V, class Coeff>
+std::vector<trigonometric_workspace_polynomial<Coeff, V>>
+trigonometric_workspace_generators(const chain<Coeff>& robot) {
+  using enlarged = trigonometric_workspace_polynomial<Coeff, V>;
+  using order = trigonometric_workspace_order<V>;
+  using layout = trigonometric_workspace_layout<V>;
+
+  const auto map = trigonometric_forward_kinematics<V, grevlex>(robot);
+
+  std::vector<enlarged> generators;
+  for (const auto& relation : circle_relations<V, grevlex>(robot)) {
+    generators.push_back(embed_polynomial<order, V + 3>(relation, layout::first_joint));
+  }
+  for (std::size_t i = 0; i < 3; ++i) {
+    const auto translation =
+        embed_polynomial<order, V + 3>(map.translation(i), layout::first_joint);
+    generators.push_back(translation - enlarged::variable(layout::first_pose + i));
+  }
+  return generators;
+}
+
+// Generators of the ideal of the Zariski closure of the reachable set of tool
+// positions, in the three pose variables alone.
+template <std::size_t V, class Coeff>
+std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations(
+    const chain<Coeff>& robot, buchberger_statistics* statistics = nullptr) {
+  using layout = trigonometric_workspace_layout<V>;
+
+  const auto graph = groebner_basis(trigonometric_workspace_generators<V>(robot), statistics);
   const auto eliminated = eliminated_generators(graph, layout::eliminated_block);
 
   std::vector<polynomial<Coeff, 3, grevlex>> relations;
