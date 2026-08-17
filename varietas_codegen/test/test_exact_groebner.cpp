@@ -99,18 +99,20 @@ TEST(ExactGroebner, MembershipOfACombinationHoldsExactlyAndFailsInDouble) {
   EXPECT_TRUE(varietas::is_member(exact_f, exact_basis))
       << "an exact combination of basis elements must reduce to zero";
 
-  // Documenting the failure rather than tolerating it: over double the same
-  // reduction leaves rounding dust, so the membership test returns the wrong
-  // answer. If this ever starts passing the demonstration has gone stale, but
-  // the exact assertion above is the one that matters.
+  // The same computation over double gets it wrong. This asserts the defect
+  // rather than tolerating it: the remainder is a single constant term of
+  // magnitude around 1e-18, which is unmistakably rounding dust and not a
+  // genuine obstruction to membership, yet is_zero is a structural test and so
+  // reports the polynomial as outside the ideal.
   const auto approximate_remainder = varietas::normal_form(approximate_f, approximate_basis);
-  if (!approximate_remainder.is_zero()) {
-    for (const auto& t : approximate_remainder.terms()) {
-      EXPECT_LT(std::abs(t.coeff), 1e-10)
-          << "residue should be rounding dust, not a genuine remainder";
-    }
-    SUCCEED() << "double left " << approximate_remainder.size()
-              << " spurious term(s) of magnitude below 1e-10";
+  EXPECT_FALSE(approximate_remainder.is_zero())
+      << "if this now holds, the floating point demonstration has gone stale; the exact "
+         "assertion above is the one that must keep passing";
+  EXPECT_FALSE(varietas::is_member(approximate_f, approximate_basis));
+
+  for (const auto& t : approximate_remainder.terms()) {
+    EXPECT_LT(std::abs(t.coeff), 1e-10)
+        << "residue should be rounding dust, not a genuine remainder";
   }
 }
 

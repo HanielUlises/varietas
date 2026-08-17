@@ -29,10 +29,12 @@ TEST(Rational, ValuesAreKeptInLowestTerms) {
 }
 
 TEST(Rational, ZeroIsDetectedAfterExactCancellation) {
-  // The sum that motivates the whole exercise: over double this is 5.55e-17.
+  // Sevenths, not thirds: three thirds happen to round back to exactly 1.0 in
+  // binary, which is a good reminder that a field is not exact merely because
+  // one example came out right.
   rational sum = traits::zero();
-  for (int i = 0; i < 3; ++i) {
-    sum = sum + make_rational(1, 3);
+  for (int i = 0; i < 7; ++i) {
+    sum = sum + make_rational(1, 7);
   }
   sum = sum - traits::one();
 
@@ -40,11 +42,12 @@ TEST(Rational, ZeroIsDetectedAfterExactCancellation) {
   EXPECT_EQ(sum, 0);
 
   double approximate = 0.0;
-  for (int i = 0; i < 3; ++i) {
-    approximate += 1.0 / 3.0;
+  for (int i = 0; i < 7; ++i) {
+    approximate += 1.0 / 7.0;
   }
   approximate -= 1.0;
   EXPECT_FALSE(varietas::coefficient_traits<double>::is_zero(approximate));
+  EXPECT_NEAR(approximate, 0.0, 1e-15);
 }
 
 TEST(Rational, InverseAndNegateRoundTrip) {
