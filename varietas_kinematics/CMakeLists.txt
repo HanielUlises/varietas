@@ -27,6 +27,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_chain test/test_chain.cpp)
   target_link_libraries(test_chain ${PROJECT_NAME} varietas_codegen::varietas_codegen)
+
+  ament_add_gtest(test_rationalize test/test_rationalize.cpp)
+  target_link_libraries(test_rationalize ${PROJECT_NAME} varietas_codegen::varietas_codegen)
 endif()
 
 ament_package()

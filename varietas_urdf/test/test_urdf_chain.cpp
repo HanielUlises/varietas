@@ -12,7 +12,9 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <urdf/model.h>
 
+#include "varietas/core/order/grevlex.hpp"
 #include "varietas/kinematics/evaluate.hpp"
+#include "varietas/kinematics/rationalize.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
 namespace {
@@ -244,6 +246,76 @@ TEST(urdf_chain, forward_kinematics_agrees_with_kdl) {
 
   // The residual is the file's truncated pi propagated through the arm, about a
   // nanometre over a metre of reach, and not an error of the recovery.
+  EXPECT_LT(worst_position, 1e-9);
+  EXPECT_LT(worst_orientation, 1e-9);
+}
+
+// The tangent half-angle substitution, on a real robot.
+//
+// The planar arm in varietas_kinematics checks the rationalisation against a
+// map written a few lines away from it. This checks it against KDL, on seven
+// joints whose axes are turned by right angles at every link — the composition
+// the closure property has to survive. Substituting t = tan(q / 2) into the
+// rational map must reproduce the pose the reference implementation computes
+// from the angles directly.
+TEST(urdf_chain, the_rational_map_agrees_with_kdl_on_seven_joints) {
+  urdf::Model model = load_model();
+
+  chain<rational> exact_robot;
+  ASSERT_TRUE(chain_from_model(model, kRoot, kTip, exact_robot).ok());
+  const chain<double> robot = chain_cast<double>(exact_robot);
+  ASSERT_EQ(robot.degrees_of_freedom(), 7u);
+
+  const auto map =
+      varietas::rational_forward_kinematics<7, varietas::grevlex>(robot);
+
+  // Seven revolute joints, so seven factors 1 + t_i^2 and a denominator of
+  // degree fourteen, whatever the fixed geometry between them.
+  for (std::size_t i = 0; i < 7; ++i) {
+    EXPECT_EQ(map.denominator_exponents()[i], 1) << "joint " << i;
+  }
+
+  KDL::Tree tree;
+  ASSERT_TRUE(kdl_parser::treeFromUrdfModel(model, tree));
+  KDL::Chain kdl_chain;
+  ASSERT_TRUE(tree.getChain(kRoot, kTip, kdl_chain));
+  KDL::ChainFkSolverPos_recursive solver(kdl_chain);
+
+  std::mt19937 generator(20260818);
+  std::uniform_real_distribution<double> uniform(-2.0, 2.0);
+
+  double worst_position = 0.0;
+  double worst_orientation = 0.0;
+
+  for (int trial = 0; trial < 50; ++trial) {
+    std::array<double, 7> point{};
+    KDL::JntArray kdl_values(7);
+    for (std::size_t i = 0; i < 7; ++i) {
+      const double angle = uniform(generator);
+      kdl_values(static_cast<unsigned int>(i)) = angle;
+      point[i] = varietas::variable_from_angle(angle);
+    }
+
+    KDL::Frame reference;
+    ASSERT_GE(solver.JntToCart(kdl_values, reference), 0);
+    const rigid_transform<double> ours = map.evaluate(point);
+
+    for (std::size_t i = 0; i < 3; ++i) {
+      worst_position =
+          std::max(worst_position, std::fabs(ours.translation()[i] - reference.p[i]));
+    }
+
+    varietas::matrix3<double> theirs;
+    for (std::size_t i = 0; i < 3; ++i) {
+      for (std::size_t j = 0; j < 3; ++j) {
+        theirs(i, j) = reference.M(static_cast<int>(i), static_cast<int>(j));
+      }
+    }
+    worst_orientation = std::max(
+        worst_orientation,
+        varietas::urdf_import::rotation_distance(ours.rotation(), theirs));
+  }
+
   EXPECT_LT(worst_position, 1e-9);
   EXPECT_LT(worst_orientation, 1e-9);
 }
