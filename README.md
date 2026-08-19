@@ -210,8 +210,8 @@ Clearing the denominators against a target gives the residuals, and `position_id
 <p align="center">
   <em><strong>Figure 3.</strong> The two elbow configurations at a single prescribed tool position, both returned by the
   spectral solver. The pose is built by evaluating the rational map at a rational point, so the problem
-  never leaves $\mathbb{Q}$; the quotient has dimension two over the field, and that number — not the
-  count of what was found — is the certificate that no branch is missing.</em>
+  never leaves the rationals; the quotient has dimension two over the field, and that number — not
+  the count of what was found — is the certificate that no branch is missing.</em>
 </p>
 
 On the planar two-link arm the pipeline now runs end to end, over $\mathbb{Q}$ throughout. A target built by evaluating the rational map at $t=(1/2,1/3)$ is rational, so nothing leaves the exact field; the saturated ideal is zero-dimensional with $\dim_k A=2$; the configuration the target was built from satisfies every generator exactly, which over the rationals is a structural test and not a residual below a threshold; and the spectral solver returns both elbow branches, each of which puts the tool back on the target. The rational map itself is checked against KDL on the iiwa — seven joints, axes turned by a right angle at every link, which is the composition the closure property has to survive.
@@ -230,8 +230,8 @@ The word *closure* carries weight the library should not paper over. The reachab
 
 <p align="center">
   <em><strong>Figure 4.</strong> The workspace closure of the arm with perpendicular axes: the zero set of the single
-  quartic $(x^2+y^2+z^2+3)^2=16(x^2+y^2)$ that elimination returned. No torus is parameterised in
-  drawing this — the surface is traced from the polynomial itself.</em>
+  quartic <code>(x²+y²+z²+3)² = 16(x²+y²)</code> that elimination returned. No torus is parameterised
+  in drawing this — the surface is traced from the polynomial itself.</em>
 </p>
 
 The three cases tested make the distinction concrete: a one-joint arm traces the circle $z=0,\ x^2+y^2=1$ and elimination returns it exactly; a planar two-joint arm reaches an annulus and elimination returns $z=0$ and nothing else, so that a point a hundred units away satisfies every equation the closure has; a two-joint arm with perpendicular axes traces a torus, the map is not dominant, and elimination returns the quartic that cuts it out. `workspace_is_dense` reports the middle case rather than leaving an empty result to be misread as a failure.
@@ -274,10 +274,10 @@ Which rows of that Jacobian the minors are taken from is the caller's choice, be
 </p>
 
 <p align="center">
-  <em><strong>Figure 5.</strong> The singular image of the planar two-link arm. Elimination returns $z$ together with
-  $x(x^2+y^2-4)$ and $y(x^2+y^2-4)$: the circle of radius $l_1+l_2$ and the point at $|l_1-l_2|$, which
-  is to say the outer boundary of the reachable disc and the hole at its centre. The tint is the
-  reachable set, which is semialgebraic and which no ideal cuts out.</em>
+  <em><strong>Figure 5.</strong> The singular image of the planar two-link arm. Elimination returns <code>z</code> together
+  with <code>x(x²+y²−4)</code> and <code>y(x²+y²−4)</code>: the circle of radius l₁+l₂ and the point at
+  |l₁−l₂|, which is to say the outer boundary of the reachable disc and the hole at its centre. The
+  tint is the reachable set, which is semialgebraic and which no ideal cuts out.</em>
 </p>
 
 The two-link arm shows what the construction is for. Its singular ideal is $\langle c_i^2+s_i^2-1,\ s_2\rangle$ — and the minor itself is $(c_1^2+s_1^2)s_2$, the textbook $l_1l_2\sin q_2$ multiplied by something the determinant has no way of knowing is one, which reduces to $s_2$ modulo the circle relations and not before. The locus is one dimensional, a circle's worth of configurations with the shoulder free and the elbow pinned, and splitting along $c_2-1$ separates the straight elbow from the folded one exactly. Eliminating the joint variables carries it into the workspace as the boundary above: the singular image is the workspace boundary, computed rather than reasoned about.
@@ -293,7 +293,7 @@ Two negative results are worth as much as the positive one.
 <p align="center">
   <em><strong>Figure 6.</strong> The same construction on the arm whose offset equals its tool length: the inner circle
   of the torus has closed to a point, and every singular configuration maps to that pinch. The
-  elimination returns $x$, $y$ and $z^2$ — not $z$.</em>
+  elimination returns <code>x</code>, <code>y</code> and <code>z²</code> — not <code>z</code>.</em>
 </p>
 
 **A non-radical image.** The pinched torus, where the offset equals the tool length, is singular on the circle $c_2=-1$, all of which maps to the origin, and the elimination returns $x$, $y$ and $z^2$ — not $z$. The variety is the single point the Closure Theorem promises, but the ideal is not radical, and the square is not noise: the arm reaches the pinch tangentially in $z$, and the elimination ideal has kept the order of contact that the set alone forgot. Taking a radical would discard it, and varietas cannot take one anyway.
