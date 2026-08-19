@@ -8,6 +8,18 @@ Given a URDF, the library recovers the chain exactly over $\mathbb{Q}$, rational
 
 Where IKFast pattern-matches known kinematic structures and fails silently outside them, varietas either produces a solution set with a proof of completeness or reports precisely which hypothesis of the Extension Theorem was violated.
 
+<p align="center">
+  <img src="docs/figures/pipeline.svg" alt="The varietas pipeline, from a robot description to the three constructions the ideal supports" width="980">
+</p>
+
+<p align="center">
+  <em><strong>Figure 1.</strong> The pipeline. A robot description is recovered exactly over the rationals, rationalised
+  into an ideal, and reduced to a Gröbner basis; that one basis then supports all three constructions —
+  the configurations, the workspace closure, and the singular locus. Everything up to the last step is
+  exact, and the only numerical operation in the library is the eigendecomposition that reads the
+  configurations off the action matrix.</em>
+</p>
+
 ---
 
 ### Contents
@@ -29,7 +41,7 @@ Where IKFast pattern-matches known kinematic structures and fails silently outsi
 </p>
 
 <p align="center">
-  <em><strong>Figure 1.</strong> Kinematics of a planar serial chain with revolute joints, and its formulation as a
+  <em><strong>Figure 2.</strong> Kinematics of a planar serial chain with revolute joints, and its formulation as a
   zero-dimensional polynomial system. Forward kinematics evaluates the map; inverse kinematics
   computes the fibre, which varietas realises as the variety of an ideal in a quotient ring of
   finite dimension.</em>
@@ -156,7 +168,7 @@ The search is therefore projective: divide by the largest entry, then approximat
 </p>
 
 <p align="center">
-  <em><strong>Figure 2.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF; the
+  <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF; the
   translucent sphere is the tool pose computed by varietas from the exactly recovered chain, and the
   ribbon is the path it has traced. Had the recovery changed the robot, the sphere would drift off the
   tip as the arm moves.</em>
@@ -208,7 +220,7 @@ Clearing the denominators against a target gives the residuals, and `position_id
 </p>
 
 <p align="center">
-  <em><strong>Figure 3.</strong> The two elbow configurations at a single prescribed tool position, both returned by the
+  <em><strong>Figure 4.</strong> The two elbow configurations at a single prescribed tool position, both returned by the
   spectral solver. The pose is built by evaluating the rational map at a rational point, so the problem
   never leaves the rationals; the quotient has dimension two over the field, and that number — not
   the count of what was found — is the certificate that no branch is missing.</em>
@@ -229,7 +241,7 @@ The word *closure* carries weight the library should not paper over. The reachab
 </p>
 
 <p align="center">
-  <em><strong>Figure 4.</strong> The workspace closure of the arm with perpendicular axes: the zero set of the single
+  <em><strong>Figure 5.</strong> The workspace closure of the arm with perpendicular axes: the zero set of the single
   quartic <code>(x²+y²+z²+3)² = 16(x²+y²)</code> that elimination returned. No torus is parameterised
   in drawing this — the surface is traced from the polynomial itself.</em>
 </p>
@@ -274,7 +286,7 @@ Which rows of that Jacobian the minors are taken from is the caller's choice, be
 </p>
 
 <p align="center">
-  <em><strong>Figure 5.</strong> The singular image of the planar two-link arm. Elimination returns <code>z</code> together
+  <em><strong>Figure 6.</strong> The singular image of the planar two-link arm. Elimination returns <code>z</code> together
   with <code>x(x²+y²−4)</code> and <code>y(x²+y²−4)</code>: the circle of radius l₁+l₂ and the point at
   |l₁−l₂|, which is to say the outer boundary of the reachable disc and the hole at its centre. The
   tint is the reachable set, which is semialgebraic and which no ideal cuts out.</em>
@@ -291,7 +303,7 @@ Two negative results are worth as much as the positive one.
 </p>
 
 <p align="center">
-  <em><strong>Figure 6.</strong> The same construction on the arm whose offset equals its tool length: the inner circle
+  <em><strong>Figure 7.</strong> The same construction on the arm whose offset equals its tool length: the inner circle
   of the torus has closed to a point, and every singular configuration maps to that pinch. The
   elimination returns <code>x</code>, <code>y</code> and <code>z²</code> — not <code>z</code>.</em>
 </p>
