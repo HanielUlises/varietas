@@ -97,7 +97,7 @@ is the ideal of the Zariski closure of the reachable workspace, by the Closure T
 | `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit | `varietas_kinematics` |
 | `varietas_demo` | RViz demonstration of the recovered chain | ROS 2 |
 
-`varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator.
+`varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator. Build and test instructions are in [BUILD.md](BUILD.md).
 
 #### Representation
 
@@ -164,14 +164,19 @@ The recovery is a fact about quaternions rather than about angles. A quarter tur
 The search is therefore projective: divide by the largest entry, then approximate each of the four by a rational of bounded denominator, by continued fractions. Every multiple of a right angle is recovered exactly this way, and every joint of the iiwa is such a multiple; a genuinely oblique placement is not, and is reported with the deviation it would introduce rather than silently rounded. Lengths are recovered the same way — `0.1575` comes back as $63/400$, the decimal the author wrote rather than the binary approximation the file stores.
 
 <p align="center">
-  <img src="docs/figures/urdf_sweep.gif" alt="A KUKA LBR iiwa driven from the chain varietas recovered from its URDF" width="720">
+  <img src="docs/figures/iiwa_sweep.gif" alt="A KUKA LBR iiwa driven from the chain varietas recovered from its URDF" width="720">
 </p>
 
 <p align="center">
-  <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF; the
-  translucent sphere is the tool pose computed by varietas from the exactly recovered chain, and the
-  ribbon is the path it has traced. Had the recovery changed the robot, the sphere would drift off the
-  tip as the arm moves.</em>
+  <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF, and
+  the closed curve its tool traces over one full period of the sweep, held whole rather than trailing
+  behind the tool, so that the arm is seen moving through a fixed object. The two markers are the same
+  tool pose computed twice: the green halo from the chain varietas recovered exactly, the magenta core
+  from the transform <code>robot_state_publisher</code> derives from the file. They are drawn under the
+  same convention and at the same instant, so agreement is the core sitting concentric in the halo, and
+  any error in the recovery would show as the core leaving it. The orange spheres are the URDF's own —
+  it draws one at every joint origin — and the one that appears beside the tool is the wrist, not a
+  third estimate of the tool pose.</em>
 </p>
 
 That the two coincide is measured rather than seen. The demonstration looks up the transform `robot_state_publisher` derives from the file and compares it against the pose computed from the exact chain at the same instant, and the agreement is $10^{-12}$ metres, which is the file's truncated $\pi$ propagated through seven joints and a metre of reach. The unit suite makes the same comparison against KDL over two hundred random configurations, off-line and with no timing to confound it.

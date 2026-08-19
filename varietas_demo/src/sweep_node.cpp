@@ -1,16 +1,19 @@
 // Drives a URDF from the exact chain varietas recovered from it.
 //
 // The node imports the model into a chain over the rationals, sweeps the joints
-// through a trajectory, and publishes two things: the joint states, which
+// through a trajectory, and publishes the joint states, which
 // robot_state_publisher turns into the transforms RViz draws the robot with,
-// and a marker at the tool pose computed by varietas' own forward kinematics
-// from the exactly recovered chain.
+// together with two markers at the tool: a halo at the pose varietas computes
+// from the exactly recovered chain, and a core at the pose
+// robot_state_publisher derives from the decimals in the file, by way of KDL.
 //
-// The marker is the whole point. robot_state_publisher poses the robot from the
-// decimals in the file, by way of KDL; the marker is placed from the exact
-// chain, whose right angles are exact rather than truncated. If the recovery
-// had changed the robot, the marker would drift off the tip as the arm moves.
-// It does not, at any configuration, which is what the recording shows.
+// The pair is the whole point, and it is a pair for a reason. Comparing one
+// marker against the drawn robot does not work: RViz redraws the robot from tf
+// on its own schedule, so at speed the mesh trails the marker stream by however
+// much the two clocks differ, and a marker sitting exactly where the frame is
+// still looks displaced from the mesh. Two markers published in one array from
+// one instant admit no such gap. Agreement is the shell sitting concentric in
+// the halo, and an error is the shell leaving it.
 
 #include <chrono>
 #include <cmath>
@@ -70,6 +73,10 @@ void quaternion_of(const varietas::matrix3<double>& r, double& x, double& y, dou
 }  // namespace
 
 class sweep_node : public rclcpp::Node {
+  // The rate the trajectory is stepped at. The trail's length is derived from
+  // it, so the two cannot drift apart.
+  static constexpr std::chrono::milliseconds kTick{20};
+
  public:
   sweep_node() : rclcpp::Node("varietas_sweep") {
     const std::string urdf_path = declare_parameter<std::string>("urdf", "");
@@ -119,7 +126,7 @@ class sweep_node : public rclcpp::Node {
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    timer_ = create_wall_timer(20ms, [this] { tick(); });
+    timer_ = create_wall_timer(kTick, [this] { tick(); });
     verify_timer_ = create_wall_timer(200ms, [this] { verify(); });
     start_ = now();
   }
@@ -166,6 +173,15 @@ class sweep_node : public rclcpp::Node {
     const varietas::rigid_transform<double> tool =
         varietas::forward_kinematics(robot_, values);
 
+    geometry_msgs::msg::Point point;
+    point.x = tool.translation()[0];
+    point.y = tool.translation()[1];
+    point.z = tool.translation()[2];
+    trail_.push_back(point);
+    if (trail_.size() > trail_capacity()) {
+      trail_.erase(trail_.begin());
+    }
+
     visualization_msgs::msg::MarkerArray array;
 
     visualization_msgs::msg::Marker tip;
@@ -180,30 +196,130 @@ class sweep_node : public rclcpp::Node {
     tip.pose.position.z = tool.translation()[2];
     quaternion_of(tool.rotation(), tip.pose.orientation.x, tip.pose.orientation.y,
                   tip.pose.orientation.z, tip.pose.orientation.w);
-    // Large enough to enclose the link the robot_state_publisher draws, and
-    // translucent, so that the two poses are seen to coincide rather than one
-    // hiding the other.
-    tip.scale.x = tip.scale.y = tip.scale.z = 0.16;
+    // Translucent, and wider than the shell below by a margin thick enough to
+    // read at the size the recording is published at: the annulus between the
+    // two silhouettes is what carries the comparison, so it has to survive
+    // being scaled down to a few hundred pixels. Scale is a diameter, so this
+    // is a radius of 0.120 against the shell's 0.080.
+    tip.scale.x = tip.scale.y = tip.scale.z = 0.240;
     tip.color.r = 0.11f;
-    tip.color.g = 0.78f;
-    tip.color.b = 0.60f;
-    tip.color.a = 0.45f;
+    tip.color.g = 0.85f;
+    tip.color.b = 0.62f;
+    tip.color.a = 0.30f;
     array.markers.push_back(tip);
 
-
-    // The path the tool has traced, kept to a fixed length so the recording
-    // shows a ribbon rather than an accumulating tangle.
-    geometry_msgs::msg::Point point;
-    point.x = tool.translation()[0];
-    point.y = tool.translation()[1];
-    point.z = tool.translation()[2];
-    trail_.push_back(point);
-    if (trail_.size() > 240) {
-      trail_.erase(trail_.begin());
+    // The same pose as robot_state_publisher reports it, drawn as a translucent
+    // shell around ours.
+    //
+    // Comparing our marker against the drawn robot was the wrong comparison and
+    // it made the demonstration unreadable. Not because the flange is drawn off
+    // its frame -- in this fixture link_7's visual is a sphere at the origin,
+    // so it is drawn exactly on it -- but because RViz poses the robot from tf
+    // on its own redraw schedule while the markers arrive on ours. The two
+    // clocks differ, and at the speeds the tool reaches here that difference is
+    // centimetres of apparent displacement between marker and mesh: measured
+    // off a recording, the gap tracked tool speed at r = 0.6, which is a lag
+    // signature and not a kinematic one. So the mesh comparison showed the
+    // renderer's timing even though the two poses agreed to 4e-12 m, and the
+    // picture could not tell a correct recovery from a wrong one, which is the
+    // only thing it exists to do.
+    //
+    // Two markers under the same convention can. The green halo is placed from
+    // our exactly recovered chain and the magenta shell inside it from the
+    // transform robot_state_publisher derives from the file's decimals, so
+    // agreement is the shell sitting concentric in the halo and any error is
+    // the shell riding up against one side of it. What the picture resolves is
+    // gross error, a centimetre or so; the agreement is finer than any picture
+    // can carry and is measured rather than shown, by verify() below.
+    // Both markers have to describe the same instant or the picture measures
+    // latency instead of kinematics. The transform robot_state_publisher
+    // publishes carries the stamp it was computed for, and the trajectory is an
+    // analytic function of time, so our own pose is evaluated at that stamp
+    // rather than at the current one — the same discipline verify() uses, and
+    // for the same reason: at these speeds a tenth of a second of lag is
+    // indistinguishable from a kinematic error.
+    geometry_msgs::msg::TransformStamped reference;
+    try {
+      reference = tf_buffer_->lookupTransform(root_link_, tip_link_, tf2::TimePointZero);
+    } catch (const tf2::TransformException&) {
+      array.markers.push_back(trail_marker(tip.header));
+      markers_->publish(array);
+      return;
     }
 
+    const rclcpp::Time at(reference.header.stamp);
+    const varietas::rigid_transform<double> ours =
+        varietas::forward_kinematics(robot_, configuration_at((at - start_).seconds()));
+
+    tip.pose.position.x = ours.translation()[0];
+    tip.pose.position.y = ours.translation()[1];
+    tip.pose.position.z = ours.translation()[2];
+    quaternion_of(ours.rotation(), tip.pose.orientation.x, tip.pose.orientation.y,
+                  tip.pose.orientation.z, tip.pose.orientation.w);
+    array.markers.back() = tip;
+
+    visualization_msgs::msg::Marker shell;
+    shell.header = tip.header;
+    shell.ns = "varietas";
+    shell.id = 2;
+    shell.type = visualization_msgs::msg::Marker::SPHERE;
+    shell.action = visualization_msgs::msg::Marker::ADD;
+    shell.pose.position.x = reference.transform.translation.x;
+    shell.pose.position.y = reference.transform.translation.y;
+    shell.pose.position.z = reference.transform.translation.z;
+    shell.pose.orientation = reference.transform.rotation;
+    // Wide enough to actually enclose the flange the file draws, and nearly
+    // opaque so that it hides it. Scale is a diameter, so this is a radius of
+    // 0.080 against the flange sphere's 0.060; the previous 0.080 was a radius
+    // of 0.040 and so sat buried inside the very thing the comment claimed it
+    // enclosed, visible only in the moments it slipped out from under it.
+    //
+    // The 20 mm of clearance is what absorbs the renderer skew described
+    // below. It is not unlimited: the sweep reaches 1.6 m/s at period 20, so
+    // at the very fastest moments the flange still shows at the rim. Covering
+    // it even then would take a marker of 15 cm radius, which would swallow
+    // the wrist it is meant to sit on, and the trade is not worth it.
+    //
+    // Hiding the flange is the point and not a cosmetic choice. RViz redraws
+    // the robot from tf on its own schedule, independently of the marker
+    // stream, and the tool moves at up to about a metre a second here, so the
+    // drawn flange trails the markers by whatever the two clocks differ by --
+    // measured off an earlier recording, some tens of milliseconds, which is
+    // centimetres on screen. That lag is a property of the renderer and says
+    // nothing about the kinematics, but left visible it reads as a third blob
+    // sitting off to one side and invites exactly the wrong conclusion. The
+    // two markers are published in one array from one instant, so no such
+    // skew can open between them, and covering the flange leaves only the
+    // comparison that means something.
+    //
+    // Magenta against the green halo: the two have to be told apart at a
+    // glance, and green against blue at this size reads as one teal blob.
+    shell.scale.x = shell.scale.y = shell.scale.z = 0.160;
+    shell.color.r = 0.96f;
+    shell.color.g = 0.26f;
+    shell.color.b = 0.72f;
+    shell.color.a = 0.92f;
+    array.markers.push_back(shell);
+
+
+    array.markers.push_back(trail_marker(tip.header));
+    markers_->publish(array);
+  }
+
+  // One full period of tool positions, at the rate tick() runs. The trajectory
+  // is periodic, so a window of exactly one period is the closed curve the tool
+  // traces and nothing more: it neither accumulates nor, as a shorter window
+  // did, reduces the curve to a fragment that swings about the frame while the
+  // rest of it is missing. Held whole, it is a fixed object the arm moves
+  // through, which is what a still of the recording has to be able to show.
+  std::size_t trail_capacity() const {
+    const double step = std::chrono::duration<double>(kTick).count();
+    return static_cast<std::size_t>(period_ / step) + 1;
+  }
+
+  visualization_msgs::msg::Marker trail_marker(const std_msgs::msg::Header& header) {
     visualization_msgs::msg::Marker trail;
-    trail.header = tip.header;
+    trail.header = header;
     trail.ns = "varietas";
     trail.id = 1;
     trail.type = visualization_msgs::msg::Marker::LINE_STRIP;
@@ -215,9 +331,7 @@ class sweep_node : public rclcpp::Node {
     trail.color.b = 0.60f;
     trail.color.a = 0.65f;
     trail.points = trail_;
-    array.markers.push_back(trail);
-
-    markers_->publish(array);
+    return trail;
   }
 
   // The claim the demonstration exists to support, measured rather than
