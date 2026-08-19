@@ -136,6 +136,50 @@ std::vector<polynomial<Coeff, N, Order>> saturate_by_product(
   return saturate(generators, product, statistics);
 }
 
+// Splitting a variety along a hypersurface.
+//
+// V(I) = V(I : h^∞) ∪ V(I + (h)), exactly, for any h: a point of V(I) either
+// lies on h = 0, and then it is in the second piece, or it does not, and then
+// it lies in the closure of V(I) \ V(h), which is the first. The identity is
+// the one honest step towards a decomposition that this library can take with
+// what it has, and it is worth being precise about what it is not.
+//
+// It is not a primary decomposition. The pieces are not irreducible, they are
+// not primary, and nothing here chooses h — a real decomposition algorithm
+// finds its own splittings, and finding them needs factorisation of
+// multivariate polynomials over Q, which varietas does not have and which is a
+// project of its own. What the caller gets is the ability to say "separate the
+// configurations where this vanishes from the ones where it does not" and have
+// the two answers be exact and exhaustive.
+//
+// It is nonetheless what a decomposition is made of. Applied to the singular
+// locus of an arm with a generator the geometry suggests — the sine of an elbow
+// angle, say — it separates the elbow-straight branch from the elbow-folded one
+// and each piece can then be measured, eliminated to the workspace, or split
+// again.
+template <class Coeff, std::size_t N, class Order>
+struct ideal_splitting {
+  // I : h^∞, the closure of the part of V(I) away from h = 0.
+  std::vector<polynomial<Coeff, N, Order>> away;
+  // I + (h), the part of V(I) lying on h = 0.
+  std::vector<polynomial<Coeff, N, Order>> on;
+};
+
+template <class Coeff, std::size_t N, class Order>
+ideal_splitting<Coeff, N, Order> split_along(
+    const std::vector<polynomial<Coeff, N, Order>>& generators,
+    const polynomial<Coeff, N, Order>& h, buchberger_statistics* statistics = nullptr) {
+  VARIETAS_ASSERT(!h.is_zero());
+
+  ideal_splitting<Coeff, N, Order> result;
+  result.away = saturate(generators, h, statistics);
+
+  std::vector<polynomial<Coeff, N, Order>> on_generators = generators;
+  on_generators.push_back(h);
+  result.on = groebner_basis(on_generators);
+  return result;
+}
+
 // 1 + t_i^2, the denominator the tangent half-angle substitution clears at the
 // i-th variable. Named here because the saturation it calls for is the reason
 // this header exists.

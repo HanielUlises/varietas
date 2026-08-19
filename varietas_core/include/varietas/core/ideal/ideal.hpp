@@ -7,6 +7,7 @@
 
 #include "varietas/core/config.hpp"
 #include "varietas/core/ideal/buchberger.hpp"
+#include "varietas/core/ideal/dimension.hpp"
 #include "varietas/core/ideal/division.hpp"
 #include "varietas/core/monomial.hpp"
 #include "varietas/core/order/order_id.hpp"
@@ -96,6 +97,12 @@ class ideal {
   quotient_basis<N> quotient() const { return standard_monomials(basis()); }
 
   bool is_zero_dimensional() const { return quotient().is_zero_dimensional; }
+
+  // dim V(I), with the empty variety reported as such. The finiteness verdict
+  // above is the same statement at dimension zero — the two are checked against
+  // each other in the tests — but it is the one the quotient construction needs
+  // and it comes with the standard monomials, so both are kept.
+  affine_dimension<N> dimension() const { return ideal_dimension(basis()); }
 
   // Generators of the elimination ideal I ∩ k[x_Split, ..., x_{N-1}], namely
   // the basis elements that do not involve any of the first Split variables.

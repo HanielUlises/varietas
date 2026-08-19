@@ -30,6 +30,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_saturation test/test_saturation.cpp)
   target_link_libraries(test_saturation ${PROJECT_NAME})
+
+  ament_add_gtest(test_dimension test/test_dimension.cpp)
+  target_link_libraries(test_dimension ${PROJECT_NAME})
 endif()
 
 ament_package()
