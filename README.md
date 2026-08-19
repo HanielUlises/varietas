@@ -170,13 +170,13 @@ The search is therefore projective: divide by the largest entry, then approximat
 <p align="center">
   <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF, and
   the closed curve its tool traces over one full period of the sweep, held whole rather than trailing
-  behind the tool, so that the arm is seen moving through a fixed object. The two markers are the same
-  tool pose computed twice: the green halo from the chain varietas recovered exactly, the magenta core
-  from the transform <code>robot_state_publisher</code> derives from the file. They are drawn under the
-  same convention and at the same instant, so agreement is the core sitting concentric in the halo, and
-  any error in the recovery would show as the core leaving it. The orange spheres are the URDF's own —
-  it draws one at every joint origin — and the one that appears beside the tool is the wrist, not a
-  third estimate of the tool pose.</em>
+  behind the tool, so that the arm is seen moving through a fixed object. The green marker is the tool
+  pose computed by varietas from the exactly recovered chain, and what the recording shows is that it
+  stays on the arm the file poses and on the curve it drew, at every configuration of the sweep. How
+  closely the two agree it does not show, and no image could: the figure is drawn at about four
+  millimetres to the pixel and the disagreement is $10^{-12}$ metres. That number is measured rather
+  than seen, below. The orange spheres are the URDF's own — it draws one at every joint origin — so the
+  one beside the marker is the wrist, not a second estimate of the tool pose.</em>
 </p>
 
 That the two coincide is measured rather than seen. The demonstration looks up the transform `robot_state_publisher` derives from the file and compares it against the pose computed from the exact chain at the same instant, and the agreement is $10^{-12}$ metres, which is the file's truncated $\pi$ propagated through seven joints and a metre of reach. The unit suite makes the same comparison against KDL over two hundred random configurations, off-line and with no timing to confound it.

@@ -3,17 +3,17 @@
 // The node imports the model into a chain over the rationals, sweeps the joints
 // through a trajectory, and publishes the joint states, which
 // robot_state_publisher turns into the transforms RViz draws the robot with,
-// together with two markers at the tool: a halo at the pose varietas computes
-// from the exactly recovered chain, and a core at the pose
-// robot_state_publisher derives from the decimals in the file, by way of KDL.
+// together with a marker at the tool pose varietas computes from the exactly
+// recovered chain and the closed curve that pose traces over one period.
 //
-// The pair is the whole point, and it is a pair for a reason. Comparing one
-// marker against the drawn robot does not work: RViz redraws the robot from tf
-// on its own schedule, so at speed the mesh trails the marker stream by however
-// much the two clocks differ, and a marker sitting exactly where the frame is
-// still looks displaced from the mesh. Two markers published in one array from
-// one instant admit no such gap. Agreement is the shell sitting concentric in
-// the halo, and an error is the shell leaving it.
+// The division of labour between the picture and the log is deliberate. What
+// the recording can show is that the tool goes where the recovered chain says
+// it goes, and that the arm the file poses carries it along the same curve
+// frame after frame. What it cannot show is how closely the two agree: that is
+// 1e-12 m, which no image resolves, and attempts to draw it -- a marker for
+// each pose, nested, with concentricity as the reading -- fail for reasons set
+// out where the marker is built. verify() measures it instead and prints the
+// number, which is the honest place for a quantity of that size.
 
 #include <chrono>
 #include <cmath>
@@ -196,111 +196,47 @@ class sweep_node : public rclcpp::Node {
     tip.pose.position.z = tool.translation()[2];
     quaternion_of(tool.rotation(), tip.pose.orientation.x, tip.pose.orientation.y,
                   tip.pose.orientation.z, tip.pose.orientation.w);
-    // Translucent, and wider than the shell below by a margin thick enough to
-    // read at the size the recording is published at: the annulus between the
-    // two silhouettes is what carries the comparison, so it has to survive
-    // being scaled down to a few hundred pixels. Scale is a diameter, so this
-    // is a radius of 0.120 against the shell's 0.080.
-    tip.scale.x = tip.scale.y = tip.scale.z = 0.240;
+    // One marker, not two, and translucent so the flange stays visible under it.
+    //
+    // This was a pair for a while: a halo here from our exactly recovered chain
+    // and a shell inside it from the transform robot_state_publisher derives
+    // from the file, so that agreement would read as the shell sitting
+    // concentric in the halo. The device cannot work, for two reasons that are
+    // structural rather than matters of tuning.
+    //
+    // The tool point lies on the flange, so the arm occupies half the volume of
+    // any sphere centred there. A translucent sphere shows its colour only
+    // where nothing opaque stands behind it, so the link entering from one side
+    // extinguishes that side and leaves a crescent on the other. The inner
+    // marker then looks displaced towards the arm in every frame and at every
+    // speed, and a reader checking the picture against the claim concludes the
+    // recovery is wrong. It is not: measured off the published markers over 541
+    // samples, the two poses lay 2.3e-12 m apart on average.
+    //
+    // And the annulus between the two silhouettes, which is the whole of what
+    // the comparison had to be read from, came to some ten pixels at the size
+    // the recording is published at, half of them lost to the occlusion above.
+    // No pair of radii fixes that: widening the gap enough to read it makes a
+    // marker that swallows the wrist it sits on.
+    //
+    // So the picture keeps what a picture can carry -- where the tool is, and
+    // that it stays on the curve it traced -- and the agreement, which is finer
+    // than any image, is left to verify() below, which measures it and prints
+    // the number.
+    //
+    // Opaque enough that the marker keeps its own colour. The flange beneath it
+    // is orange, and green laid over orange at a light alpha composites to
+    // olive: at 0.45 the marker rendered (139, 166, 89), which reads as a
+    // muddy yellow rather than as the green everything else in the frame uses
+    // for the tool path. At 0.75 it is (78, 194, 127) over the flange and
+    // (67, 209, 166) over a white link, near enough the same green either way,
+    // which is what makes it legible as one thing as the arm turns under it.
+    tip.scale.x = tip.scale.y = tip.scale.z = 0.180;
     tip.color.r = 0.11f;
     tip.color.g = 0.85f;
     tip.color.b = 0.62f;
-    tip.color.a = 0.30f;
+    tip.color.a = 0.75f;
     array.markers.push_back(tip);
-
-    // The same pose as robot_state_publisher reports it, drawn as a translucent
-    // shell around ours.
-    //
-    // Comparing our marker against the drawn robot was the wrong comparison and
-    // it made the demonstration unreadable. Not because the flange is drawn off
-    // its frame -- in this fixture link_7's visual is a sphere at the origin,
-    // so it is drawn exactly on it -- but because RViz poses the robot from tf
-    // on its own redraw schedule while the markers arrive on ours. The two
-    // clocks differ, and at the speeds the tool reaches here that difference is
-    // centimetres of apparent displacement between marker and mesh: measured
-    // off a recording, the gap tracked tool speed at r = 0.6, which is a lag
-    // signature and not a kinematic one. So the mesh comparison showed the
-    // renderer's timing even though the two poses agreed to 4e-12 m, and the
-    // picture could not tell a correct recovery from a wrong one, which is the
-    // only thing it exists to do.
-    //
-    // Two markers under the same convention can. The green halo is placed from
-    // our exactly recovered chain and the magenta shell inside it from the
-    // transform robot_state_publisher derives from the file's decimals, so
-    // agreement is the shell sitting concentric in the halo and any error is
-    // the shell riding up against one side of it. What the picture resolves is
-    // gross error, a centimetre or so; the agreement is finer than any picture
-    // can carry and is measured rather than shown, by verify() below.
-    // Both markers have to describe the same instant or the picture measures
-    // latency instead of kinematics. The transform robot_state_publisher
-    // publishes carries the stamp it was computed for, and the trajectory is an
-    // analytic function of time, so our own pose is evaluated at that stamp
-    // rather than at the current one — the same discipline verify() uses, and
-    // for the same reason: at these speeds a tenth of a second of lag is
-    // indistinguishable from a kinematic error.
-    geometry_msgs::msg::TransformStamped reference;
-    try {
-      reference = tf_buffer_->lookupTransform(root_link_, tip_link_, tf2::TimePointZero);
-    } catch (const tf2::TransformException&) {
-      array.markers.push_back(trail_marker(tip.header));
-      markers_->publish(array);
-      return;
-    }
-
-    const rclcpp::Time at(reference.header.stamp);
-    const varietas::rigid_transform<double> ours =
-        varietas::forward_kinematics(robot_, configuration_at((at - start_).seconds()));
-
-    tip.pose.position.x = ours.translation()[0];
-    tip.pose.position.y = ours.translation()[1];
-    tip.pose.position.z = ours.translation()[2];
-    quaternion_of(ours.rotation(), tip.pose.orientation.x, tip.pose.orientation.y,
-                  tip.pose.orientation.z, tip.pose.orientation.w);
-    array.markers.back() = tip;
-
-    visualization_msgs::msg::Marker shell;
-    shell.header = tip.header;
-    shell.ns = "varietas";
-    shell.id = 2;
-    shell.type = visualization_msgs::msg::Marker::SPHERE;
-    shell.action = visualization_msgs::msg::Marker::ADD;
-    shell.pose.position.x = reference.transform.translation.x;
-    shell.pose.position.y = reference.transform.translation.y;
-    shell.pose.position.z = reference.transform.translation.z;
-    shell.pose.orientation = reference.transform.rotation;
-    // Wide enough to actually enclose the flange the file draws, and nearly
-    // opaque so that it hides it. Scale is a diameter, so this is a radius of
-    // 0.080 against the flange sphere's 0.060; the previous 0.080 was a radius
-    // of 0.040 and so sat buried inside the very thing the comment claimed it
-    // enclosed, visible only in the moments it slipped out from under it.
-    //
-    // The 20 mm of clearance is what absorbs the renderer skew described
-    // below. It is not unlimited: the sweep reaches 1.6 m/s at period 20, so
-    // at the very fastest moments the flange still shows at the rim. Covering
-    // it even then would take a marker of 15 cm radius, which would swallow
-    // the wrist it is meant to sit on, and the trade is not worth it.
-    //
-    // Hiding the flange is the point and not a cosmetic choice. RViz redraws
-    // the robot from tf on its own schedule, independently of the marker
-    // stream, and the tool moves at up to about a metre a second here, so the
-    // drawn flange trails the markers by whatever the two clocks differ by --
-    // measured off an earlier recording, some tens of milliseconds, which is
-    // centimetres on screen. That lag is a property of the renderer and says
-    // nothing about the kinematics, but left visible it reads as a third blob
-    // sitting off to one side and invites exactly the wrong conclusion. The
-    // two markers are published in one array from one instant, so no such
-    // skew can open between them, and covering the flange leaves only the
-    // comparison that means something.
-    //
-    // Magenta against the green halo: the two have to be told apart at a
-    // glance, and green against blue at this size reads as one teal blob.
-    shell.scale.x = shell.scale.y = shell.scale.z = 0.160;
-    shell.color.r = 0.96f;
-    shell.color.g = 0.26f;
-    shell.color.b = 0.72f;
-    shell.color.a = 0.92f;
-    array.markers.push_back(shell);
-
 
     array.markers.push_back(trail_marker(tip.header));
     markers_->publish(array);
