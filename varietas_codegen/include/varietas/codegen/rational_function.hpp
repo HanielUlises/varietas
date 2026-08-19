@@ -8,6 +8,8 @@
 
 #include "varietas/codegen/rational.hpp"
 #include "varietas/core/config.hpp"
+#include "varietas/core/gcd.hpp"
+#include "varietas/core/ideal/division.hpp"
 #include "varietas/core/order/grevlex.hpp"
 #include "varietas/core/polynomial.hpp"
 
@@ -152,14 +154,16 @@ class rational_function {
   }
 
  private:
-  // Reduce the representation as far as cheap operations allow: the rational
-  // content, the monomial content, and a sign convention on the denominator.
+  // Reduce the representation to lowest terms.
   //
-  // What this deliberately does not do is a full multivariate GCD. The
-  // consequence is expression swell rather than incorrectness — a common factor
-  // that is a genuine polynomial survives — and whether it is tolerable is a
-  // question about the arms actually put through the emitter, not one that can
-  // be settled in the abstract. It is measured rather than assumed.
+  // The cheap reductions come first because they are cheap — the monomial
+  // content and the rational content are read straight off the terms — and the
+  // polynomial gcd, which is the expensive one, then runs on smaller inputs.
+  //
+  // Without the gcd this arithmetic is still correct but unusable: the entries
+  // of a parametric action matrix run to degree seventy and beyond, when the
+  // functions they represent are of degree one or two. Cancellation is not a
+  // tidying step here, it is what makes the emitted expressions finite.
   void normalize() {
     if (numerator_.is_zero()) {
       denominator_ = parameter_polynomial::constant(rational(1));
@@ -168,6 +172,8 @@ class rational_function {
 
     remove_monomial_content(numerator_, denominator_);
     remove_rational_content(numerator_, denominator_);
+    remove_common_factor(numerator_, denominator_);
+    remove_rational_content(numerator_, denominator_);
 
     // A negative leading coefficient on the denominator is moved to the
     // numerator, so that equal functions are written the same way.
@@ -175,6 +181,27 @@ class rational_function {
       numerator_ = -numerator_;
       denominator_ = -denominator_;
     }
+  }
+
+  // The polynomial common factor, divided out of each. The gcd is monic and
+  // divides both, so each division is exact.
+  static void remove_common_factor(parameter_polynomial& n, parameter_polynomial& d) {
+    if (n.degree() == 0 || d.degree() == 0) {
+      return;  // one side is a unit; nothing of positive degree can be shared
+    }
+    const parameter_polynomial g = polynomial_gcd(n, d);
+    if (g.degree() == 0) {
+      return;
+    }
+    n = exact_quotient(n, g);
+    d = exact_quotient(d, g);
+  }
+
+  static parameter_polynomial exact_quotient(const parameter_polynomial& p,
+                                             const parameter_polynomial& g) {
+    const auto result = divide(p, std::vector<parameter_polynomial>{g});
+    VARIETAS_ASSERT(result.remainder.is_zero());
+    return result.quotients.front();
   }
 
   // The largest monomial dividing every term of both, divided out of each.
