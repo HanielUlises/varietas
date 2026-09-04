@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>varietas_ik</name>
+  <version>0.1.0</version>
+  <description>
+    The join between the robot and the emitter: the inverse kinematics of a
+    chain posed over Q(p), with the target pose adjoined to the coefficient
+    field rather than substituted into the ring, so that one Grobner basis
+    answers every pose. Produces the parametric_solution that varietas_codegen
+    emits as a header. Header-only, and free of ROS: a URDF front end sits above
+    this, not inside it.
+  </description>
+  <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>varietas_kinematics</depend>
+  <depend>varietas_codegen</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

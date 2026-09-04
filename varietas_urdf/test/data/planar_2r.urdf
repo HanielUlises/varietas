@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!-- The planar two-link arm of unit links, as a URDF.
+
+     The running example of the library in the format the pipeline actually
+     starts from, so that urdf_codegen has something to be exercised on whose
+     answer is known: two elbow configurations for every point strictly inside
+     the annulus of radii 0 and 2. -->
+<robot name="planar_2r">
+  <link name="base_link"/>
+  <link name="link1"/>
+  <link name="link2"/>
+  <link name="tool"/>
+
+  <joint name="q1" type="revolute">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="q2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="tool_mount" type="fixed">
+    <parent link="link2"/>
+    <child link="tool"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

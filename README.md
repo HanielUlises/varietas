@@ -94,7 +94,8 @@ is the ideal of the Zariski closure of the reachable workspace, by the Closure T
 | `varietas_core` | Monomials, polynomials, orders, ideals, quotient algebra, solving | Eigen |
 | `varietas_codegen` | Exact rationals over GMP; the offline field; code emission | `varietas_core` |
 | `varietas_kinematics` | Chains, rationalisation, workspace, singularities | `varietas_core` |
-| `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit | `varietas_kinematics` |
+| `varietas_ik` | Inverse kinematics posed over $\mathbb{Q}(\boldsymbol{p})$, ready to emit | `varietas_kinematics`, `varietas_codegen` |
+| `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit; `urdf_codegen` | `varietas_ik` |
 | `varietas_demo` | RViz demonstration of the recovered chain | ROS 2 |
 
 `varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator. Build and test instructions are in [BUILD.md](BUILD.md).
@@ -333,11 +334,20 @@ What is deliberately not claimed is a primary decomposition. `split_along` is ex
 | Half-angle and trigonometric rationalisation | complete |
 | Workspace implicitization | complete |
 | Singular locus, dimension, workspace image | complete |
-| Code emission | complete, but not wired to the URDF front end |
+| Code emission | complete |
+| URDF → header pipeline | complete |
 | Factorisation over $\mathbb{Q}$ | not begun |
 
 `emit` takes a system solved over $\mathbb{Q}(\boldsymbol{p})$ — the pose adjoined to the coefficient field rather than to the polynomial ring, so that one basis answers every pose instead of one basis per pose — and writes a header. It holds the action matrices as expressions in the pose, the coordinates of each variable's normal form (a variable is usually not a standard monomial, having been reduced away), the `order_id` the basis was computed under, and a guard on every denominator, so a pose on the locus the parametric basis fails to describe is refused rather than answered with infinities.
 
 Two runtimes are offered. `matrices_only` includes `<cstddef>` and `<cstdint>`, names nothing from this library, and leaves the eigenproblem to the caller. `eigen` adds `solve`, which builds a separating combination of the matrices, decomposes its transpose — left eigenvectors of a multiplication operator are the evaluation functionals at the points of the variety — and returns the real solutions. Generated code is checked by being compiled: a program links the emitter during the build, writes a header, and the test suite `#include`s it, so emitted text that does not parse is a build failure. The solutions it returns are required to satisfy the original equations and to agree with `solve_zero_dimensional` run on the same system with the pose substituted beforehand, which are two genuinely different computations.
 
-What remains is the connection: nothing yet joins `varietas_kinematics` to `emit`, so the path from a URDF to a header is not closed. Factorisation over $\mathbb{Q}$ is what would turn `split_along` into a decomposition proper.
+`varietas_ik` is the connection between the two halves. `parametric_position_ik` poses the inverse kinematics of a chain with the target adjoined to the coefficient field rather than substituted into the ring, saturates away the half-angle loci, and returns exactly the `parametric_solution` that `emit` consumes — so the path from a URDF to a header is one command, `ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp>`. On the planar 2R arm it writes a header that a program including nothing but that header and Eigen compiles and runs, returning both elbow configurations for any point the basis describes.
+
+It refuses more than it accepts, which is the point. Fewer pose coordinates than unknowns cannot give a finite solution set — $P$ polynomials in $N$ variables cut out components of dimension at least $N-P$, and saturation only removes components — so that case is settled by counting before any Gröbner basis is attempted. A coordinate left out of the parameter list is checked to be identically zero before its equation is dropped, since dropping an equation that constrains the joints would silently answer about a larger variety. What counting cannot catch, the quotient dimension does.
+
+The basis is the same object either way, and it can be checked as one: a pose substituted into the basis computed over $\mathbb{Q}(\boldsymbol{p})$ has to give the basis computed over $\mathbb{Q}$ with that pose substituted first, and those are two genuinely different Buchberger runs. That agreement, the standard monomials included, is a test rather than an assumption.
+
+Two limits are worth stating plainly. The emitted guard compares denominators against zero exactly, so it refuses a pose that lands on the pole locus in binary and misses one that merely lies within rounding of it — on the planar 2R arm the pole is the circle $x^2+y^2+2x=0$, an artefact of the elimination rather than anything the arm cannot reach, and near it one of the two returned branches is wrong with no signal to the caller. And monomial exponents are held in a `uint8_t`, which an underdetermined system over $\mathbb{Q}(\boldsymbol{p})$ can overflow: the parameter polynomials reach degree 254 in a single variable and then wrap, after which a true divisor no longer divides. The dimension precheck keeps the pipeline away from that, but it is a ceiling in `varietas_core` and not a property of the bridge.
+
+Factorisation over $\mathbb{Q}$ is what would turn `split_along` into a decomposition proper.

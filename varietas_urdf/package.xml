@@ -17,6 +17,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>varietas_kinematics</depend>
+  <depend>varietas_ik</depend>
   <depend>varietas_codegen</depend>
   <depend>urdf</depend>
 
