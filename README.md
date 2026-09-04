@@ -92,7 +92,7 @@ is the ideal of the Zariski closure of the reachable workspace, by the Closure T
 | Package | Role | Depends on |
 |---|---|---|
 | `varietas_core` | Monomials, polynomials, orders, ideals, quotient algebra, solving | Eigen |
-| `varietas_codegen` | Exact rationals over GMP; the offline field | `varietas_core` |
+| `varietas_codegen` | Exact rationals over GMP; the offline field; code emission | `varietas_core` |
 | `varietas_kinematics` | Chains, rationalisation, workspace, singularities | `varietas_core` |
 | `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit | `varietas_kinematics` |
 | `varietas_demo` | RViz demonstration of the recovered chain | ROS 2 |
@@ -133,7 +133,7 @@ Complex and real points are reported separately, a residual is available to cert
 
 #### Exact arithmetic
 
-`varietas_codegen` is the offline half of the library and supplies the field the Gröbner computation actually runs over: `varietas::rational`, arbitrary precision rationals backed by GMP, together with the `coefficient_traits` specialisation that the core algorithms consult.
+`varietas_codegen` is the offline half of the library. It supplies the field the Gröbner computation actually runs over — `varietas::rational`, arbitrary precision rationals backed by GMP, together with the `coefficient_traits` specialisation that the core algorithms consult — and, above it, `rational_function<P>`, which adjoins the pose to that field so a basis can be computed once for every pose rather than once per pose. `emit` writes the result out as a header. The same Buchberger implementation runs over all three fields without modification, which is the parameterisation paying for itself twice.
 
 Nothing in `varietas_core` changes — the ideal, quotient and solving layers were already templated on the coefficient type — so the same Buchberger implementation runs over $\mathbb{Q}$ offline and over `double` at runtime, and the two are exercised by the same test bodies instantiated twice.
 
@@ -333,7 +333,11 @@ What is deliberately not claimed is a primary decomposition. `split_along` is ex
 | Half-angle and trigonometric rationalisation | complete |
 | Workspace implicitization | complete |
 | Singular locus, dimension, workspace image | complete |
-| Code emission | not begun |
+| Code emission | complete, but not wired to the URDF front end |
 | Factorisation over $\mathbb{Q}$ | not begun |
 
-Code emission is what would turn the offline basis into the header-only runtime solver the design is aimed at; factorisation over $\mathbb{Q}$ is what would turn `split_along` into a decomposition proper.
+`emit` takes a system solved over $\mathbb{Q}(\boldsymbol{p})$ — the pose adjoined to the coefficient field rather than to the polynomial ring, so that one basis answers every pose instead of one basis per pose — and writes a header. It holds the action matrices as expressions in the pose, the coordinates of each variable's normal form (a variable is usually not a standard monomial, having been reduced away), the `order_id` the basis was computed under, and a guard on every denominator, so a pose on the locus the parametric basis fails to describe is refused rather than answered with infinities.
+
+Two runtimes are offered. `matrices_only` includes `<cstddef>` and `<cstdint>`, names nothing from this library, and leaves the eigenproblem to the caller. `eigen` adds `solve`, which builds a separating combination of the matrices, decomposes its transpose — left eigenvectors of a multiplication operator are the evaluation functionals at the points of the variety — and returns the real solutions. Generated code is checked by being compiled: a program links the emitter during the build, writes a header, and the test suite `#include`s it, so emitted text that does not parse is a build failure. The solutions it returns are required to satisfy the original equations and to agree with `solve_zero_dimensional` run on the same system with the pose substituted beforehand, which are two genuinely different computations.
+
+What remains is the connection: nothing yet joins `varietas_kinematics` to `emit`, so the path from a URDF to a header is not closed. Factorisation over $\mathbb{Q}$ is what would turn `split_along` into a decomposition proper.

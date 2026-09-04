@@ -41,6 +41,41 @@ if(BUILD_TESTING)
   ament_add_gtest(test_rational test/test_rational.cpp)
   target_link_libraries(test_rational ${PROJECT_NAME})
 
+  ament_add_gtest(test_rational_function test/test_rational_function.cpp)
+  target_link_libraries(test_rational_function ${PROJECT_NAME})
+
+  ament_add_gtest(test_emit test/test_emit.cpp)
+  target_link_libraries(test_emit ${PROJECT_NAME})
+  target_include_directories(test_emit PRIVATE test)
+
+  # Generated code, compiled.
+  #
+  # The emitter's other tests compare text or walk the same expression tree
+  # twice; neither can catch output that does not parse, or that parses and
+  # means something else. So the header is generated during the build by a
+  # program that links the emitter, and test_generated includes it as ordinary
+  # source. A syntax error in the emitted text is a build failure here, which
+  # is where it should be, and the numbers are checked against the closed form
+  # of the same system.
+  add_executable(generate_planar test/generate_planar.cpp)
+  target_link_libraries(generate_planar ${PROJECT_NAME})
+  target_include_directories(generate_planar PRIVATE test)
+
+  set(generated_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
+  set(generated_header ${generated_dir}/planar.hpp)
+  add_custom_command(
+    OUTPUT ${generated_header}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${generated_dir}
+    COMMAND generate_planar ${generated_header}
+    DEPENDS generate_planar
+    COMMENT "Emitting ${generated_header} from the parametric solution")
+  add_custom_target(planar_header DEPENDS ${generated_header})
+
+  ament_add_gtest(test_generated test/test_generated.cpp)
+  target_link_libraries(test_generated ${PROJECT_NAME})
+  target_include_directories(test_generated PRIVATE ${generated_dir})
+  add_dependencies(test_generated planar_header)
+
   # The core algebra and ideal suites, run a second time over the exact field.
   ament_add_gtest(test_exact_algebra test/test_exact_algebra.cpp)
   target_link_libraries(test_exact_algebra ${PROJECT_NAME})
