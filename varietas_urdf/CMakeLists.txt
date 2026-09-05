@@ -22,6 +22,12 @@ add_executable(urdf_report src/urdf_report.cpp)
 target_link_libraries(urdf_report ${PROJECT_NAME})
 install(TARGETS urdf_report DESTINATION lib/${PROJECT_NAME})
 
+# One pose, solved exactly. The half the emitter cannot reach, because
+# orientation cannot be adjoined to the coefficient field at any workable size.
+add_executable(urdf_solve src/urdf_solve.cpp)
+target_link_libraries(urdf_solve ${PROJECT_NAME})
+install(TARGETS urdf_solve DESTINATION lib/${PROJECT_NAME})
+
 # The pipeline as a command: a URDF in, a header out.
 add_executable(urdf_codegen src/urdf_codegen.cpp)
 target_link_libraries(urdf_codegen ${PROJECT_NAME})
@@ -41,6 +47,13 @@ if(BUILD_TESTING)
 
   # KDL is a test dependency only: it is the reference the recovered chain is
   # checked against, not something the pipeline runs on.
+  # Pose inverse kinematics, orientation included. Slow enough to want a
+  # timeout: five joints takes seconds, and the cost climbs steeply.
+  ament_add_gtest(test_pose_ik test/test_pose_ik.cpp TIMEOUT 600)
+  target_compile_definitions(test_pose_ik PRIVATE
+    VARIETAS_URDF_TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/test/data")
+  target_link_libraries(test_pose_ik ${PROJECT_NAME})
+
   ament_add_gtest(test_urdf_chain test/test_urdf_chain.cpp)
   target_compile_definitions(test_urdf_chain PRIVATE
     VARIETAS_URDF_TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/test/data")

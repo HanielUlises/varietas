@@ -73,5 +73,9 @@ g++ -std=c++17 -O2 consumer.cpp -I. -I/usr/include/eigen3
 ros2 run varietas_urdf urdf_report <file.urdf> [tip_link] [root_link]
 ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> [--tip L] [--root L] [--coords xy|xyz]
 ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --decouple   # sweep the base joint out (three joints, no --coords)
+
+# One pose, solved exactly, orientation included. Up to five joints in practice.
+ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z [--rpy R P Y | --quat X Y Z W]
+ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z --position-only
 ros2 launch varietas_demo sweep.launch.py urdf:=<file.urdf> period:=12.0
 ```
