@@ -27,7 +27,7 @@ computed, no gcd taken**.
 
 What it deliberately is not is ``matrix3<Coeff>``: that type asks
 ``coefficient_traits`` for inverses, and polynomials are not invertible, so the
-substitution needs its own type — which is the type system saying something true
+substitution needs its own type. That is the type system saying something true
 rather than an inconvenience.
 
 Clearing the denominators against a target gives the residuals, and
@@ -46,7 +46,7 @@ recording :math:`1/h`, then eliminate :math:`y` and appeal to the Closure
 Theorem.
 
 The construction is therefore an elimination and uses the block order machinery
-exactly as it stood — its first real application. Two details earn their keep:
+exactly as it stood, in its first real application. Two details earn their keep:
 the adjoined variable goes first so the block order eliminates it, and the
 trailing block is ordered by the caller's own order, so what comes back is
 already a Gröbner basis of the saturation under that order rather than something
@@ -56,7 +56,7 @@ sorted under a different one.
 
 This is what removes the components the half-angle substitution invents.
 Clearing the denominators :math:`1+t_i^2` attaches to the variety the loci where
-they vanish, namely :math:`t_i=\pm i` — the images of the configurations
+they vanish, namely :math:`t_i=\pm i`, the images of the configurations
 :math:`q_i=\pi` that the substitution sent to infinity. Over the reals they are
 invisible, since :math:`1+t^2` never vanishes there, and **that is precisely why
 they must be removed symbolically**: they are counted regardless, and the count
@@ -64,8 +64,8 @@ is the completeness certificate.
 
 The tests exhibit both ways it goes wrong. In the mild case the spurious locus is
 a few extra points and :math:`\dim_k A` reads 3 where the arm has one
-configuration. In the severe case — the one that actually arises, where the
-denominator divides more than one generator — the spurious locus is a whole
+configuration. In the severe case, the one that actually arises, where the
+denominator divides more than one generator, the spurious locus is a whole
 line, the ideal is not zero-dimensional at all, and the Finiteness Theorem
 returns no verdict. Saturating is what makes the system *solvable* in the first
 place, not merely what makes the count right.
@@ -80,8 +80,8 @@ The pipeline on the planar arm
    The two elbow configurations at a single prescribed tool position, both
    returned by the spectral solver. The pose is built by evaluating the rational
    map at a rational point, so the problem never leaves the rationals; the
-   quotient has dimension two over the field, and that number — not the count of
-   what was found — is the certificate that no branch is missing.
+   quotient has dimension two over the field, and that number, not the count of
+   what was found, is the certificate that no branch is missing.
 
 On the planar two-link arm the pipeline runs end to end, over :math:`\Q`
 throughout. A target built by evaluating the rational map at
@@ -92,7 +92,7 @@ rationals is a structural test and not a residual below a threshold; and the
 spectral solver returns both elbow branches, each of which puts the tool back on
 the target.
 
-The rational map itself is checked against KDL on the iiwa — seven joints, axes
+The rational map itself is checked against KDL on the iiwa: seven joints, axes
 turned by a right angle at every link, which is the composition the closure
 property has to survive.
 
@@ -104,7 +104,7 @@ comes to lie.
 
 A point **off the plane** of the arm is unreachable in the strong sense: the
 tool has :math:`z=0` identically, a residual reads :math:`0=1`, the variety is
-empty over :math:`\bar k` and the ideal is the whole ring — which is what the
+empty over :math:`\bar k` and the ideal is the whole ring, which is what the
 weak Nullstellensatz detects.
 
 A point **in the plane but beyond reach** is not that at all. The ideal is not

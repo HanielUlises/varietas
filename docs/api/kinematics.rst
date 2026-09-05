@@ -165,7 +165,7 @@ Trigonometric rationalisation
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
                   std::vector<polynomial<Coeff, N, Order>> circle_relations(const chain<Coeff>& robot)
 
-   :math:`c_i^2+s_i^2-1`, on the same footing as the pose residuals — a genuine
+   :math:`c_i^2+s_i^2-1`, on the same footing as the pose residuals: a genuine
    equation of the problem rather than damage repair.
 
 .. cpp:function:: template<class Coeff> std::vector<Coeff> trigonometric_point(const chain<Coeff>& robot, const std::vector<Coeff>& angles)
@@ -180,7 +180,7 @@ Workspace
                   std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations(const chain<Coeff>& robot)
 
    The implicit equations of the Zariski closure of the reachable set, computed
-   on the trigonometric ring — a factor of a thousand faster than the half-angle
+   on the trigonometric ring, a factor of a thousand faster than the half-angle
    route on the torus arm, and provably the same ideal.
 
 .. cpp:function:: template<std::size_t N, class Coeff> \
@@ -192,7 +192,7 @@ Workspace
                   bool workspace_is_dense(const std::vector<polynomial<Coeff, 3, grevlex>>& relations)
 
    Reports the full-dimensional case, where the closure is everything and the
-   elimination ideal returned only what held identically — rather than leaving
+   elimination ideal returned only what held identically, rather than leaving
    an empty result to be misread as a failure.
 
 Also ``workspace_residuals``, ``workspace_layout``,

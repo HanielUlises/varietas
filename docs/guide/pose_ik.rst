@@ -2,10 +2,10 @@
 One pose at a time
 ==================
 
-Orientation cannot be adjoined. A general pose is six parameters — twelve matrix
-entries are not independent, and a general point of :math:`\A^{12}` is not a
-rigid motion at all — and two adjoined parameters is the working limit, so there
-is no parametric solver for a full pose and there is not going to be one at this
+Orientation cannot be adjoined. A general pose is six parameters, since twelve
+matrix entries are not independent and a general point of :math:`\A^{12}` is not
+a rigid motion at all, and two adjoined parameters is the working limit. So there
+is no parametric solver for a full pose, and there is not going to be one at this
 size.
 
 **Giving up the parameters is what buys orientation back.** With the target a
@@ -43,7 +43,7 @@ The pose has to be exact
 
 This is not a formality. A target assembled by rounding sines and cosines into
 rationals carries denominators near :math:`2^{52}`, and a run over coefficients
-that size does not finish — the first attempt at a six-joint pose here failed
+that size does not finish. The first attempt at a six-joint pose here failed
 that way before it failed for any interesting reason.
 
 So the target is snapped onto a nearby exact pose by the same quaternion
@@ -63,6 +63,6 @@ unit ideal and the answer is no configuration at all, rather than a
 configuration that nearly works. ``urdf_solve`` says so in those words.
 
 Asking such an arm for a **position** instead (``--position-only``) returns the
-four postures it genuinely has — the same four the decoupled generated solver
+four postures it genuinely has: the same four the decoupled generated solver
 returns, by an entirely different computation, which is the cross-check the two
 paths give each other.

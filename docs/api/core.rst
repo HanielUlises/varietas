@@ -23,7 +23,7 @@ Configuration
    :cpp:class:`varietas::codegen::rational_function`.
 
    ``is_exact`` is what lets the library refuse, at compile time, an operation
-   that is only meaningful over a floating point field —
+   that is only meaningful over a floating point field,
    ``polynomial::prune`` being the example.
 
 Monomials
@@ -38,7 +38,7 @@ Monomials
    .. cpp:type:: std::uint16_t exponent_type
 
       Sixteen bits, not eight. Parameter polynomials over a function field
-      reach the old ceiling — degree 254 in one variable was observed — after
+      reach the old ceiling (degree 254 in one variable was observed), after
       which a product wrapped to a *different monomial* and a polynomial that
       divided another silently stopped dividing it. The product now asserts
       rather than wraps.
@@ -187,7 +187,7 @@ Dimension
 .. cpp:struct:: template<std::size_t N> affine_dimension
 
    The dimension, the maximal independent set that witnesses it, and a flag for
-   the empty variety — which is *not* dimension zero, that being a point.
+   the empty variety, which is *not* dimension zero, that being a point.
 
 .. cpp:function:: template<class Coeff, std::size_t N, class Order> \
                   affine_dimension<N> \
@@ -223,7 +223,7 @@ Saturation
 
    :math:`I : h^{\infty}` by Rabinowitsch's trick, computed as a single
    elimination under a block order whose trailing block is the caller's own
-   order — so the result is already a Gröbner basis under that order.
+   order, so the result is already a Gröbner basis under that order.
 
 .. cpp:function:: template<class Coeff, std::size_t N, class Order> \
                   std::vector<polynomial<Coeff, N, Order>> \
@@ -240,7 +240,7 @@ Saturation
                   split_along(const std::vector<polynomial<Coeff, N, Order>>& generators, \
                               const polynomial<Coeff, N, Order>& h)
 
-   Exact and exhaustive — but the caller chooses :math:`h`. Not a primary
+   Exact and exhaustive, but the caller chooses :math:`h`. Not a primary
    decomposition; see :doc:`../roadmap`.
 
 .. cpp:function:: template<class Coeff, std::size_t N, class Order> \
@@ -256,8 +256,8 @@ Quotient algebra
 .. cpp:struct:: template<std::size_t N> quotient_basis
 
    The standard monomials, by Macaulay's theorem, together with
-   ``is_zero_dimensional`` — true exactly when some leading monomial is a pure
-   power of each variable — and ``dimension()``, which is :math:`\dim_k A`.
+   ``is_zero_dimensional``, true exactly when some leading monomial is a pure
+   power of each variable, and ``dimension()``, which is :math:`\dim_k A`.
 
 .. cpp:function:: template<class Coeff, std::size_t N, class Order> \
                   quotient_basis<N> \
@@ -335,7 +335,7 @@ Minors
 .. cpp:function:: template<class Element> std::vector<Element> maximal_minors(const dense_matrix<Element>& m)
 
    Laplace expansion memoised on the set of remaining columns: :math:`2^k k`
-   multiplications rather than :math:`k!`, and — the point — an arrangement
+   multiplications rather than :math:`k!`, and, the point, an arrangement
    that **never divides**. Gaussian elimination needs to invert a pivot and
    Bareiss needs exact division; polynomials offer neither.
 

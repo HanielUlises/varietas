@@ -23,7 +23,7 @@ First tagged version. Everything in :doc:`status` marked *complete* is in it.
   splitting along a chosen divisor.
 * Standard monomials and the finiteness verdict; action matrices; the spectral
   solver of Stetter and Möller, with every failure mode named.
-* Maximal minors by memoised Laplace expansion — the arrangement that never
+* Maximal minors by memoised Laplace expansion, the arrangement that never
   divides.
 
 .. rubric:: Exactness
@@ -40,7 +40,7 @@ First tagged version. Everything in :doc:`status` marked *complete* is in it.
   with validation that names the joint and the defect.
 * Rotations rational by construction, from quaternions or from a cosine–sine
   pair.
-* Both rationalisations — half-angle and trigonometric — carried alongside each
+* Both rationalisations, half-angle and trigonometric, carried alongside each
   other, and required by test to agree.
 * Workspace implicitization on the trigonometric ring, with the half-angle route
   kept for comparison.

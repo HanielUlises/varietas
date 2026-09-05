@@ -9,7 +9,7 @@ Let :math:`\prec` be a monomial order, :math:`G=\mathrm{GB}_{\prec}(I)` the
 reduced Gröbner basis, and :math:`A=k[\boldsymbol{t}]/I` the quotient algebra.
 
 By the Finiteness Theorem, :math:`\dim_k A<\infty` if and only if :math:`\V(I)`
-is finite — a condition decidable from the leading terms of :math:`G` alone:
+is finite, a condition decidable from the leading terms of :math:`G` alone:
 the quotient is finite dimensional exactly when some leading monomial is a pure
 power of each variable. In that case :math:`\dim_k A` **bounds the number of
 solutions counted with multiplicity**, so the basis itself certifies that no
@@ -23,7 +23,7 @@ Standard monomials
 ==================
 
 :cpp:func:`varietas::standard_monomials` computes the monomials not in the
-initial ideal — a basis of :math:`A` by Macaulay's theorem — together with the
+initial ideal, a basis of :math:`A` by Macaulay's theorem, together with the
 finiteness verdict, as :cpp:struct:`varietas::quotient_basis`.
 
 Action matrices
@@ -45,8 +45,8 @@ monomial :math:`m` to :math:`m(p)`. Left eigenvectors of :math:`M` are right
 eigenvectors of :math:`M^{\mathsf T}`, which is what is actually decomposed.
 
 Each coordinate is then obtained by applying the functional to the normal form
-of :math:`t_i`, divided by what the functional gives to :math:`1` — the division
-that makes it an evaluation rather than a multiple of one.
+of :math:`t_i`, divided by what the functional gives to :math:`1`. That division
+is what makes it an evaluation rather than a multiple of one.
 
 .. note::
 
@@ -54,7 +54,7 @@ that makes it an evaluation rather than a multiple of one.
    it the same value, the eigenvalue is repeated, the eigenvector is an arbitrary
    element of a plane, and it carries no point. varietas uses a fixed linear
    combination of the action matrices, which separates the solutions except on a
-   proper algebraic subset of the coefficient space — and being fixed rather than
+   proper algebraic subset of the coefficient space, and being fixed rather than
    random, two runs on the same pose return the same points in the same order.
 
 Failure is named
@@ -83,7 +83,7 @@ Failure is named
        are still returned, but the set is **not** certified complete and the
        caller must treat it as a failure of genericity.
 
-Complex and real points are reported separately —
-``solution_set::real_points(tolerance)`` filters to the ones a manipulator can
-actually be commanded to — and :cpp:func:`varietas::residual` certifies any
+Complex and real points are reported separately, with
+``solution_set::real_points(tolerance)`` filtering to the ones a manipulator can
+actually be commanded to, and :cpp:func:`varietas::residual` certifies any
 point against the original generators.

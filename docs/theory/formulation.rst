@@ -25,8 +25,8 @@ Let the manipulator have :math:`n` revolute joints with configuration
 
 with :math:`\p=(x,y,\theta)` for :math:`m=2` and :math:`\p\in SE(3)` in the
 spatial case. Inverse kinematics is the determination of the fibre
-:math:`\mathcal{F}^{-1}(\p)` for a prescribed pose :math:`\p` — a problem that
-is transcendental as stated and therefore not directly amenable to exact
+:math:`\mathcal{F}^{-1}(\p)` for a prescribed pose :math:`\p`. That problem is
+transcendental as stated, and therefore not directly amenable to exact
 methods.
 
 Rationalisation
@@ -67,7 +67,7 @@ The trigonometric alternative
 The half-angle substitution is not the only rationalisation available. Adjoining
 :math:`c_i=\cos q_i` and :math:`s_i=\sin q_i` with the circle relations
 :math:`c_i^2+s_i^2=1` gives a polynomial system in :math:`2n` variables with no
-excluded locus at all — nothing is sent to infinity, so nothing has to be
+excluded locus at all: nothing is sent to infinity, so nothing has to be
 saturated back.
 
 The trade is dimension against cleanliness: twice the variables, but every
@@ -81,8 +81,8 @@ mean losing part of the answer.
 Why exactness is the whole point
 ================================
 
-Each of the statements above — that the quotient is finite dimensional, that a
-subset of variables is independent, that a leading monomial is a pure power —
+Each of the statements above (that the quotient is finite dimensional, that a
+subset of variables is independent, that a leading monomial is a pure power)
 is a statement about *whether a coefficient is zero*. Over floating point those
 are not decidable questions: a coefficient that vanishes mathematically almost
 never evaluates to ``0.0``, and a Gröbner basis computed from wrong zero tests

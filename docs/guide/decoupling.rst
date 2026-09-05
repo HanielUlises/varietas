@@ -16,12 +16,12 @@ instead of solving for it.
 If the base turns about a fixed axis and the rest of the arm holds the tool in a
 plane containing that axis, then turning the base sweeps that plane around it:
 the tool's position is a radius and a height in the plane together with the
-angle the plane has been turned through — and that angle is an **arctangent of
+angle the plane has been turned through, and that angle is an **arctangent of
 the target** rather than an eigenvalue. What is left is a two-joint problem in
 two parameters.
 
-The anthropomorphic arm — base yawing about :math:`z`, shoulder and elbow
-pitching about :math:`y` — reduces this way in about **45 ms**, against the
+The anthropomorphic arm, base yawing about :math:`z` with shoulder and elbow
+pitching about :math:`y`, reduces this way in about **45 ms**, against the
 fifteen minutes that produced nothing when all three coordinates were adjoined.
 
 .. code-block:: sh
@@ -31,7 +31,7 @@ fifteen minutes that produced nothing when all three coordinates were adjoined.
 goes from the URDF to the reduced header in about a second.
 
 Each solution of the reduced problem is a configuration of the arm **twice
-over** — facing the target, and reversed half a turn away — which recovers the
+over**, facing the target and reversed half a turn away, which recovers the
 four postures such an arm is known to have. That is the same count that solving
 the whole system over :math:`\Q` at a fixed pose reports, by an entirely
 different computation.
@@ -54,7 +54,7 @@ The decomposition is a question about the arm, so it is asked of the arm.
      - The first joint has to turn; the whole construction is about the plane
        it sweeps.
    * - ``first_axis_not_a_coordinate_direction``
-     - An arbitrary axis can be decoupled too, by rotating the frame first —
+     - An arbitrary axis can be decoupled too, by rotating the frame first,
        but that rotation is not in general rational and would leave the exact
        field.
    * - ``first_joint_is_displaced``
@@ -69,8 +69,8 @@ The decomposition is a question about the arm, so it is asked of the arm.
      - The reduced two-joint problem was itself refused; the reason comes from
        there.
 
-A **planar** arm fails the last of these — its base turns in the plane the arm
-already works in, so there is nothing to sweep — and is refused rather than
+A **planar** arm fails the last of these, since its base turns in the plane the
+arm already works in and there is nothing to sweep, so it is refused rather than
 reduced.
 
 What is generated

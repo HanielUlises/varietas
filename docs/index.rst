@@ -1,12 +1,12 @@
 =========================================
-varietas — algebraic kinematics for ROS 2
+varietas: algebraic kinematics for ROS 2
 =========================================
 
 **Exact inverse kinematics, workspace implicitization, and singularity variety
 decomposition via Gröbner bases and elimination theory.**
 
-varietas treats robot kinematics as what it is — *a system of polynomial
-equations over a finite-dimensional quotient ring* — and solves it with the
+varietas treats robot kinematics as what it is, *a system of polynomial
+equations over a finite-dimensional quotient ring*, and solves it with the
 tools of computational algebraic geometry rather than with numerical iteration
 or structural pattern matching.
 
@@ -29,7 +29,7 @@ violated.
 
    **The pipeline.** A robot description is recovered exactly over the
    rationals, rationalised into an ideal, and reduced to a Gröbner basis; that
-   one basis then supports all three constructions — the configurations, the
+   one basis then supports all three constructions: the configurations, the
    workspace closure, and the singular locus. Everything up to the last step is
    exact, and the only numerical operation in the library is the
    eigendecomposition that reads the configurations off the action matrix.

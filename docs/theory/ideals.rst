@@ -10,7 +10,7 @@ remainder (:cpp:func:`varietas::divide`, :cpp:func:`varietas::normal_form`) and
 Buchberger's algorithm with the normal selection strategy and both Buchberger
 criteria (:cpp:func:`varietas::buchberger`). The number of critical pairs each
 criterion discarded is reported in :cpp:struct:`varietas::buchberger_statistics`
-rather than being hidden — the two counts are the difference between a run that
+rather than being hidden: the two counts are the difference between a run that
 finishes and one that does not.
 
 :cpp:func:`varietas::groebner_basis` minimalises and fully reduces, giving the
@@ -25,10 +25,10 @@ Polynomials carry their monomial order as a template parameter, so two
 polynomials written under different orders cannot be added. The available
 orders are
 
-* :cpp:class:`varietas::lex` — lexicographic,
-* :cpp:class:`varietas::grlex` — graded lexicographic,
-* :cpp:class:`varietas::grevlex` — graded reverse lexicographic,
-* ``block_order<Split, First, Second>`` — for elimination,
+* :cpp:class:`varietas::lex`, lexicographic,
+* :cpp:class:`varietas::grlex`, graded lexicographic,
+* :cpp:class:`varietas::grevlex`, graded reverse lexicographic,
+* ``block_order<Split, First, Second>``, for elimination,
 * ``weight_order<Weights, TieBreak>``.
 
 Each records an :cpp:enum:`varietas::order_id`, which a generated header stores
@@ -39,7 +39,7 @@ Membership, emptiness, dimension
 ================================
 
 :cpp:func:`varietas::is_member` decides ideal membership by normal form.
-:cpp:func:`varietas::is_unit_ideal` detects the unit ideal — that is, an
+:cpp:func:`varietas::is_unit_ideal` detects the unit ideal, that is, an
 **empty variety**: a target no configuration reaches.
 
 :cpp:func:`varietas::ideal_dimension` is :math:`\dim \V(I)` read off the leading
@@ -49,7 +49,7 @@ such subset.
 
 The empty variety falls out of the same statement rather than needing a case:
 the unit ideal's leading monomial :math:`1` is supported inside every subset, so
-it is reported as **empty** rather than as dimension zero — which is what a
+it is reported as **empty** rather than as dimension zero, which is what a
 *point* would be. That distinction is not pedantry; it is the difference between
 "this target is unreachable" and "this target has exactly one solution".
 
@@ -70,7 +70,7 @@ Saturation
 ==========
 
 :cpp:func:`varietas::saturate` computes :math:`I : h^{\infty}` by the Rabinowitsch
-trick — adjoin a variable :math:`u` and the relation :math:`1 - u h`, then
+trick: adjoin a variable :math:`u` and the relation :math:`1 - u h`, then
 eliminate :math:`u`. This is what removes the spurious components the half-angle
 substitution introduces at :math:`q_i = \pi`.
 

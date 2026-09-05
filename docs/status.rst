@@ -3,7 +3,7 @@ Status
 ======
 
 Version 0.1.0. What follows is what the library does, what it costs, and what it
-refuses — the last being the largest part, and deliberately.
+refuses, the last being the largest part, and deliberately.
 
 .. list-table::
    :header-rows: 1
@@ -58,14 +58,14 @@ least :math:`N-P`, and saturation only removes components. More coordinates than
 unknowns cannot give a nonempty one: the positions an :math:`N`-joint arm
 reaches form a variety of dimension at most :math:`N`, the parameters are
 transcendentals rather than a point of that variety, and a general pose is
-simply out of reach — the ideal is the unit ideal.
+simply out of reach, and the ideal is the unit ideal.
 
 So :math:`P=N` is the only arrangement that can produce a solver at all, and
 both other cases are rejected by counting. A coordinate left out of the
 parameter list is separately checked to be identically zero before its equation
 is dropped, since dropping an equation that constrains the joints would silently
-answer about a larger variety. What counting cannot catch — two joints turning
-about one axis, say — the quotient dimension does.
+answer about a larger variety. What counting cannot catch, two joints turning
+about one axis for instance, the quotient dimension does.
 
 Two things that were once wrong
 ===============================
@@ -77,8 +77,8 @@ history.
 floating point: a denominator that vanishes mathematically almost never
 evaluates to ``0.0``, it evaluates to whatever the cancellation between its
 terms leaves behind. On the planar 2R arm the pole is the circle
-:math:`x^2+y^2+2x=0` — an artefact of the elimination rather than anything the
-arm cannot reach — and at :math:`(-1.6, 0.8)`, which is on it exactly over
+:math:`x^2+y^2+2x=0`, an artefact of the elimination rather than anything the
+arm cannot reach, and at :math:`(-1.6, 0.8)`, which is on it exactly over
 :math:`\Q`, the same expression in doubles comes to about
 :math:`4\times10^{-16}`. The guard did not fire, the matrices were formed by
 dividing by that, and one of the two returned branches did not reach the target,
@@ -86,8 +86,8 @@ with neither the count nor the status saying so. The guard now compares each
 denominator against the sum of the magnitudes of the terms that produced it.
 
 **Monomial exponents were held in a** ``uint8_t``. Parameter polynomials over a
-function field reach that ceiling — degree 254 in one variable was observed in
-an underdetermined system — after which a product wrapped to a different
+function field reach that ceiling (degree 254 in one variable was observed in
+an underdetermined system), after which a product wrapped to a different
 monomial and a polynomial that divided another silently stopped dividing it.
 Exponents are sixteen bits now, and the product asserts rather than wraps, which
 is the half that matters.
@@ -121,7 +121,7 @@ arm but in the number of parameters adjoined.**
      - ~45 ms
 
 The 3R arm at a fixed pose returns a basis of six elements and
-:math:`\dim_k A = 4` — exactly the four branches such an arm is known to have.
+:math:`\dim_k A = 4`, exactly the four branches such an arm is known to have.
 The arm is not the difficulty.
 
 The difficulty is cancellation
@@ -132,7 +132,7 @@ polynomial gcd that cancellation needs is what the run is made of. Sampled over
 three minutes:
 
 * about **86%** of the time is spent inside ``polynomial_gcd``;
-* the cost per call grows sharply as the parameter polynomials do — the first
+* the cost per call grows sharply as the parameter polynomials do: the first
   twenty-seven thousand calls take five seconds between them, while a later
   sixteen hundred take sixty-eight.
 
@@ -157,7 +157,7 @@ Computing the same remainder sequence over several primes is therefore not
 enough; only a gcd built on evaluation and interpolation addresses the cost that
 was measured.
 
-Until it is, **two adjoined parameters remains the working limit** — and since
+Until it is, **two adjoined parameters remains the working limit**, and since
 :math:`P=N`, that is to say two joints. The way to solve a three-joint arm today
 is to sweep one of them out rather than adjoin it (:doc:`guide/decoupling`).
 
@@ -167,8 +167,8 @@ Against a real robot
 Run against the KUKA iiwa in ``varietas_urdf/test/data``, the pipeline mostly
 declines, and the way it declines is the useful part.
 
-The chain recovers exactly — the audit moves no joint by more than
-:math:`5\times10^{-12}` radians — and then has **seven joints**, which is four
+The chain recovers exactly, with the audit moving no joint by more than
+:math:`5\times10^{-12}` radians, and then has **seven joints**, which is four
 more than a tool position can constrain, so ``urdf_codegen`` says so and stops.
 
 Truncating the chain does not rescue it either: taking the tip to be

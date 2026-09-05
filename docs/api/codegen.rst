@@ -60,7 +60,7 @@ The function field
 
    .. rubric:: What it buys
 
-   Not much — about 29 ms down to about 25 ms on the reduced two-joint problem,
+   Not much: about 29 ms down to about 25 ms on the reduced two-joint problem,
    and the three-parameter system still produces no answer. See
    :doc:`../roadmap`.
 
@@ -76,7 +76,7 @@ The solved system
 .. cpp:struct:: template<std::size_t N, std::size_t P> parametric_solution
 
    Everything the emitter needs about a solved system, and nothing about how it
-   was posed — so it can be built by hand in a unit test, and the emitter is
+   was posed, so it can be built by hand in a unit test and the emitter is
    testable without a robot.
 
    :``order``: the :cpp:enum:`order_id` the basis was computed under.
@@ -85,8 +85,8 @@ The solved system
    :``quotient``: the standard monomial basis.
    :``action``: one :cpp:struct:`parametric_matrix` per unknown.
    :``one_index``: where the monomial :math:`1` sits. The eigenvalue method
-      divides by the eigenvector's component there — a functional that sends
-      :math:`1` to zero is not an evaluation at a point.
+      divides by the eigenvector's component there, and a functional that
+      sends :math:`1` to zero is not an evaluation at a point.
    :``variable_coordinates``: row :math:`i` is the normal form of :math:`x_i`
       in the standard basis.
 
@@ -114,15 +114,15 @@ Emission
 
 .. cpp:enum:: runtime_kind
 
-   ``matrices_only`` — the header includes only ``<cstddef>`` and ``<cstdint>``
-   and names nothing from this library. ``eigen`` — the above plus ``solve``.
+   ``matrices_only``: the header includes only ``<cstddef>`` and ``<cstdint>``
+   and names nothing from this library. ``eigen``: the above plus ``solve``.
 
 .. cpp:struct:: emit_options
 
    ``name``, ``name_space``, ``guard`` (defaulted from the two), ``source_note``
-   (free text in the banner), ``runtime``, and ``epilogue`` — verbatim
-   declarations placed inside the namespace after the struct, written out
-   exactly as given.
+   (free text in the banner), ``runtime``, and ``epilogue``, the last being
+   verbatim declarations placed inside the namespace after the struct, written
+   out exactly as given.
 
 .. cpp:function:: template<std::size_t N, std::size_t P> \
                   std::string emit(const parametric_solution<N, P>& solution, \

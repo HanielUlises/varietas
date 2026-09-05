@@ -45,10 +45,10 @@ Rotations that are rational by construction
 Do **not** assemble a joint origin from roll–pitch–yaw angles and round the
 result. Use either
 
-* :cpp:func:`varietas::rotation_from_quaternion` — the Euler–Rodrigues matrix
+* :cpp:func:`varietas::rotation_from_quaternion`, the Euler–Rodrigues matrix
   divided by the squared norm, exactly orthogonal of determinant one for any
   nonzero rational quaternion, no square root taken; or
-* :cpp:func:`varietas::rotation_about_axis` — Rodrigues' formula in a
+* :cpp:func:`varietas::rotation_about_axis`, Rodrigues' formula in a
   cosine–sine pair rather than an angle.
 
 A quarter turn about :math:`x` is ``rotation_from_quaternion(1, 1, 0, 0)``: a
@@ -70,7 +70,7 @@ Validate before solving
 
 ``validate`` checks orthogonality, properness, unit axes and limits, and returns
 a :cpp:struct:`varietas::chain_diagnostic` naming **which** joint failed and
-**how** — not a bare bool. Over an exact field the tolerance argument is ignored:
+**how**, not a bare bool. Over an exact field the tolerance argument is ignored:
 the only admissible orthogonality defect is zero.
 
 Two indexings, kept apart
@@ -80,8 +80,8 @@ A fixed joint contributes no variable, so the index of a joint in the model and
 the index of its variable in the polynomial ring are different numbers.
 ``chain::variable_of_joint`` and ``chain::joint_of_variable`` convert between
 them, and they are kept explicit because generated code indexes by variable
-while a robot model indexes by joint — conflating them is how a solution ends up
-applied to the wrong axis.
+while a robot model indexes by joint, and conflating them is how a solution ends
+up applied to the wrong axis.
 
 ``chain::degrees_of_freedom()`` is the :math:`N` the rest of the library is
 templated on.

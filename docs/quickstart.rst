@@ -20,9 +20,9 @@ Before anything is solved, ask whether the chain can be recovered exactly.
 ``urdf_report`` reads the URDF, snaps every joint origin onto a nearby exact
 rational pose, and reports the deviation joint by joint. On the KUKA iiwa
 shipped in ``varietas_urdf/test/data`` no joint moves by more than
-:math:`5\times10^{-12}` radians. A chain that cannot be recovered — a
+:math:`5\times10^{-12}` radians. A chain that cannot be recovered (a
 non-orthonormal rotation, an unsupported joint type, a branch where a serial
-chain was expected — is refused here with the reason, rather than silently
+chain was expected) is refused here with the reason, rather than silently
 approximated.
 
 See :doc:`theory/exactness` for what the snapping does and why it is not a
@@ -35,9 +35,9 @@ Generate a solver from a URDF
 
    ros2 run varietas_urdf urdf_codegen arm.urdf arm_ik.hpp
 
-This poses the inverse kinematics over :math:`\Q(\p)` — the target adjoined to
-the *coefficient field* rather than substituted into the ring, so that one
-basis answers every pose instead of one basis per pose — computes the Gröbner
+This poses the inverse kinematics over :math:`\Q(\p)`, with the target adjoined
+to the *coefficient field* rather than substituted into the ring so that one
+basis answers every pose instead of one basis per pose. It computes the Gröbner
 basis once, and writes a self-contained header.
 
 For an arm whose base turns about a fixed axis, sweep that joint out instead of
@@ -74,8 +74,8 @@ The generated header is consumed with nothing but a compiler and (for the
 The struct is named ``urdf_ik`` in namespace ``varietas_generated`` unless
 ``--name`` and ``--namespace`` say otherwise, and ``solve`` returns the number
 of real configurations written, or ``-1`` with ``state`` saying why. A
-``--decouple`` header additionally defines ``urdf_ik_reduced`` — the two-joint
-problem the wrapper is built on — and its ``solve`` returns **joint angles in
+``--decouple`` header additionally defines ``urdf_ik_reduced``, the two-joint
+problem the wrapper is built on, whose ``solve`` returns **joint angles in
 radians** rather than half-angle variables. See :doc:`guide/generated_headers`.
 
 .. code-block:: sh
@@ -85,8 +85,8 @@ radians** rather than half-angle variables. See :doc:`guide/generated_headers`.
 .. note::
 
    The parametric path is bounded by the number of parameters adjoined, not by
-   the arm. Two parameters — and therefore, since the counts force
-   :math:`P = N`, two joints — is the working limit. Decoupling buys a third.
+   the arm. Two parameters, and therefore two joints since the counts force
+   :math:`P = N`, is the working limit. Decoupling buys a third.
    See :doc:`guide/decoupling` and :doc:`status`.
 
 Solve one pose exactly

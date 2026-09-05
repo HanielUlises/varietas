@@ -44,7 +44,7 @@ Testing
    colcon test --packages-select varietas_codegen
 
 Generated code is checked by being compiled. A program links the emitter during
-the build, writes a header, and the test suite ``#include``\ s it — so emitted
+the build, writes a header, and the test suite ``#include``\ s it, so emitted
 text that does not parse is a build failure rather than a test failure.
 
 .. _without-ros:

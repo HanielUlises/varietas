@@ -15,7 +15,7 @@ statement about a different ideal.
 ``test_exact_groebner`` exhibits this on an ideal with non-dyadic coefficients,
 where an explicit combination :math:`a g_0 + b g_1` of basis elements is
 certified as a member over :math:`\Q` and reported as a non-member over
-``double`` — the obstruction being a single constant term of magnitude
+``double``, the obstruction being a single constant term of magnitude
 :math:`10^{-18}`.
 
 Correspondingly, ``polynomial::prune``, which discards negligible terms, is
@@ -30,14 +30,14 @@ implementation runs over
 
 * ``double``, at runtime,
 * :cpp:type:`varietas::rational`, arbitrary-precision rationals backed by GMP,
-* :cpp:class:`varietas::codegen::rational_function` — the pose adjoined to the
+* :cpp:class:`varietas::codegen::rational_function`, the pose adjoined to the
   coefficient field, so that one basis answers every pose,
 
 without modification, and the two former are exercised by the same test bodies
 instantiated twice.
 
 The bridge between the fields is deliberate and narrow: ``to_double`` and
-``from_double`` are crossed only where the numerics belong — in the assembly of
+``from_double`` are crossed only where the numerics belong: in the assembly of
 the action matrix and in the eigendecomposition that recovers the points.
 
 Exact geometry
@@ -72,7 +72,7 @@ Recovering a URDF exactly
 
 A URDF contains no exact geometry. The KUKA iiwa writes :math:`\pi/2` as
 ``1.57079632679``, and reading that literal as a rational produces an exact
-answer about a robot whose axes are misaligned by :math:`10^{-12}` radians — a
+answer about a robot whose axes are misaligned by :math:`10^{-12}` radians, a
 robot nobody built.
 
 The recovery is a fact about quaternions rather than about angles. A quarter
@@ -89,7 +89,7 @@ a right angle is recovered exactly this way, and every joint of the iiwa is
 such a multiple; a genuinely oblique placement is not, and is **reported with
 the deviation it would introduce** rather than silently rounded.
 
-Lengths are recovered the same way — ``0.1575`` comes back as :math:`63/400`,
+Lengths are recovered the same way: ``0.1575`` comes back as :math:`63/400`,
 the decimal the author wrote rather than the binary approximation the file
 stores.
 
@@ -106,8 +106,8 @@ stores.
    configuration of the sweep. How closely the two agree it does not show, and
    no image could: the figure is drawn at about four millimetres to the pixel
    and the disagreement is :math:`10^{-12}` metres. The orange spheres are the
-   URDF's own — it draws one at every joint origin — so the one beside the
-   marker is the wrist, not a second estimate of the tool pose.
+   URDF's own, drawn at every joint origin, so the one beside the marker is
+   the wrist, not a second estimate of the tool pose.
 
 That the two coincide is measured rather than seen. The demonstration looks up
 the transform ``robot_state_publisher`` derives from the file and compares it
@@ -128,7 +128,7 @@ with no timing to confound it.
    * - Lengths moved
      - none
    * - Recovered origins exactly orthogonal
-     - all — which the file's own were not
+     - all, which the file's own were not
 
 A note on measuring the deviation
 =================================

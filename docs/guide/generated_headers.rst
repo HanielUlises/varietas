@@ -2,9 +2,9 @@
 Generated headers
 =================
 
-``emit`` takes a system solved over :math:`\Q(\p)` — the pose adjoined to the
-coefficient field rather than to the polynomial ring, so that one basis answers
-every pose instead of one basis per pose — and writes a header.
+``emit`` takes a system solved over :math:`\Q(\p)`, with the pose adjoined to
+the coefficient field rather than to the polynomial ring so that one basis
+answers every pose instead of one basis per pose, and writes a header.
 
 What the header contains
 ========================
@@ -45,8 +45,8 @@ Two runtimes
 
 ``eigen``
    The above plus ``solve``, which builds a separating combination of the
-   matrices, decomposes its transpose — left eigenvectors of a multiplication
-   operator are the evaluation functionals at the points of the variety — and
+   matrices, decomposes its transpose (left eigenvectors of a multiplication
+   operator are the evaluation functionals at the points of the variety), and
    returns the real solutions. This is the default for ``urdf_codegen``;
    ``--matrices-only`` selects the other.
 
@@ -93,7 +93,7 @@ Every denominator is guarded, so a pose on the locus the parametric basis fails
 to describe is **refused rather than answered with infinities**.
 
 The guard does not compare against zero. A denominator that vanishes
-mathematically almost never evaluates to ``0.0`` — it evaluates to whatever the
+mathematically almost never evaluates to ``0.0``; it evaluates to whatever the
 cancellation between its terms leaves behind. On the planar 2R arm the pole is
 the circle :math:`x^2+y^2+2x=0` (an artefact of the elimination rather than
 anything the arm cannot reach) and at :math:`(-1.6, 0.8)`, which is on it
@@ -124,7 +124,8 @@ emitted text that does not parse is a build failure.
 
 The solutions it returns are required to satisfy the original equations *and* to
 agree with :cpp:func:`varietas::solve_zero_dimensional` run on the same system
-with the pose substituted beforehand — two genuinely different computations.
+with the pose substituted beforehand, which are two genuinely different
+computations.
 
 The same holds one level up: a pose substituted into the basis computed over
 :math:`\Q(\p)` has to give the basis computed over :math:`\Q` with that pose
@@ -142,7 +143,7 @@ The epilogue hook
 
 :cpp:struct:`varietas::codegen::emit_options` carries an ``epilogue``: verbatim
 declarations placed inside the namespace after the struct. A solved system is not
-always the whole answer — an arm whose first joint was swept out needs an
+always the whole answer. An arm whose first joint was swept out needs an
 arctangent applied to what the header returns, and that arctangent belongs in the
 same header as the matrices it accompanies. :doc:`decoupling` is the one user of
 it today.

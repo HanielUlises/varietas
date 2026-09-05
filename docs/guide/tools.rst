@@ -6,8 +6,8 @@ All three live in ``varietas_urdf`` and are run with ``ros2 run``.
 
 .. _urdf_report:
 
-``urdf_report`` — the audit
-===========================
+``urdf_report``: the audit
+==========================
 
 .. code-block:: sh
 
@@ -23,7 +23,7 @@ than approximated silently. See :doc:`../theory/exactness`.
 
 .. _urdf_codegen:
 
-``urdf_codegen`` — URDF to header
+``urdf_codegen``: URDF to header
 =================================
 
 .. code-block:: sh
@@ -45,7 +45,7 @@ than approximated silently. See :doc:`../theory/exactness`.
    * - ``--coords xy``
      - Which position coordinates are adjoined as parameters. A coordinate left
        out is checked to be **identically zero** before its equation is dropped
-       — dropping an equation that constrains the joints would silently answer
+       Dropping an equation that constrains the joints would silently answer
        about a larger variety.
    * - ``--name N``
      - Name of the generated struct. Default ``urdf_ik``.
@@ -65,7 +65,7 @@ solver at all.
 
 .. _urdf_solve:
 
-``urdf_solve`` — one pose, exactly
+``urdf_solve``: one pose, exactly
 ==================================
 
 .. code-block:: sh

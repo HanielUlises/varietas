@@ -20,7 +20,7 @@ Rational approximation
 
 .. cpp:function:: rational rationalize(double value, long max_denominator = 1000000)
 
-   ``0.1575`` comes back as :math:`63/400` — the decimal the author wrote, not
+   ``0.1575`` comes back as :math:`63/400`, the decimal the author wrote, not
    the binary approximation the file stores.
 
 .. cpp:function:: double nearest_double(const rational& value)
@@ -66,7 +66,7 @@ Import
    move in more than one degree of freedom and have no single axis to substitute
    for), ``axis_not_rational_unit``, ``rotation_deviation_exceeded``,
    ``translation_deviation_exceeded``, ``no_actuated_joints``,
-   ``chain_invalid`` — the last meaning the importer, not the file, is at fault.
+   ``chain_invalid``, the last meaning the importer, not the file, is at fault.
 
 .. cpp:struct:: import_options
 
@@ -79,9 +79,9 @@ Import
 .. cpp:struct:: joint_recovery
 
    ``name``, ``rotation_deviation``, ``translation_deviation``, and ``unmoved``
-   — the recovered placement is the stated one to the last bit. A joint whose
-   angles were written as truncated decimals is *not* of this kind: it moves, by
-   the truncation.
+   for when the recovered placement is the stated one to the last bit. A joint
+   whose angles were written as truncated decimals is *not* of this kind: it
+   moves, by the truncation.
 
 .. cpp:struct:: import_report
 
@@ -107,4 +107,4 @@ Import
 Executables
 ===========
 
-``urdf_report``, ``urdf_codegen`` and ``urdf_solve`` — see :doc:`../guide/tools`.
+``urdf_report``, ``urdf_codegen`` and ``urdf_solve``; see :doc:`../guide/tools`.

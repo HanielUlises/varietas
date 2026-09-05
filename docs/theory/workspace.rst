@@ -16,8 +16,8 @@ Closure is not reach
 ====================
 
 The word *closure* carries weight the library should not paper over. The
-reachable set of an arm is **semialgebraic** — an annulus, a shell, something
-with a boundary — and boundaries are cut out by inequalities that no ideal
+reachable set of an arm is **semialgebraic**, an annulus, a shell, something
+with a boundary, and boundaries are cut out by inequalities that no ideal
 expresses. Where the workspace is full dimensional the closure is everything,
 and the elimination ideal returns only what held identically.
 
@@ -28,7 +28,7 @@ and the elimination ideal returns only what held identically.
 
    The workspace closure of the arm with perpendicular axes: the zero set of the
    single quartic :math:`(x^2+y^2+z^2+3)^2 = 16(x^2+y^2)` that elimination
-   returned. No torus is parameterised in drawing this — the surface is traced
+   returned. No torus is parameterised in drawing this; the surface is traced
    from the polynomial itself.
 
 Three cases make the distinction concrete:
@@ -42,7 +42,7 @@ Three cases make the distinction concrete:
    * - One joint
      - The circle :math:`z=0,\ x^2+y^2=1`, exactly.
    * - Planar two-joint
-     - :math:`z=0` and nothing else — so a point a hundred units away satisfies
+     - :math:`z=0` and nothing else, so a point a hundred units away satisfies
        every equation the closure has. The reachable annulus is not an ideal.
    * - Two joints, perpendicular axes
      - The quartic cutting out the torus. The map is not dominant, and the
@@ -56,8 +56,8 @@ Which formulation, and what it cost
 
 The exercise also measured something about the formulation. Eliminating for the
 torus in the half-angle ring takes **seventy seconds**. Presenting the same arm
-with two variables per joint and the relation :math:`c^2+s^2=1` — no
-denominators, and therefore no saturation at all — eliminates in **sixty
+with two variables per joint and the relation :math:`c^2+s^2=1`, which has no
+denominators and therefore needs no saturation at all, eliminates in **sixty
 milliseconds** and returns the identical quartic. A factor of a thousand.
 
 The half-angle substitution buys one variable per joint rather than two, which
@@ -75,7 +75,7 @@ around, and pays for it with a denominator, which is what matters here.
      - 1
      - 2
    * - Denominators
-     - yes — saturation required
+     - yes, saturation required
      - none
    * - :math:`q=\pi`
      - sent to infinity
@@ -106,7 +106,7 @@ so a chain composes as an ordinary product of polynomial matrices and
 carry.
 
 The trigonometric identity enters as a generator :math:`c_i^2+s_i^2-1` on the
-same footing as the pose residuals — a genuine equation of the problem rather
+same footing as the pose residuals: a genuine equation of the problem rather
 than damage repair. Nothing is cleared, so nothing spurious is attached, so
 there is nothing to saturate away: the loci :math:`t_i=\pm i` have no
 counterpart here, and :math:`\V(c^2+s^2-1)` is exactly the parameter space of a

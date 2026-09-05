@@ -46,5 +46,5 @@ The layering that matters
 ``varietas_kinematics`` **knows nothing of URDF**, which is the point. The
 rationalisation, the emitter, the implicitization and the singular locus are all
 written against :cpp:class:`varietas::chain`, so a URDF front end arrives later
-as a translation into it rather than as a dependency of the pipeline — and
+as a translation into it rather than as a dependency of the pipeline, and
 hand-written chains and DH tables enter by the same door.

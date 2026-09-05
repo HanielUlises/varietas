@@ -56,12 +56,13 @@ Parametric inverse kinematics
       * - ``overdetermined``
         - :math:`P > N`. The positions an :math:`N`-joint arm reaches form a
           variety of dimension at most :math:`N`, and the parameters are
-          transcendentals rather than a point of that image — so a general pose
+          transcendentals rather than a point of that image, so a general pose
           is out of reach and the ideal is the unit ideal.
       * - ``dropped_coordinate_is_not_identically_zero``
         - Leaving a coordinate out drops its equation, which is legitimate only
-          when that equation says nothing — when the tool's coordinate there is
-          identically zero as a polynomial, as the :math:`z` of a planar arm is.
+          when that equation says nothing, that is, when the tool's coordinate
+          there is identically zero as a polynomial, as the :math:`z` of a
+          planar arm is.
           Checked rather than assumed.
       * - ``not_zero_dimensional``
         - The saturated ideal over :math:`\Q(\p)` has no finite solution set at
@@ -69,7 +70,7 @@ Parametric inverse kinematics
           constrain; two joints turning about one axis is another.
 
    The first two counting cases leave :math:`P = N` as the **only** arrangement
-   that can produce a parametric solver — worth knowing before choosing
+   that can produce a parametric solver, which is worth knowing before choosing
    ``--coords`` rather than after waiting for a Gröbner basis to say so.
 
 Decoupled inverse kinematics
@@ -96,7 +97,7 @@ Decoupled inverse kinematics
 
    ``status``, ``reduced_status``, ``frame``, ``reduced`` (a
    ``parametric_solution<N-1, 2>``, emitted exactly as any other),
-   ``first_joint_name``, and ``branches`` — twice the reduced dimension, since
+   ``first_joint_name``, and ``branches``, twice the reduced dimension, since
    each reduced solution occurs at the swept angle and again half a turn away
    with the radius negated.
 
@@ -130,6 +131,6 @@ Emitting the decoupled solver
 Casting
 =======
 
-``varietas/ik/cast_chain.hpp`` — ``cast_vector3``,
+``varietas/ik/cast_chain.hpp``: ``cast_vector3``,
 ``cast_matrix3``, ``cast_rigid_transform``,
 ``cast_joint``, ``cast_chain``, between coefficient fields.

@@ -17,7 +17,7 @@ what holds the parametric path to two adjoined parameters.
 coprimality test bolted to the front: specialise every parameter but one in a
 small prime field, take a univariate gcd on machine integers, and skip the exact
 computation when the answer is constant. It is evidence rather than proof, which
-is admissible because it only decides whether to *skip* a cancellation — a
+is admissible because it only decides whether to *skip* a cancellation: a
 skipped one costs size, never correctness.
 
 It buys about 29 ms down to 25 ms on the reduced two-joint problem, and the
@@ -44,7 +44,7 @@ caller chooses the divisor :math:`h`. It separates a branch the geometry
 suggests; it does not *find* the branches.
 
 **What is needed.** Multivariate factorisation over :math:`\Q`. It is what would
-turn ``split_along`` into a **decomposition proper** — a singular locus reported
+turn ``split_along`` into a **decomposition proper**, a singular locus reported
 as its irreducible components rather than as one ideal the caller has to probe.
 
 **Status.** Not begun. It is a project of its own.
@@ -52,7 +52,7 @@ as its irreducible components rather than as one ideal the caller has to probe.
 Not on the roadmap
 ==================
 
-**A parametric solver for a full pose.** A general pose is six parameters —
+**A parametric solver for a full pose.** A general pose is six parameters:
 twelve matrix entries are not independent, and a general point of :math:`\A^{12}`
 is not a rigid motion at all. Two adjoined parameters is the working limit, so
 there is no parametric solver for a full pose and there is not going to be one
