@@ -14,7 +14,7 @@
 
 \theoremstyle{plain}
 \newtheorem{proposition}{Proposition}
-\newtheorem{lemma}[proposition]{Lemma}
+\newtheorem{corollary}[proposition]{Corollary}
 \theoremstyle{definition}
 \newtheorem{definition}[proposition]{Definition}
 \theoremstyle{remark}
@@ -22,7 +22,6 @@
 
 \newcommand{\FF}{\mathbb{F}}
 \newcommand{\QQ}{\mathbb{Q}}
-\newcommand{\CC}{\mathbb{C}}
 \newcommand{\Aff}{\mathbb{A}}
 \newcommand{\bp}{\boldsymbol{p}}
 \newcommand{\bt}{\boldsymbol{t}}
@@ -31,7 +30,7 @@
 
 \title{\bfseries The cost of parametric Gr\"obner basis computation\\ over a rational function field}
 \author{Haniel Ulises}
-\date{5 September 2026}
+\date{4 September 2026}
 
 \begin{document}
 \maketitle
@@ -41,20 +40,20 @@
 Inverse kinematics can be posed so that the target pose is adjoined to the coefficient field rather
 than substituted into the polynomial ring. A single Gr\"obner basis over $\QQ(\bp)$ then answers
 every pose, which is what permits an offline solve and generated runtime code. In the implementation
-studied here this computation completes in milliseconds with two adjoined parameters and has not been
+studied here that computation completes in milliseconds with two adjoined parameters and has not been
 observed to complete with three. Profiling attributes approximately \SI{86}{\percent} of the running
 time to the polynomial greatest common divisor invoked when coefficients are reduced to lowest terms,
-which suggests that a modular gcd would remove the limitation. We test that suggestion by repeating
-the computation over $\FF_p(\bp)$, where coefficient arithmetic is a single machine-word operation
-and coefficients do not grow. The three-parameter problem fails to terminate over $\FF_p$ as well.
-An independent measurement of the subresultant gcd over both fields, on dense trivariate operands
-ranging from $35$ to $969$ terms, gives fitted cost exponents of $3.79$ over $\FF_p$ and $3.81$ over
-$\QQ$, with a ratio between the fields that rises to and settles near $13$. The choice of coefficient
-field therefore governs a bounded multiplicative constant while the growth in operand size governs
-the exponent. Since the operands reached during a single reduction of the three-parameter run number
-$498$ terms, a value interior to the measured range, we conclude that a modular gcd formed by
-computing the existing remainder sequence over several primes cannot make the problem tractable, and
-that only a gcd based on evaluation and interpolation addresses the measured cost.
+which suggests that a modular gcd would remove the limitation. This report tests that suggestion by
+repeating the computation over $\FF_p(\bp)$, where coefficient arithmetic is a single machine-word
+operation and coefficients do not grow. The three-parameter problem fails to terminate over $\FF_p$
+as well. An independent measurement of the subresultant gcd over both fields, on dense trivariate
+operands ranging from $35$ to $969$ terms, gives fitted cost exponents of $3.79$ over $\FF_p$ and
+$3.81$ over $\QQ$, with a ratio between the fields that rises to and settles near $13$. The choice of
+coefficient field therefore governs a bounded multiplicative constant while the growth in operand size
+governs the exponent. Since the operands reached during a single reduction of the three-parameter run
+number $498$ terms, a value interior to the measured range, a modular gcd formed by computing the
+existing remainder sequence over several primes cannot make the problem tractable, and only a gcd
+based on evaluation and interpolation addresses the measured cost.
 \end{abstract}
 
 \section{Introduction}
@@ -65,47 +64,34 @@ the tangent half-angle substitution $t_i = \tan(q_i/2)$, and the resulting zero-
 be solved by the eigenvalue method of M\"oller and Stetter~\cite{moller1995}. Classical treatments of
 the general $6R$ arm reduce the problem to a univariate resultant of degree
 sixteen~\cite{leeliang1988,raghavanroth1993,manochacanny1994}. The system studied here takes a
-different route: the target pose is adjoined to the coefficient field, so that the Gr\"obner basis is
+different route. The target pose is adjoined to the coefficient field, so that the Gr\"obner basis is
 computed once for the manipulator and evaluated at each requested pose, and the action matrices of
 the quotient algebra are emitted as source code.
 
-The cost of this formulation is the subject of the present report. Writing $N$ for the number of
-actuated joints and $P$ for the number of adjoined pose coordinates, the observed behaviour of the
-implementation is
-\begin{itemize}
-  \item $P = N = 2$: complete in \SIrange{6}{33}{\milli\second};
-  \item $P = N = 3$: no result after \SI{900}{\second}.
-\end{itemize}
-An instrumented run of the three-parameter problem attributes approximately \SI{86}{\percent} of
-elapsed time to \texttt{polynomial\_gcd}. Two explanations are consistent with that attribution, and
-they recommend different work.
+The cost of that formulation is the subject of this report. Writing $N$ for the number of actuated
+joints and $P$ for the number of adjoined pose coordinates, the implementation completes the case
+$P = N = 2$ in between \SI{6}{\milli\second} and \SI{33}{\milli\second}, and has produced no result
+for $P = N = 3$ after \SI{900}{\second}. An instrumented run of the three-parameter problem attributes
+approximately \SI{86}{\percent} of elapsed time to the polynomial gcd invoked during normalisation of
+the coefficients.
 
-\begin{description}
-  \item[H1.] The cost lies in arithmetic on rational coefficients, whose numerators and denominators
-        grow through the subresultant remainder sequence. A modular gcd, computing images over
-        several primes and reconstructing by the Chinese remainder theorem, would then recover most
-        of it.
-  \item[H2.] The cost lies in the number of terms of the parameter polynomials, which is a property
-        of the problem and of the monomial order and is unaffected by the representation of
-        coefficients.
-\end{description}
+Two explanations are consistent with that attribution, and they recommend different work. The first
+locates the cost in arithmetic on rational coefficients, whose numerators and denominators grow
+through the subresultant remainder sequence; on this account a modular gcd, computing images over
+several primes and reconstructing by the Chinese remainder theorem, would recover most of the running
+time. The second locates it in the number of terms of the parameter polynomials, a quantity fixed by
+the problem and the monomial order and independent of how coefficients are represented. Deciding
+between the two accounts before committing to an implementation is the purpose of the experiment
+described below.
 
-\paragraph{Contribution.}
-We distinguish H1 from H2 by a controlled substitution of coefficient field, and we quantify the two
-contributions separately. Specifically:
-\begin{enumerate}
-  \item Section~\ref{sec:design} describes a substitution of $\FF_p$ for $\QQ$ that leaves the
-        algorithm, the ideal, the monomial order and the number of parameters unchanged, together
-        with a control that detects an invalid substitution.
-  \item Section~\ref{sec:results} reports that the three-parameter problem fails to terminate over
-        $\FF_p(\bp)$, and localises the failure to a single reduction rather than to an accumulating
-        basis.
-  \item Section~\ref{sec:gcd} reports the cost of the subresultant gcd in isolation over both fields
-        across a range of operand sizes covering the sizes reached by the failing run.
-  \item Section~\ref{sec:analysis} separates the multiplicative effect of the coefficient field from
-        the exponent in operand size, and states what each class of modular gcd can and cannot
-        address.
-\end{enumerate}
+The method is a controlled substitution of the coefficient field, replacing $\QQ$ by a prime field in
+which coefficients cannot grow, together with a control that detects an invalid substitution;
+Section~\ref{sec:design} sets this out. Section~\ref{sec:results} reports that the three-parameter
+problem fails to terminate over the prime field, and localises the failure to a single reduction
+rather than to an accumulating basis. Section~\ref{sec:gcd} measures the subresultant gcd in isolation
+over both fields, across a range of operand sizes that covers the sizes reached by the failing run.
+Section~\ref{sec:analysis} separates the multiplicative effect of the coefficient field from the
+exponent in operand size and states what each class of modular gcd can address.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -113,18 +99,19 @@ contributions separately. Specifically:
 \subsection{Notation}
 
 Let $k$ be a field and $k[\bt] = k[t_1,\dots,t_N]$ the polynomial ring in the joint variables. For a
-monomial order $\prec$ and $f \in k[\bt]$ nonzero, $\LM(f)$ denotes the leading monomial of $f$, and
-for an ideal $I$, $\In(I) = \langle \LM(f) : f \in I \setminus \{0\} \rangle$ denotes its initial
-ideal. A finite $G \subset I$ is a Gr\"obner basis when $\In(I) = \langle \LM(g) : g \in G\rangle$.
-The quotient $A = k[\bt]/I$ is a $k$-vector space with basis the monomials outside $\In(I)$, the
-standard monomials, and $I$ is zero-dimensional exactly when that basis is finite, in which case
-$\dim_k A$ bounds the number of points of $V(I)$ over $\bar{k}$ and equals it when $I$ is radical.
-We refer to~\cite{coxlittleoshea} throughout for these facts and to~\cite{buchberger1965} for the
-completion algorithm.
+monomial order $\prec$ and nonzero $f \in k[\bt]$, $\LM(f)$ denotes the leading monomial of $f$, and
+for an ideal $I$ the initial ideal is
+$\In(I) = \langle \LM(f) : f \in I \setminus \{0\} \rangle$. A finite $G \subset I$ is a Gr\"obner
+basis when $\In(I) = \langle \LM(g) : g \in G\rangle$. The quotient $A = k[\bt]/I$ is a $k$-vector
+space with basis the monomials outside $\In(I)$, called the standard monomials, and $I$ is
+zero-dimensional exactly when that basis is finite, in which case $\dim_k A$ bounds the number of
+points of $V(I)$ over $\bar{k}$ and equals it when $I$ is radical. We refer
+to~\cite{coxlittleoshea} throughout for these facts and to~\cite{buchberger1965} for the completion
+algorithm.
 
 Saturation is written $I : h^\infty$. The half-angle substitution introduces denominators
 $1 + t_i^2$, and clearing them attaches to $V(I)$ the loci $t_i = \pm\sqrt{-1}$, which correspond to
-no configuration of the manipulator; saturating by $h = \prod_i (1+t_i^2)$ removes them, so that
+no configuration of the manipulator. Saturating by $h = \prod_i (1+t_i^2)$ removes them, so that
 $\dim_k A$ counts configurations alone.
 
 \subsection{The parametric formulation}
@@ -143,47 +130,55 @@ indeterminates $\bp = (p_1,\dots,p_P)$ to $k$. The parametric position ideal is
 
 Coefficients are elements of $k(\bp)$, represented as a quotient of two polynomials in $\bp$ over $k$
 and reduced to lowest terms after every arithmetic operation. Reduction requires a polynomial gcd in
-$k[\bp]$, computed by a subresultant remainder sequence in the sense of
-Collins~\cite{collins1967}. Without reduction the representations grow without bound under the
-repeated additions and multiplications of the completion algorithm.
+$k[\bp]$, computed by a subresultant remainder sequence in the sense of Collins~\cite{collins1967}.
+Without it the representations grow without bound under the repeated additions and multiplications of
+the completion algorithm, so the reduction is a requirement of the formulation rather than an
+economy.
 
 \subsection{The admissible number of parameters}
 
-The following restricts attention to $P = N$ and explains why the three-parameter case is the
+The two results below restrict attention to $P = N$ and identify the three-parameter case as the
 smallest spatial instance.
 
 \begin{proposition}
-\label{prop:pn}
-Let $I$ be as in Definition~\ref{def:problem} with $k(\bp)$ the coefficient field and $\bp$
-algebraically independent over $k$.
-\begin{enumerate}
-  \item If $P < N$, then every irreducible component of $V(I)$ has dimension at least $N - P$. In
-        particular $I$ is not zero-dimensional unless $V(I) = \emptyset$.
-  \item If $P > N$ and the Zariski closure of the image of $\Phi$ has dimension at most $N < P$,
-        then $I = \langle 1 \rangle$.
-\end{enumerate}
-Consequently a nonempty finite solution set requires $P = N$.
+\label{prop:under}
+Let $I$ be as in Definition~\ref{def:problem} with $P < N$. Then every irreducible component of
+$V(I)$ has dimension at least $N - P$, and $I$ fails to be zero-dimensional unless
+$V(I) = \emptyset$.
 \end{proposition}
 
 \begin{proof}
-For (1), the ideal before saturation is generated by $P$ elements, so by Krull's height
+The ideal before saturation is generated by $P$ elements, so by Krull's height
 theorem~\cite[Ch.~10]{eisenbud} every minimal prime over it has height at most $P$, whence every
-component of its zero set has dimension at least $N - P$. Saturation removes components and does not
-lower the dimension of those that remain, so the bound persists, with the degenerate case $V(I) =
-\emptyset$ arising when every component is removed.
-
-For (2), the coordinates $p_1,\dots,p_P$ are algebraically independent over $k$, so the point
-$\bp \in \Aff^P$ is a generic point of $\Aff^P$ in the sense that it satisfies no nontrivial polynomial
-relation over $k$. The tool positions attainable by the manipulator lie in a constructible set whose
-closure $\overline{\operatorname{im}\Phi}$ has dimension at most $N$. If $N < P$ then
-$\overline{\operatorname{im}\Phi}$ is a proper closed subset of $\Aff^P$, cut out by some nonzero
-$F \in k[\bp]$, and $F(\bp) \neq 0$ by independence. Hence no $\bt$ satisfies the generators, and the
-ideal is the unit ideal.
+component of its zero set has dimension at least $N - P$. Saturation deletes components and leaves
+the dimension of those that survive unchanged, so the bound persists. The degenerate case
+$V(I) = \emptyset$ arises when saturation deletes every component.
 \end{proof}
 
+\begin{proposition}
+\label{prop:over}
+Let $I$ be as in Definition~\ref{def:problem} with $\bp$ algebraically independent over $k$, and
+suppose $P > N$. If the Zariski closure of the image of $\Phi$ has dimension at most $N$, then
+$I = \langle 1 \rangle$.
+\end{proposition}
+
+\begin{proof}
+Since $p_1,\dots,p_P$ satisfy no nontrivial polynomial relation over $k$, the point $\bp$ is a generic
+point of $\Aff^P$. The attainable tool positions lie in a constructible set whose closure
+$\overline{\operatorname{im}\Phi}$ has dimension at most $N < P$, hence is a proper closed subset of
+$\Aff^P$ and is contained in the zero set of some nonzero $F \in k[\bp]$. Independence gives
+$F(\bp) \neq 0$, so no $\bt$ satisfies the generators and the ideal is the unit ideal.
+\end{proof}
+
+\begin{corollary}
+\label{cor:pn}
+A nonempty finite solution set requires $P = N$.
+\end{corollary}
+
 \begin{remark}
-Proposition~\ref{prop:pn} is used by the implementation as a precondition test, rejecting
-$P \neq N$ by counting before any completion is attempted. The three-parameter case is therefore the
+\label{rem:precondition}
+The implementation uses Corollary~\ref{cor:pn} as a precondition test, rejecting $P \neq N$ by
+counting before any completion is attempted. Under this restriction the three-parameter case is the
 smallest one in which a manipulator positions a tool in space.
 \end{remark}
 
@@ -195,62 +190,58 @@ smallest one in which a manipulator positions a tool in space.
 The discriminating measurement replaces $\QQ$ by the prime field $\FF_p$ with $p = 2^{31} - 1$,
 holding fixed the algorithm, the monomial order, the generators, the saturation and the number of
 adjoined parameters. In $\FF_p$ an addition or multiplication is one machine-word operation followed
-by a reduction, and coefficients do not grow. Any cost surviving the substitution is independent of
-coefficient size, so the substitution separates H1 from H2 directly.
+by a reduction, and coefficients do not grow, so any cost surviving the substitution is independent of
+coefficient size. The substitution therefore separates the two accounts of Section~\ref{sec:introduction}
+directly.
 
-The field $\FF_p(\bp)$ is implemented as a quotient of two polynomials over $\FF_p$, normalised in
-the same three steps used for $\QQ(\bp)$: division by the monomial content, division by the
-polynomial gcd, and scaling to a monic denominator. The remainder of the library is templated on the
-coefficient type and is used without modification, so both runs execute the same instruction
-sequence up to the arithmetic itself.
+The field $\FF_p(\bp)$ is implemented as a quotient of two polynomials over $\FF_p$, normalised in the
+same three steps used for $\QQ(\bp)$: division by the monomial content, division by the polynomial
+gcd, and scaling to a monic denominator. The remainder of the library is templated on the coefficient
+type and is used without modification, so the two runs execute the same instruction sequence up to the
+arithmetic itself.
 
 \subsection{Validity control}
 
 Reduction modulo a prime preserves the structure of a Gr\"obner basis for all but finitely many
-primes; the exceptional primes are those for which the reduced basis has a different initial ideal,
-and detecting them is the standard obstacle in modular Gr\"obner methods~\cite{arnold2003}. We
+primes. The exceptional primes are those for which the reduced basis acquires a different initial
+ideal, and detecting them is the standard obstacle in modular Gr\"obner methods~\cite{arnold2003}. We
 therefore record, for every completed run, the multiset of leading monomials of the reduced basis.
 
 \begin{remark}
 \label{rem:control}
 Agreement of the initial ideals between the two fields is a necessary condition for the substitution
 to be valid on a given input. Disagreement would indicate an unlucky prime and would invalidate a
-comparison of running times on that input, since the two runs would be completing different ideals.
+comparison of running times on that input, the two runs having completed different ideals.
 \end{remark}
 
 \subsection{Systems}
 
-Three systems are measured, each posed as in Definition~\ref{def:problem} with one adjoined
-coordinate per joint, so that $P = N$ throughout in accordance with Proposition~\ref{prop:pn}.
-
-\begin{description}
-  \item[Planar 2R.] Two revolute joints about $z$, unit links, $C = \{x,y\}$. Two solutions.
-  \item[Reduced 2R.] The shoulder and elbow of an anthropomorphic arm, obtained by sweeping the base
-        joint out of the problem in the manner of Pieper's decoupling~\cite{pieper1968}, with $C$ a
-        radius and a height. Two solutions.
-  \item[Anthropomorphic 3R.] A base yawing about $z$ and two joints pitching about $y$, unit links,
-        $C = \{x,y,z\}$. Four solutions, established independently by completing the same system over
-        $\QQ$ at a fixed rational pose.
-\end{description}
-
-The two-parameter systems act as controls in the sense of Remark~\ref{rem:control}.
+Three systems are measured, each posed as in Definition~\ref{def:problem} with one adjoined coordinate
+per joint, so that $P = N$ throughout in accordance with Corollary~\ref{cor:pn}. The first is a planar
+two-link arm with two revolute joints about $z$ and unit links, constrained in $x$ and $y$, which has
+two solutions. The second is the shoulder and elbow of an anthropomorphic arm, obtained by removing
+its base joint in the manner of Pieper's decoupling~\cite{pieper1968} and constrained by a radius and
+a height; it also has two solutions. The third is the anthropomorphic arm itself, a base yawing about
+$z$ followed by two joints pitching about $y$, with unit links and all three coordinates constrained.
+Completing that system over $\QQ$ at a fixed rational pose establishes independently that it has four
+solutions. The first two systems act as controls in the sense of Remark~\ref{rem:control}.
 
 \subsection{Instrumentation}
 
 Three quantities are recorded beyond wall-clock time. The completion is timed separately from the
-construction of the forward map and residuals, since the latter also performs coefficient arithmetic
-and would otherwise be conflated with the former. The main loop of the completion algorithm reports
-the number of pairs processed, the current basis size, the pending pair count and the largest basis
-polynomial. The normalisation of $k(\bp)$ reports the largest numerator or denominator it has seen,
-in terms.
+construction of the forward map and the residuals, since the latter also performs coefficient
+arithmetic and would otherwise be conflated with the former. The main loop of the completion algorithm
+reports the number of pairs processed, the current basis size, the pending pair count and the largest
+basis polynomial. The normalisation of $k(\bp)$ reports the largest numerator or denominator it has
+encountered, measured in terms.
 
 \subsection{Environment}
 
-Measurements were taken on an Intel Core i7-10870H at \SI{2.20}{\giga\hertz} running Linux
-6.8, compiled with g++ 11.4.0 at \texttt{-O2}, with GMP providing arbitrary-precision rational
-arithmetic. In the gcd measurements of Section~\ref{sec:gcd}, points with operands of total degree
-at most eight are the median of five runs and larger points are single runs; the quantity of
-interest spans five orders of magnitude and is insensitive to run-to-run variation at that scale.
+Measurements were taken on an Intel Core i7-10870H at \SI{2.20}{\giga\hertz} running Linux 6.8,
+compiled with g++ 11.4.0 at \texttt{-O2}, with GMP providing arbitrary-precision rational arithmetic.
+In the gcd measurements of Section~\ref{sec:gcd}, points whose operands have total degree at most
+eight are the median of five runs and larger points are single runs; the quantity of interest spans
+five orders of magnitude and is insensitive to run-to-run variation at that scale.
 
 \section{Results}
 \label{sec:results}
@@ -259,15 +250,14 @@ interest spans five orders of magnitude and is insensitive to run-to-run variati
 
 Table~\ref{tab:controls} reports the two-parameter systems. Basis size, quotient dimension, largest
 basis polynomial and initial ideal agree exactly between the fields, so by Remark~\ref{rem:control}
-the prime is not unlucky for these inputs. The substitution reduces the completion time by a factor
-of approximately four.
+the prime is not unlucky for these inputs. The substitution reduces the completion time by a factor of
+approximately four.
 
 \begin{table}[htbp]
 \centering
-\caption{Two-parameter systems, both fields. Times in seconds. \emph{Setup} covers construction of
-the rational forward map and the residuals; \emph{completion} covers saturation and the Gr\"obner
-basis. The initial ideal is given by the exponent vectors of the leading monomials of the reduced
-basis.}
+\caption{Two-parameter systems, both fields. Times in seconds. \emph{Setup} covers construction of the
+rational forward map and the residuals; \emph{completion} covers saturation and the Gr\"obner basis.
+The initial ideal is given by the leading monomials of the reduced basis.}
 \label{tab:controls}
 \small
 \begin{tabular}{llS[table-format=1.3]S[table-format=1.3]rrrl}
@@ -285,15 +275,15 @@ Reduced 2R & $\QQ(r,z)$   & 0.001 & 0.033 & 2 & 2 & 3 & $\langle t_2^2,\, t_1 \r
 \subsection{The three-parameter system}
 \label{sec:three}
 
-The anthropomorphic 3R system with $C = \{x,y,z\}$ produced no result over $\FF_p(x,y,z)$ within
-\SI{400}{\second}, nor over $\QQ(x,y,z)$ within \SI{900}{\second}. Construction of the forward map
-and residuals completed in under \SI{0.05}{\second} in both fields, so the whole of the elapsed time
-is attributable to the completion.
+The anthropomorphic 3R system with all three coordinates constrained produced no result over
+$\FF_p(x,y,z)$ within \SI{400}{\second}, nor over $\QQ(x,y,z)$ within \SI{900}{\second}. Construction
+of the forward map and the residuals completed in under \SI{0.05}{\second} in both fields, so the
+whole of the elapsed time is attributable to the completion.
 
 Instrumenting the main loop localises the failure. Over $\FF_p(x,y,z)$ the run enters the loop with
-four basis elements, six pending pairs and a largest basis polynomial of fourteen terms, and
-processes one pair. No second pair was processed in the subsequent \SI{300}{\second}. The run is
-therefore inside a single reduction, and the failure is not an accumulation of many basis elements.
+four basis elements, six pending pairs and a largest basis polynomial of fourteen terms, and processes
+one pair. No second pair was processed in the subsequent \SI{300}{\second}. The run is therefore
+inside a single reduction, and the failure is not an accumulation of many basis elements.
 
 Instrumenting the normalisation identifies what grows during that reduction. The largest parameter
 polynomial appearing as a numerator or denominator reaches $460$ terms after \SI{93}{\second} and
@@ -305,10 +295,10 @@ section and fixes $m \approx 500$ as the operating point of interest.
 \subsection{The subresultant gcd in isolation}
 \label{sec:gcd}
 
-Table~\ref{tab:gcd} and Figure~\ref{fig:gcd} report the cost of a single gcd outside the pipeline.
-Two dense trivariate polynomials of equal total degree are formed with a planted common factor, so
-that the remainder sequence runs to full length rather than terminating early on coprime inputs. The
-same integer coefficients are used over both fields.
+Table~\ref{tab:gcd} and Figure~\ref{fig:gcd} report the cost of a single gcd outside the pipeline. Two
+dense trivariate polynomials of equal total degree are formed with a planted common factor, so that
+the remainder sequence runs to full length rather than terminating early on coprime inputs. The same
+integer coefficients are used over both fields.
 
 \begin{table}[htbp]
 \centering
@@ -357,18 +347,15 @@ Degree & $m$ & gcd terms & {$t$ over $\FF_p$} & {$t$ over $\QQ$} & {Ratio} \\
 \end{loglogaxis}
 \end{tikzpicture}
 \caption{Cost of one subresultant gcd against operand size, both axes logarithmic. The two series are
-parallel, so the coefficient field contributes a multiplicative constant and not an exponent. The
-vertical line marks the operand size observed during the failing three-parameter run, which lies
-inside the measured range.}
+parallel, so the coefficient field contributes a multiplicative constant and leaves the exponent
+unchanged. The vertical line marks the operand size observed during the failing three-parameter run,
+which lies inside the measured range.}
 \label{fig:gcd}
 \end{figure}
 
-Fitting $\log t = \alpha \log m + \beta$ by least squares over the points of Table~\ref{tab:gcd}
-gives
-\[
-  \alpha_{\FF_p} = 3.79, \qquad \alpha_{\QQ} = 3.81 .
-\]
-The ratio $t_{\QQ}/t_{\FF_p}$ rises from $11.3$ at $m = 35$ and settles near $13.9$ at $m = 455$.
+Fitting $\log t = \alpha \log m + \beta$ by least squares over the points of Table~\ref{tab:gcd} gives
+$\alpha_{\FF_p} = 3.79$ and $\alpha_{\QQ} = 3.81$. The ratio $t_{\QQ}/t_{\FF_p}$ rises from $11.3$ at
+$m = 35$ and settles near $13.9$ at $m = 455$.
 
 \section{Analysis}
 \label{sec:analysis}
@@ -378,101 +365,92 @@ The ratio $t_{\QQ}/t_{\FF_p}$ rises from $11.3$ at $m = 35$ and settles near $13
 The controls of Table~\ref{tab:controls} establish that the substitution of $\FF_p$ for $\QQ$
 preserves the computation on the two-parameter inputs, by the criterion of Remark~\ref{rem:control}.
 The three-parameter system then fails to terminate in a setting where coefficient arithmetic is a
-machine-word operation and coefficients do not grow, which is inconsistent with H1 as an explanation
-of the failure.
+machine-word operation and coefficients do not grow, which is inconsistent with the first of the two
+accounts as an explanation of the failure.
 
 Table~\ref{tab:gcd} quantifies what remains. The two fitted exponents agree to within $0.02$, so the
-coefficient field affects the constant $\beta$ and leaves $\alpha$ unchanged; this is visible in
+coefficient field affects the constant $\beta$ and leaves $\alpha$ unchanged, which appears in
 Figure~\ref{fig:gcd} as two parallel lines. The exponent $\alpha \approx 3.8$ is a property of the
 subresultant remainder sequence applied to multivariate operands: the sequence performs a number of
 pseudo-divisions growing with the degree in the main variable, each pseudo-division is a polynomial
-multiplication and exact division on the remaining variables, and the content computations recurse
+multiplication and exact division over the remaining variables, and the content computations recurse
 into those variables in turn~\cite{collins1967,brown1971}. The measured $\alpha$ is consistent with
 that structure and is present over both fields.
 
 \subsection{Consequences for modular gcd algorithms}
 
-The term \emph{modular gcd} covers two constructions with different consequences here.
-
-The first computes the same subresultant remainder sequence over several primes and reconstructs the
-result by the Chinese remainder theorem, with a trial division to certify the
-candidate~\cite{brown1971}. This addresses coefficient growth and leaves the sequence itself intact,
-so its benefit is bounded by the ratio measured in Table~\ref{tab:gcd}, namely a factor of
-approximately $13$. Applied to a computation that has not completed in \SI{900}{\second}, a factor of
-$13$ does not produce a usable result.
+The term \emph{modular gcd} covers two constructions with different consequences here. The first
+computes the same subresultant remainder sequence over several primes and reconstructs the result by
+the Chinese remainder theorem, with a trial division to certify the candidate~\cite{brown1971}. It
+addresses coefficient growth and leaves the sequence itself intact, so its benefit is bounded by the
+ratio measured in Table~\ref{tab:gcd}, approximately a factor of $13$. Applied to a computation that
+has not completed in \SI{900}{\second}, a factor of $13$ does not produce a usable result.
 
 The second reduces the multivariate problem to univariate gcds at sampled points and recovers the
 answer by interpolation, in the dense form due to Brown~\cite{brown1971} or the sparse form due to
-Zippel~\cite{zippel1979}, with the Hensel-based variant of Moses and Yun~\cite{mosesyun1973} a
-further alternative. This replaces the remainder sequence and therefore acts on $\alpha$ rather than
-on $\beta$. It is the construction that addresses the cost measured here.
+Zippel~\cite{zippel1979}, with the Hensel-based variant of Moses and Yun~\cite{mosesyun1973} a further
+alternative. Such a construction replaces the remainder sequence and therefore acts on $\alpha$ rather
+than on $\beta$, which is what the measurement identifies as the governing quantity.
 
 \subsection{The operating point}
 
 Interpolating Table~\ref{tab:gcd} between $m = 455$ and $m = 680$ at the exponent $\alpha = 3.79$
 places a single gcd at $m = 498$ at approximately \SI{9}{\second} over $\FF_p$ and, applying the
-measured ratio, approximately \SI{125}{\second} over $\QQ$. Both figures are consistent with the
-intervals between consecutive normalisations reported in Section~\ref{sec:three}. Since $m = 498$
-lies inside the range covered by Table~\ref{tab:gcd}, this statement requires no extrapolation.
+measured ratio, approximately \SI{125}{\second} over $\QQ$. Both figures agree with the intervals
+between consecutive normalisations reported in Section~\ref{sec:three}. Since $m = 498$ lies inside the
+range covered by Table~\ref{tab:gcd}, the estimate requires no extrapolation.
 
 \section{Threats to validity}
 \label{sec:threats}
 
-\paragraph{Necessity without sufficiency.}
-The experiment establishes that a faster gcd is necessary for the three-parameter problem. It does
-not establish sufficiency. The number of reductions the completion requires is unknown, since the
-run has never terminated, and a gcd with a lower exponent would remove the present obstruction
-without guaranteeing termination in useful time. Determining the number of reductions would require
-either a completed run or an independent bound on the size of the reduced basis over $\QQ(\bp)$.
+The experiment establishes that a faster gcd is necessary for the three-parameter problem without
+establishing that it is sufficient. The number of reductions the completion requires is unknown, the
+run having never terminated, and a gcd with a lower exponent would remove the present obstruction
+without guaranteeing termination in useful time. Settling the question would require either a
+completed run or an independent bound on the size of the reduced basis over $\QQ(\bp)$.
 
-\paragraph{Density of the benchmark operands.}
-The operands of Table~\ref{tab:gcd} are dense of their total degree, whereas the parameter
-polynomials arising in the pipeline are not necessarily dense. Density fixes the relation between
-degree and term count and makes $m$ an unambiguous size measure, at the cost of favouring dense
-interpolation over the sparse method of~\cite{zippel1979} in any comparison of the two. It does not
-affect the separation of $\alpha$ from $\beta$, which is the conclusion drawn.
+The operands of Table~\ref{tab:gcd} are dense of their total degree, whereas the parameter polynomials
+arising in the pipeline need not be. Density fixes the relation between degree and term count and makes
+$m$ an unambiguous size measure, at the cost of favouring dense interpolation over the sparse method
+of~\cite{zippel1979} in any comparison of the two. The separation of $\alpha$ from $\beta$, which is
+the conclusion drawn, is unaffected.
 
-\paragraph{Single prime.}
 One prime was used for the substitution. The control of Remark~\ref{rem:control} verifies that it is
-not unlucky on the two-parameter inputs, and it cannot be verified on the three-parameter input,
-which does not complete. An unlucky prime would be expected to alter the initial ideal and hence the
-course of the computation; it would not be expected to convert a terminating computation into a
-non-terminating one, since the failure is localised to a single reduction whose operands grow for
-reasons independent of the prime.
+not unlucky on the two-parameter inputs, and no such verification is available on the three-parameter
+input, which does not complete. An unlucky prime would be expected to alter the initial ideal and hence
+the course of the computation, and would not be expected to convert a terminating computation into a
+non-terminating one, the failure being localised to a single reduction whose operands grow for reasons
+independent of the prime.
 
-\paragraph{Timeout as evidence of non-termination.}
 The statements that the three-parameter runs do not complete are bounded observations at
 \SI{400}{\second} and \SI{900}{\second} rather than proofs of non-termination. The instrumentation of
-Section~\ref{sec:three}, showing one pair processed and none thereafter, is the stronger evidence
-and is what the analysis relies upon.
+Section~\ref{sec:three}, showing one pair processed and none thereafter, is the stronger evidence and
+is what the analysis relies upon.
 
-\paragraph{Implementation specificity.}
-All measurements concern one implementation of Buchberger's algorithm with the normal selection
-strategy and grevlex order. A completion algorithm of the F4 family~\cite{faugere1999}, which
-replaces sequential reduction by row reduction of a large matrix, would change the number and shape
-of the coefficient operations and has not been measured.
+Finally, all measurements concern one implementation of Buchberger's algorithm with the normal
+selection strategy and the graded reverse lexicographic order. A completion algorithm of the F4
+family~\cite{faugere1999}, which replaces sequential reduction by row reduction of a large matrix,
+would change the number and the shape of the coefficient operations, and has not been measured.
 
 \section{Conclusions}
 \label{sec:conclusions}
 
-\begin{enumerate}
-  \item The three-parameter parametric position problem does not complete over $\FF_p(x,y,z)$ within
-        \SI{400}{\second}, so its cost is not attributable to arithmetic on rational coefficients.
-        Hypothesis H1 is rejected as an explanation of the limitation.
-  \item The subresultant gcd on dense trivariate operands costs $\Theta(m^{\alpha})$ with
-        $\alpha \approx 3.8$ measured over both fields, and the coefficient field contributes a
-        bounded multiplicative factor of approximately $13$.
-  \item The operands reached within one reduction of the three-parameter run number $498$ terms, a
-        value interior to the measured range, placing a single gcd at approximately \SI{9}{\second}
-        over $\FF_p$.
-  \item A modular gcd formed by computing the existing remainder sequence over several primes is
-        bounded by the factor of $13$ and would not render the three-parameter problem tractable. A
-        gcd based on evaluation and interpolation acts on the exponent and is the construction that
-        addresses the measured cost; whether it suffices is not established here.
-  \item For the implementation as it stands, $P = 2$ is the working limit, and three-joint arms are
-        better obtained by the decoupling of~\cite{pieper1968}, which reduces such an arm to a
-        two-parameter problem completed in \SI{25}{\milli\second}.
-\end{enumerate}
+The three-parameter parametric position problem does not complete over $\FF_p(x,y,z)$ within
+\SI{400}{\second}, so its cost is not attributable to arithmetic on rational coefficients, and the
+first of the two accounts of Section~\ref{sec:introduction} is rejected as an explanation of the
+limitation. The subresultant gcd on dense trivariate operands instead costs $\Theta(m^{\alpha})$ with
+$\alpha \approx 3.8$ measured over both fields, the coefficient field contributing a bounded
+multiplicative factor of approximately $13$. The operands reached within one reduction of the
+three-parameter run number $498$ terms, a value interior to the measured range, which places a single
+gcd at approximately \SI{9}{\second} over $\FF_p$.
+
+It follows that a modular gcd formed by computing the existing remainder sequence over several primes
+is bounded by that factor of $13$ and would not render the three-parameter problem tractable, whereas
+a gcd based on evaluation and interpolation acts on the exponent and is the construction the
+measurement points to. Whether it also suffices is left open, for the reason given in
+Section~\ref{sec:threats}. For the implementation as it stands, $P = 2$ is the working limit, and
+three-joint arms are better obtained by the decoupling of~\cite{pieper1968}, which reduces such an arm
+to a two-parameter problem completed in \SI{25}{\milli\second}.
 
 \appendix
 
@@ -499,11 +477,11 @@ g++ -std=c++17 -O2 doc/experiments/gcd_cost.cpp -o gcd_cost \
 ./gcd_cost               # Table 2 and the fitted exponents
 \end{verbatim}
 
-Adding \texttt{-DVARIETAS\_EXPERIMENT\_TRACE} to the first build reports the largest parameter
+Adding \verb|-DVARIETAS_EXPERIMENT_TRACE| to the first build reports the largest parameter
 polynomial encountered during normalisation, which is the source of the figure $m = 498$. The
 pair-queue statistics of Section~\ref{sec:three} were obtained with a temporary instrumented copy of
-\texttt{varietas\_core/include/varietas/core/ideal/buchberger.hpp} printing the basis size, the
-pending pair count and the largest basis polynomial on each pass through the main loop.
+\verb|varietas_core/include/varietas/core/ideal/buchberger.hpp| printing the basis size, the pending
+pair count and the largest basis polynomial on each pass through the main loop.
 
 \begin{thebibliography}{99}
 
@@ -542,11 +520,6 @@ D.~Eisenbud.
 J.-C. Faug\`ere.
 \newblock A new efficient algorithm for computing Gr\"obner bases (F4).
 \newblock \emph{Journal of Pure and Applied Algebra}, 139(1--3):61--88, 1999.
-
-\bibitem{gathengerhard}
-J.~von zur Gathen and J.~Gerhard.
-\newblock \emph{Modern Computer Algebra}.
-\newblock Cambridge University Press, 3rd edition, 2013.
 
 \bibitem{leeliang1988}
 H.-Y. Lee and C.-G. Liang.
