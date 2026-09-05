@@ -151,6 +151,60 @@ TEST(RationalFunction, ArithmeticAgreesWithEvaluationOnRandomFunctions) {
   EXPECT_GT(checked, 100) << "the sample point degenerated too often to be an oracle";
 }
 
+// Planted common factors are found, whichever variable they live in.
+//
+// Normalisation consults a cheap modular test before paying for the exact gcd,
+// and that test specialises all but one parameter. A factor involving only a
+// specialised variable collapses to a constant and would be invisible, so every
+// variable is kept in turn. This is the test that would catch that loop being
+// narrowed back to one variable: a shared factor of y + 2 is only visible while
+// y is the variable being kept.
+//
+// A missed cancellation is not a wrong answer — the fraction still stands for
+// the same function — so what is asserted is the degree, which is where the
+// cost of missing one actually lands.
+TEST(RationalFunction, CommonFactorsAreCancelledInEveryVariable) {
+  struct planted {
+    field factor;
+    const char* description;
+  };
+  const planted factors[] = {
+      {x() + constant(1), "x + 1, in the first variable only"},
+      {y() + constant(2), "y + 2, in the second variable only"},
+      {x() * y() - constant(3), "xy - 3, in both"},
+      {x() * x() + y() - constant(5), "x^2 + y - 5, of higher degree"},
+  };
+
+  const field a = x() - constant(4);
+  const field b = y() + constant(7);
+
+  for (const auto& planted_factor : factors) {
+    // (a * g) / (b * g) must reduce to a / b.
+    const field reduced = (a * planted_factor.factor) / (b * planted_factor.factor);
+    const field expected = a / b;
+
+    EXPECT_EQ(reduced.numerator().degree(), expected.numerator().degree())
+        << "the factor " << planted_factor.description << " was not cancelled";
+    EXPECT_EQ(reduced.denominator().degree(), expected.denominator().degree())
+        << "the factor " << planted_factor.description << " was not cancelled";
+
+    // And it is still the same function.
+    EXPECT_EQ(reduced.evaluate(sample_point()), expected.evaluate(sample_point()));
+  }
+}
+
+// Coprime pairs are left alone, which is the case the cheap test exists for.
+TEST(RationalFunction, CoprimePairsAreNotAlteredByTheSearchForAFactor) {
+  const field n = x() * x() + y() + constant(1);
+  const field d = y() * y() - x() - constant(2);
+  const field quotient = n / d;
+
+  EXPECT_EQ(quotient.numerator().degree(), n.numerator().degree());
+  EXPECT_EQ(quotient.denominator().degree(), d.numerator().degree());
+  EXPECT_EQ(quotient.evaluate(sample_point()),
+            n.evaluate(sample_point()) / d.evaluate(sample_point()));
+}
+
 // The property that makes the field usable rather than merely correct.
 //
 // Repeatedly forming a + b * c, which is the shape of every reduction step in

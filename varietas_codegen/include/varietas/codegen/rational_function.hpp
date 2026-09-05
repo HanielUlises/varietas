@@ -183,11 +183,185 @@ class rational_function {
     }
   }
 
+  // A cheap test that answers "no common factor" or "cannot tell".
+  //
+  // The subresultant gcd is where a parametric solve spends its time — around
+  // eighty-six per cent of it on a three-joint arm, with the cost per call
+  // climbing as the parameter polynomials grow — and the great majority of
+  // those calls return 1. Deciding coprimality cheaply, and only paying for the
+  // exact gcd when the cheap test cannot rule it out, is what keeps that
+  // majority cheap.
+  //
+  // The test specialises every parameter but one at fixed values in a small
+  // prime field, leaving two univariate polynomials whose gcd is a Euclidean
+  // algorithm on machine integers. A common factor of positive degree in the
+  // remaining variable almost always survives that specialisation, so a
+  // constant gcd downstairs is strong evidence of coprimality upstairs.
+  //
+  // Strong evidence and not proof, and that is the point worth being precise
+  // about: this test is consulted only to decide whether to *skip* a
+  // cancellation. Skipping one that was available leaves the fraction in
+  // higher terms than necessary, which costs size and nothing else — the value
+  // the fraction stands for is unchanged. So the failure mode is a larger
+  // expression, never a wrong one, and the test is allowed to be a heuristic
+  // where the arithmetic around it is not.
+  //
+  // The values are fixed rather than random so that the same inputs always
+  // reach the same verdict: a generated header must not depend on when it was
+  // generated.
+  static bool certainly_coprime(const parameter_polynomial& n, const parameter_polynomial& d) {
+    constexpr long long prime = 1000003;  // fits a long long product comfortably
+
+    // Fixed, nonzero and distinct, so that the specialisation is not the zero
+    // map on some factor by accident, and so that the same inputs always reach
+    // the same verdict — a generated header must not depend on when it was
+    // generated.
+    std::array<long long, P> at{};
+    for (std::size_t v = 0; v < P; ++v) {
+      at[v] = static_cast<long long>(2 + 3 * v);
+    }
+
+    // Every variable has to be tried, not just the most promising one.
+    //
+    // Specialising a variable collapses any factor that involves only that
+    // variable into a constant, where it is invisible: keeping x and setting
+    // y = 5 turns a shared factor of (y + 2) into 7, and the univariate gcd in
+    // x then reports coprimality that is not there. But a nonconstant factor
+    // has positive degree in some variable, and both polynomials are divisible
+    // by it, so that variable is one where both have positive degree — keeping
+    // it is what makes the factor visible. Testing every such variable
+    // therefore cannot miss a factor for this reason.
+    for (std::size_t main = 0; main < P; ++main) {
+      const unsigned dn = degree_in(n, main);
+      const unsigned dd = degree_in(d, main);
+      if (dn == 0 || dd == 0) {
+        continue;  // no common factor can have positive degree here
+      }
+
+      std::vector<long long> un;
+      std::vector<long long> ud;
+      if (!specialise(n, main, at, prime, un) || !specialise(d, main, at, prime, ud)) {
+        return false;
+      }
+      // A degree that dropped under specialisation means a leading coefficient
+      // vanished there, and the conclusion would not follow. Fall back.
+      if (un.size() != dn + 1u || ud.size() != dd + 1u) {
+        return false;
+      }
+      if (univariate_gcd_degree(un, ud, prime) != 0) {
+        return false;  // a shared factor survives here; let the exact gcd decide
+      }
+    }
+
+    // Either every variable that could have carried a shared factor reported
+    // none, or no variable has positive degree in both — in which case no
+    // nonconstant polynomial divides both and the conclusion needs no test.
+    return true;
+  }
+
+  static unsigned degree_in(const parameter_polynomial& p, std::size_t v) {
+    unsigned d = 0;
+    for (const auto& t : p.terms()) {
+      const unsigned e = static_cast<unsigned>(t.mon[v]);
+      if (e > d) {
+        d = e;
+      }
+    }
+    return d;
+  }
+
+  static long long power_mod(long long base, unsigned exponent, long long prime) {
+    long long result = 1;
+    long long factor = ((base % prime) + prime) % prime;
+    while (exponent != 0) {
+      if ((exponent & 1u) != 0u) {
+        result = result * factor % prime;
+      }
+      factor = factor * factor % prime;
+      exponent >>= 1;
+    }
+    return result;
+  }
+
+  // The polynomial with every variable but `main` evaluated, reduced mod prime
+  // and returned as coefficients of increasing powers of `main`. False if a
+  // coefficient's denominator vanishes mod prime, where the reduction is not
+  // defined.
+  static bool specialise(const parameter_polynomial& p, std::size_t main,
+                         const std::array<long long, P>& at, long long prime,
+                         std::vector<long long>& out) {
+    out.assign(degree_in(p, main) + 1u, 0);
+    for (const auto& t : p.terms()) {
+      const mpz_class& numerator = t.coeff.get_num();
+      const mpz_class& denominator = t.coeff.get_den();
+      // The cast pins down which of GMP's mixed-mode overloads applies; a
+      // long long is ambiguous against them.
+      const long modulus = static_cast<long>(prime);
+      const long long a = mpz_class(numerator % modulus).get_si();
+      const long long b = mpz_class(denominator % modulus).get_si();
+      const long long bb = ((b % prime) + prime) % prime;
+      if (bb == 0) {
+        return false;
+      }
+      long long value = ((a % prime) + prime) % prime;
+      value = value * power_mod(bb, static_cast<unsigned>(prime - 2), prime) % prime;
+
+      for (std::size_t v = 0; v < P; ++v) {
+        if (v == main) {
+          continue;
+        }
+        value = value * power_mod(at[v], static_cast<unsigned>(t.mon[v]), prime) % prime;
+      }
+      const std::size_t k = static_cast<std::size_t>(t.mon[main]);
+      out[k] = (out[k] + value) % prime;
+    }
+    while (out.size() > 1 && out.back() == 0) {
+      out.pop_back();
+    }
+    return true;
+  }
+
+  // Degree of the gcd of two univariate polynomials over Z/prime, by Euclid.
+  static std::size_t univariate_gcd_degree(std::vector<long long> a, std::vector<long long> b,
+                                           long long prime) {
+    const auto trim = [](std::vector<long long>& p) {
+      while (p.size() > 1 && p.back() == 0) {
+        p.pop_back();
+      }
+    };
+    const auto vanishes = [](const std::vector<long long>& p) {
+      return p.size() == 1 && p[0] == 0;
+    };
+
+    trim(a);
+    trim(b);
+    while (!vanishes(b)) {
+      // a %= b. Each step cancels the leading term, so the degree falls and the
+      // loop ends.
+      const long long inverse = power_mod(b.back(), static_cast<unsigned>(prime - 2), prime);
+      while (!vanishes(a) && a.size() >= b.size()) {
+        const long long factor = a.back() % prime * inverse % prime;
+        const std::size_t shift = a.size() - b.size();
+        for (std::size_t i = 0; i < b.size(); ++i) {
+          const long long updated = (a[i + shift] - factor * b[i] % prime) % prime;
+          a[i + shift] = (updated + prime) % prime;
+        }
+        trim(a);
+      }
+      a.swap(b);
+    }
+    trim(a);
+    return a.size() - 1;
+  }
+
   // The polynomial common factor, divided out of each. The gcd is monic and
   // divides both, so each division is exact.
   static void remove_common_factor(parameter_polynomial& n, parameter_polynomial& d) {
     if (n.degree() == 0 || d.degree() == 0) {
       return;  // one side is a unit; nothing of positive degree can be shared
+    }
+    if (certainly_coprime(n, d)) {
+      return;  // nothing to cancel, and no exact gcd computed to find that out
     }
     const parameter_polynomial g = polynomial_gcd(n, d);
     if (g.degree() == 0) {
