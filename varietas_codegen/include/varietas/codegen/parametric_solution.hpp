@@ -25,9 +25,9 @@ namespace codegen {
 // and coefficient_traits<rational_function>::to_double says so with an assert.
 //
 // So the construction is repeated here with the conversion left out. It is the
-// same construction — the j-th column is the normal form of x_v times the j-th
-// standard monomial, read off in the quotient basis — and the only difference
-// is what the entry is stored as. That is the whole of the offline half: the
+// same construction, where the j-th column is the normal form of x_v times the
+// j-th standard monomial read off in the quotient basis, and the only
+// difference is what the entry is stored as. That is the whole of the offline half: the
 // matrix whose entries are functions of the pose is the object the emitter
 // writes out, and evaluating it at a pose is what the generated header does.
 template <std::size_t P>
@@ -89,7 +89,7 @@ parametric_matrix<P> parametric_action_matrix(
 // one joint to be a function of the others reduces it away, which is exactly
 // what happened to u in the fixture these tests use. So recovering x_i at a
 // point is not a matter of reading off a coordinate, it is evaluating the
-// normal form of x_i there — and over Q(p) those coefficients are functions of
+// normal form of x_i there, and over Q(p) those coefficients are functions of
 // the pose, which is why they have to be emitted alongside the matrices rather
 // than baked in as numbers.
 template <std::size_t N, std::size_t P, class Order>
@@ -137,7 +137,7 @@ struct parametric_solution {
   // Index of the monomial 1 in the quotient basis. 1 is a standard monomial for
   // every proper ideal, since no leading monomial of a nonunit basis is
   // constant, and the eigenvalue method divides by the eigenvector's component
-  // there — it is the value the evaluation functional gives to 1, and a
+  // there. It is the value the evaluation functional gives to 1, and a
   // functional that sends 1 to zero is not an evaluation at a point.
   std::size_t one_index = 0;
 

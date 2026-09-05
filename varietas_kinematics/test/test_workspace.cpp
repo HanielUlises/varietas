@@ -3,7 +3,7 @@
 // The three cases here are chosen because the construction behaves differently
 // in each, and conflating them is how implicitization comes to be oversold. A
 // one-joint arm traces a curve and elimination returns it exactly. A planar
-// two-joint arm fills its plane, and elimination returns only the plane —
+// two-joint arm fills its plane, and elimination returns only the plane:
 // the annulus it actually reaches is semialgebraic and no ideal describes it.
 // A two-joint arm with perpendicular axes traces a surface in three-space, and
 // there elimination earns its name.

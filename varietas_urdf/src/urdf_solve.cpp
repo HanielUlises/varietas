@@ -13,7 +13,7 @@
 //
 // The pose has to be exact, and that is not a formality. A target assembled by
 // rounding sines and cosines into rationals has denominators near 2^52, and
-// Buchberger over coefficients of that size does not finish — measured, not
+// Buchberger over coefficients of that size does not finish: measured, not
 // supposed. So the target is snapped to a nearby exact pose the same way the
 // URDF's own geometry is, with the deviation reported rather than hidden.
 

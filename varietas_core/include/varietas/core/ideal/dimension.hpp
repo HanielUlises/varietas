@@ -13,8 +13,8 @@ namespace varietas {
 
 // The dimension of V(I), read off the leading terms.
 //
-// Until now the library asked one question of a variety's size — whether it is
-// finite — because that is the question inverse kinematics asks, and the
+// Until now the library asked one question of a variety's size, whether it is
+// finite, because that is the question inverse kinematics asks, and the
 // finiteness criterion answers it from the leading monomials alone. The
 // singular locus asks the general one. A singular set is almost never finite:
 // for a planar arm it is a circle's worth of configurations, for a spatial arm
@@ -37,8 +37,8 @@ namespace varietas {
 //
 // The empty variety falls out of the same statement rather than needing a case.
 // If I is the unit ideal then 1 is a leading monomial, its support is empty and
-// therefore contained in every S, so no subset is independent — not even the
-// empty one — and the maximum is over an empty set. That is reported as
+// therefore contained in every S, so no subset is independent, not even the
+// empty one, and the maximum is over an empty set. That is reported as
 // is_empty rather than as a dimension of zero, which is what a point would be.
 
 template <std::size_t N>
@@ -54,7 +54,7 @@ struct affine_dimension {
 
   // A set of variables of that size which the ideal leaves unconstrained. Its
   // complement is a set of coordinates on which V(I) is finite over the rest,
-  // so it names *which* freedom the variety has and not only how much — for a
+  // so it names *which* freedom the variety has and not only how much: for a
   // singular locus, which joints are still free to move along it.
   std::array<bool, N> independent{};
 

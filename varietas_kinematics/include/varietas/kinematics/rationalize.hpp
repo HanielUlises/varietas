@@ -33,7 +33,7 @@ namespace varietas {
 // polynomial matrix over a denominator of the form (1 + t_i^2)^{e_i}, and that
 // form is closed under composition. So a transform can be carried as a
 // numerator together with the exponent vector e, and no general rational
-// function arithmetic — no common denominators to compute, no gcd — is ever
+// function arithmetic, with no common denominators to compute and no gcd, is
 // required.
 //
 // What this deliberately is not is an element of SE(3) over a field. The
@@ -75,7 +75,7 @@ class rational_transform {
   // The displacement of a revolute joint about the unit axis u, parameterised
   // by t = tan(q / 2) in the variable at index k. The numerator is Rodrigues'
   // formula cleared of its denominator, using [u]^2 = u u^T - I, which holds
-  // because u is a unit vector — a fact chain::validate has already checked.
+  // because u is a unit vector, a fact chain::validate has already checked.
   static rational_transform revolute(const vector3<Coeff>& u, std::size_t k) {
     VARIETAS_ASSERT(k < N);
 
@@ -252,7 +252,7 @@ rational_transform<Coeff, N, Order> rational_forward_kinematics(
 // The residuals of the pose equations, denominators cleared: twelve
 // polynomials, nine from the rotation and three from the translation. The
 // system is overdetermined, which is the usual formulation and which
-// Buchberger handles without special treatment — the redundancy is information
+// Buchberger handles without special treatment: the redundancy is information
 // about the rotation group, not an inconsistency.
 template <std::size_t N, class Order, class Coeff>
 std::vector<polynomial<Coeff, N, Order>> pose_residuals(
@@ -277,7 +277,7 @@ std::vector<polynomial<Coeff, N, Order>> pose_residuals(
 
 // The residuals of the position equations alone. Asking only where the tool is,
 // and not how it is turned, is the classical inverse kinematics problem for an
-// arm with fewer joints than SE(3) has dimensions — a planar two-link arm has
+// arm with fewer joints than SE(3) has dimensions: a planar two-link arm has
 // two elbow solutions for a reachable point, and none of them for the pose,
 // since the orientation is then whatever the position leaves it.
 template <std::size_t N, class Order, class Coeff>

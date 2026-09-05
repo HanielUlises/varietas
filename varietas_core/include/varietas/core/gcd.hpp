@@ -16,8 +16,8 @@ namespace varietas {
 //
 // The algorithm is the classical recursion on the number of variables: a
 // polynomial in N variables is read as a univariate polynomial in one main
-// variable whose coefficients are polynomials in the others, the content — the
-// gcd of those coefficients — is taken out by a recursive call, and the
+// variable whose coefficients are polynomials in the others, the content, that
+// is the gcd of those coefficients, is taken out by a recursive call, and the
 // primitive parts are carried through a Euclidean remainder sequence. Ordinary
 // remainders do not exist over a ring, so the step is a pseudo-remainder, and
 // the growth that pseudo-division causes is removed at each step by the exact

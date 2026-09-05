@@ -20,8 +20,8 @@ namespace urdf_import {
 // Refusal is the interesting half. Every rotation in the file is recovered as
 // an exact rational quaternion and the recovery is only accepted if it lies
 // within a stated tolerance of what the file said; a joint whose placement is
-// genuinely oblique — not a multiple of a right angle, not a fraction of small
-// denominator — cannot be represented exactly and is reported rather than
+// genuinely oblique, neither a multiple of a right angle nor a fraction of
+// small denominator, cannot be represented exactly and is reported rather than
 // rounded. The tolerance is thus a statement about the model, not about the
 // arithmetic: it says how far from the file the exact robot is allowed to be,
 // and the offline pipeline is exact about that robot from there on.

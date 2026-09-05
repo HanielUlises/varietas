@@ -135,7 +135,7 @@ TEST(Generated, PoseDependenceIsRealAndNotBakedIn) {
 
 // The coordinates that turn an eigenvector into a point.
 //
-// u is not a standard monomial here — it was eliminated — so its value at a
+// u is not a standard monomial here, having been eliminated, so its value at a
 // solution is the normal form v/y evaluated there. That is what these
 // coordinates are, and getting them wrong would produce a solver that returns
 // the right number of points with the wrong u in each.
@@ -240,10 +240,10 @@ TEST(Generated, SolveIsDeterministic) {
 // out by hand, which catches a wrong answer but not a shared misunderstanding.
 // This one runs varietas_core's own spectral solver on the same system with the
 // pose substituted before the computation, and requires the two to agree. The
-// offline path — pose adjoined to the coefficient field, one basis for every
-// pose, emitted, compiled — and the online path — a basis per pose, solved in
-// place — are genuinely different computations, and their agreeing is the
-// claim that makes emitting worth doing at all.
+// offline path, with the pose adjoined to the coefficient field, one basis for
+// every pose, emitted and compiled, and the online path, a basis per pose
+// solved in place, are genuinely different computations, and their agreeing
+// is the claim that makes emitting worth doing at all.
 TEST(Generated, AgreesWithTheLibrarySolverOnTheSameSystem) {
   using varietas::grevlex;
   using varietas::make_rational;

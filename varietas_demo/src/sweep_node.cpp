@@ -273,15 +273,15 @@ class sweep_node : public rclcpp::Node {
   // The claim the demonstration exists to support, measured rather than
   // eyeballed: the pose computed from the exactly recovered chain agrees with
   // the one robot_state_publisher derives from the file's decimals, at the same
-  // instant. Reading the two off the screen cannot establish this — the tool
+  // instant. Reading the two off the screen cannot establish this: the tool
   // moves fast enough that a tenth of a second of display lag looks exactly
-  // like a kinematic error — so the transform is looked up at a definite past
+  // like a kinematic error, so the transform is looked up at a definite past
   // stamp and our own map evaluated at that same stamp.
   void verify() {
     // The latest transform tf holds, rather than one at a time of our
     // choosing. Asking for a particular instant makes tf interpolate between
     // the samples either side of it, and the comparison then measures that
-    // interpolation — a fraction of a millimetre at these speeds — instead of
+    // interpolation, a fraction of a millimetre at these speeds, instead of
     // the kinematics. The latest sample carries the stamp it was actually
     // computed for, and the trajectory is an analytic function of time, so our
     // own map can be evaluated at precisely that instant.

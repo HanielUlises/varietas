@@ -117,7 +117,7 @@ TEST(urdf_chain, imports_the_iiwa_exactly) {
   // Every rotation in the file is a multiple of a right angle and every length
   // a short decimal, so all of it is representable. The lengths come back
   // indistinguishable from the file; the rotations do not, and that is the
-  // recovery working rather than failing — it has moved each axis onto the
+  // recovery working rather than failing: it has moved each axis onto the
   // right angle the file truncated, by about 4e-12 radians.
   EXPECT_GT(report.max_rotation_deviation, 0.0);
   EXPECT_LT(report.max_rotation_deviation, 1e-11);
@@ -254,7 +254,7 @@ TEST(urdf_chain, forward_kinematics_agrees_with_kdl) {
 //
 // The planar arm in varietas_kinematics checks the rationalisation against a
 // map written a few lines away from it. This checks it against KDL, on seven
-// joints whose axes are turned by right angles at every link — the composition
+// joints whose axes are turned by right angles at every link, the composition
 // the closure property has to survive. Substituting t = tan(q / 2) into the
 // rational map must reproduce the pose the reference implementation computes
 // from the angles directly.

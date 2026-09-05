@@ -14,8 +14,8 @@ namespace varietas {
 // rather than a field.
 //
 // Eigen is not the tool here and no amount of care would make it one. Every
-// decomposition it offers divides — Gaussian elimination by a pivot, QR by a
-// norm — and the entries this header is written for are polynomials, which are
+// decomposition it offers divides, Gaussian elimination by a pivot and QR by a
+// norm, and the entries this header is written for are polynomials, which are
 // not invertible. The same fact the rationalisation ran into with matrix3 and
 // answered with rational_transform: a determinant over k[x] must be assembled
 // from additions and multiplications alone.
@@ -112,8 +112,8 @@ const Element& memoised_determinant(const dense_matrix<Element>& m, std::size_t 
 // The determinant of a square matrix over a commutative ring.
 //
 // Element is required to supply nothing but addition, subtraction,
-// multiplication, default construction as zero and equality — no identity, no
-// inverse, no division — which is exactly what a polynomial ring offers.
+// multiplication, default construction as zero and equality, with no identity,
+// no inverse and no division, which is exactly what a polynomial ring offers.
 template <class Element>
 Element determinant(const dense_matrix<Element>& m) {
   VARIETAS_ASSERT(m.rows() == m.cols());

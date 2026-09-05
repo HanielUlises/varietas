@@ -22,8 +22,8 @@ namespace varietas {
 // built as translation(i) - denominator * target[i], so the target appears in
 // the generators only as a coefficient, and affinely at that. Fixing it to a
 // number therefore produces a Gröbner basis that answers exactly one pose,
-// which is no use to a robot. Leaving it symbolic — adjoining x, y, z to the
-// coefficient field rather than to the polynomial ring — produces a basis whose
+// which is no use to a robot. Leaving it symbolic, by adjoining x, y, z to the
+// coefficient field rather than to the polynomial ring, produces a basis whose
 // coefficients are rational functions of the pose, and the action matrix
 // assembled from it has entries that are rational functions too. That matrix is
 // what the generated header stores, and evaluating it at a pose is what the
@@ -32,7 +32,7 @@ namespace varietas {
 // Nothing in varietas_core changes to accommodate this. The ideal, quotient and
 // solving layers are templated on the coefficient type and ask it only for the
 // field operations, so the same Buchberger implementation that runs over Q runs
-// over Q(x, y, z) — the second time this parameterisation has paid for itself.
+// over Q(x, y, z), the second time this parameterisation has paid for itself.
 //
 // P is the number of pose parameters: 3 for a position target, 6 for a pose.
 template <std::size_t P>
@@ -45,7 +45,7 @@ class rational_function {
 
   rational_function() : numerator_(), denominator_(parameter_polynomial::constant(rational(1))) {}
 
-  // NOLINTNEXTLINE(google-explicit-constructor) — a rational is a constant
+  // NOLINTNEXTLINE(google-explicit-constructor): a rational is a constant
   // function, and the implicit conversion is what lets the existing generic
   // code build coefficients without knowing the field.
   rational_function(const rational& c)
@@ -156,8 +156,8 @@ class rational_function {
  private:
   // Reduce the representation to lowest terms.
   //
-  // The cheap reductions come first because they are cheap — the monomial
-  // content and the rational content are read straight off the terms — and the
+  // The cheap reductions come first because they are cheap, since the monomial
+  // content and the rational content are read straight off the terms, and the
   // polynomial gcd, which is the expensive one, then runs on smaller inputs.
   //
   // Without the gcd this arithmetic is still correct but unusable: the entries
@@ -185,9 +185,9 @@ class rational_function {
 
   // A cheap test that answers "no common factor" or "cannot tell".
   //
-  // The subresultant gcd is where a parametric solve spends its time — around
+  // The subresultant gcd is where a parametric solve spends its time, around
   // eighty-six per cent of it on a three-joint arm, with the cost per call
-  // climbing as the parameter polynomials grow — and the great majority of
+  // climbing as the parameter polynomials grow, and the great majority of
   // those calls return 1. Deciding coprimality cheaply, and only paying for the
   // exact gcd when the cheap test cannot rule it out, is what keeps that
   // majority cheap.
@@ -201,7 +201,7 @@ class rational_function {
   // Strong evidence and not proof, and that is the point worth being precise
   // about: this test is consulted only to decide whether to *skip* a
   // cancellation. Skipping one that was available leaves the fraction in
-  // higher terms than necessary, which costs size and nothing else — the value
+  // higher terms than necessary, which costs size and nothing else. The value
   // the fraction stands for is unchanged. So the failure mode is a larger
   // expression, never a wrong one, and the test is allowed to be a heuristic
   // where the arithmetic around it is not.
@@ -214,7 +214,7 @@ class rational_function {
 
     // Fixed, nonzero and distinct, so that the specialisation is not the zero
     // map on some factor by accident, and so that the same inputs always reach
-    // the same verdict — a generated header must not depend on when it was
+    // the same verdict, since a generated header must not depend on when it was
     // generated.
     std::array<long long, P> at{};
     for (std::size_t v = 0; v < P; ++v) {
@@ -228,7 +228,7 @@ class rational_function {
     // y = 5 turns a shared factor of (y + 2) into 7, and the univariate gcd in
     // x then reports coprimality that is not there. But a nonconstant factor
     // has positive degree in some variable, and both polynomials are divisible
-    // by it, so that variable is one where both have positive degree — keeping
+    // by it, so that variable is one where both have positive degree. Keeping
     // it is what makes the factor visible. Testing every such variable
     // therefore cannot miss a factor for this reason.
     for (std::size_t main = 0; main < P; ++main) {
@@ -254,7 +254,7 @@ class rational_function {
     }
 
     // Either every variable that could have carried a shared factor reported
-    // none, or no variable has positive degree in both — in which case no
+    // none, or no variable has positive degree in both, in which case no
     // nonconstant polynomial divides both and the conclusion needs no test.
     return true;
   }

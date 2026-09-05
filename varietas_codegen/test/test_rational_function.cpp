@@ -3,7 +3,7 @@
 // rational_function is where the parametric pipeline lives or dies. Its
 // arithmetic is written in terms of a normalisation that cancels a polynomial
 // gcd, and the whole reason that cancellation is there is that without it the
-// representations grow without bound under repeated arithmetic — which is
+// representations grow without bound under repeated arithmetic, which is
 // precisely the regime Buchberger puts a coefficient through. A field that is
 // correct but whose representations blow up is as useless here as one that is
 // wrong, so both properties are checked: the arithmetic against evaluation, and
@@ -160,8 +160,8 @@ TEST(RationalFunction, ArithmeticAgreesWithEvaluationOnRandomFunctions) {
 // narrowed back to one variable: a shared factor of y + 2 is only visible while
 // y is the variable being kept.
 //
-// A missed cancellation is not a wrong answer — the fraction still stands for
-// the same function — so what is asserted is the degree, which is where the
+// A missed cancellation is not a wrong answer, since the fraction still stands
+// for the same function, so what is asserted is the degree, which is where the
 // cost of missing one actually lands.
 TEST(RationalFunction, CommonFactorsAreCancelledInEveryVariable) {
   struct planted {

@@ -24,7 +24,7 @@ namespace varietas {
 // ring instead turns the same residuals into a description of the graph of the
 // forward kinematics map, and eliminating the joint variables projects that
 // graph onto the pose coordinates. By the Closure Theorem the result is the
-// ideal of the Zariski closure of the image — the equations every reachable
+// ideal of the Zariski closure of the image: the equations every reachable
 // point satisfies.
 //
 // The word closure carries real weight and the library should not pretend
@@ -33,7 +33,7 @@ namespace varietas {
 // ideal can express. Zariski closure is the smallest algebraic set containing
 // it, so when the workspace is full dimensional in the pose coordinates the
 // closure is everything and the elimination ideal says only what was true
-// identically — that a planar arm stays in its plane, for instance. The
+// identically, that a planar arm stays in its plane for instance. The
 // construction is informative exactly when the map is not dominant, that is,
 // when the arm has fewer degrees of freedom than the space it moves in, and
 // then it is very informative: a two-joint arm with perpendicular axes traces a
@@ -44,15 +44,15 @@ namespace varietas {
 // the pose in a single pass.
 //
 // Saturating and then eliminating are both eliminations, and performing them
-// separately means computing a Gröbner basis of the saturation in full — an
-// object nobody wants — and then computing another one to project it.
+// separately means computing a Gröbner basis of the saturation in full, an
+// object nobody wants, and then computing another one to project it.
 // Eliminating y and the joint variables together asks Buchberger for the only
 // thing actually needed.
 //
 // The saving is smaller than that argument suggests: on the torus below it is
 // about a tenth, seventy-eight seconds against seventy. The cost lies in the
 // parameterisation rather than in the arrangement of the passes, which is why
-// this path is no longer the one workspace_relations takes — see the
+// this path is no longer the one workspace_relations takes; see the
 // trigonometric construction further down, where the same torus eliminates in
 // sixty milliseconds and returns the identical quartic. It is kept because the
 // agreement of the two is a test rather than an assumption, and because the
@@ -156,7 +156,7 @@ std::vector<polynomial<Coeff, 3, grevlex>> workspace_relations_half_angle(
 // never created. What is eliminated is exactly the parameter block, and the
 // Closure Theorem applies verbatim.
 //
-// V is the size of the joint block — two variables per revolute joint and one
+// V is the size of the joint block: two variables per revolute joint and one
 // per prismatic, which trigonometric_variable_count computes from the chain.
 template <std::size_t V>
 using trigonometric_workspace_order = block_order<V, grevlex, grevlex>;

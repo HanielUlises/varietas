@@ -31,7 +31,7 @@
 // computed at a pose answers that pose and is then thrown away, which is fine
 // offline and useless online. A basis computed over Q(p) is an object whose
 // entries are functions of the pose, and evaluating those functions is
-// arithmetic — which is exactly what emit() writes out.
+// arithmetic, which is exactly what emit() writes out.
 namespace varietas {
 namespace ik {
 
@@ -59,7 +59,7 @@ enum class parametric_ik_status {
   // Saturation only removes components, so it cannot raise the dimension of the
   // ones that survive: the saturated ideal is either the unit ideal, meaning the
   // arm reaches no such point at all, or it is still positive-dimensional. There
-  // is nothing to emit either way, and saying so here costs nothing — whereas
+  // is nothing to emit either way, and saying so here costs nothing, whereas
   // finding out by running Buchberger over Q(p) on an underdetermined system is
   // the most expensive way to learn it.
   underdetermined,
@@ -68,7 +68,7 @@ enum class parametric_ik_status {
   // general pose and is likewise caught before anything expensive runs.
   //
   // The tool positions an N-joint arm can reach form a variety of dimension at
-  // most N, and the parameters are transcendentals — a general point of
+  // most N, and the parameters are transcendentals, a general point of
   // P-space, not a point of that image. With P > N the image is a proper
   // subvariety of the space the pose ranges over, a general pose does not lie
   // on it, and the ideal is the unit ideal: the arm simply cannot reach the
@@ -82,7 +82,7 @@ enum class parametric_ik_status {
   // A coordinate that was *not* requested is nevertheless moved by the arm.
   //
   // Leaving a coordinate out of the parameter list drops its equation, and
-  // dropping an equation is only legitimate when the equation says nothing —
+  // dropping an equation is only legitimate when the equation says nothing,
   // when the tool's coordinate there is identically zero as a polynomial in the
   // joint variables, as the z of a planar arm is. If it is not identically
   // zero, the dropped equation constrained the joints, and the system that
@@ -141,7 +141,7 @@ struct parametric_ik_result {
 namespace detail {
 
 // The name given to the ring variable a joint contributes. The variable is not
-// the joint angle — it is tan(q/2) for a revolute joint — and the generated
+// the joint angle, being tan(q/2) for a revolute joint, and the generated
 // header's comments should not pretend otherwise.
 template <class Coeff>
 inline std::string variable_name(const joint<Coeff>& j) {

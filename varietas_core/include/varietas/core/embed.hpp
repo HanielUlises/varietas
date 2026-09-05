@@ -16,7 +16,7 @@ namespace varietas {
 // there, and reading the answer back in the original one: saturation adjoins
 // the Rabinowitsch variable, and the parametric formulation will adjoin the
 // pose coordinates. Both need the same two operations, and both need them to
-// be honest about the order — a polynomial carries its monomial order in its
+// be honest about the order: a polynomial carries its monomial order in its
 // type precisely so that terms written under different orders cannot be mixed,
 // and an embedding lands in a ring whose order is a different one, so the terms
 // must be re-sorted rather than copied across.
@@ -36,8 +36,8 @@ monomial<M> embed_at(const monomial<N>& m, std::size_t offset) {
 }
 
 // The inverse, defined only on monomials that do not involve the variables
-// outside the window. Callers establish that by construction — after an
-// elimination, the surviving basis elements are free of the eliminated block —
+// outside the window. Callers establish that by construction, since after an
+// elimination the surviving basis elements are free of the eliminated block,
 // so a violation is a programming error rather than a runtime condition.
 template <std::size_t N, std::size_t M>
 monomial<N> project_from(const monomial<M>& m, std::size_t offset) {

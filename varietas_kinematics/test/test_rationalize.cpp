@@ -141,7 +141,7 @@ TEST(rationalize, recovers_the_two_elbow_solutions) {
   // Two elbow configurations, which is what a planar two-link arm has at a
   // reachable point in the interior of its workspace. The count is read off the
   // leading monomials of the basis, and it is the certificate that no branch
-  // was missed — not a claim that two were found.
+  // was missed, not a claim that two were found.
   EXPECT_EQ(solutions.quotient().monomials.size(), 2u);
 
   // The configuration the target was built from is a solution, exactly. Over

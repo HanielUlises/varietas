@@ -15,8 +15,8 @@ namespace varietas {
 // against the polynomial system that represents it.
 //
 // This is deliberately the floating point side of the library. Evaluating the
-// pose at a given angle is transcendental — it needs cos and sin of a real
-// number, which no rational field supplies — so nothing here pretends to
+// pose at a given angle is transcendental, needing cos and sin of a real
+// number that no rational field supplies, so nothing here pretends to
 // exactness. Its purpose is to be the reference the algebra is checked against:
 // a solution recovered from the variety is correct exactly when substituting it
 // back through this map reproduces the requested pose, and the rationalisation

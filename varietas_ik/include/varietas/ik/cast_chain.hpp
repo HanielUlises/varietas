@@ -55,7 +55,7 @@ joint<To> cast_joint(const joint<From>& j) {
   result.axis = cast_vector3<To>(j.axis);
   result.origin = cast_rigid_transform<To>(j.origin);
   // Limits are inequalities and are carried as doubles in either field, so they
-  // survive the cast untouched — there is nothing to convert.
+  // survive the cast untouched, since there is nothing to convert.
   result.has_limits = j.has_limits;
   result.lower = j.lower;
   result.upper = j.upper;

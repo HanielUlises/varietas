@@ -22,10 +22,10 @@ namespace varietas {
 // induced on the remaining variables, provided Order is an elimination order
 // for that split.
 //
-// Free of the ideal class because a basis is often already in hand — saturation
-// returns one, and so does any earlier elimination — and rebuilding an ideal
-// around it only to have Buchberger walk the critical pairs of a set that is
-// already a Gröbner basis is pure waste.
+// Free of the ideal class because a basis is often already in hand, since
+// saturation returns one and so does any earlier elimination, and rebuilding an
+// ideal around it only to have Buchberger walk the critical pairs of a set
+// that is already a Gröbner basis is pure waste.
 template <class Coeff, std::size_t N, class Order>
 std::vector<polynomial<Coeff, N, Order>> eliminated_generators(
     const std::vector<polynomial<Coeff, N, Order>>& basis, std::size_t split) {
@@ -99,8 +99,8 @@ class ideal {
   bool is_zero_dimensional() const { return quotient().is_zero_dimensional; }
 
   // dim V(I), with the empty variety reported as such. The finiteness verdict
-  // above is the same statement at dimension zero — the two are checked against
-  // each other in the tests — but it is the one the quotient construction needs
+  // above is the same statement at dimension zero, and the two are checked
+  // against each other in the tests, but it is the one the quotient needs
   // and it comes with the standard monomials, so both are kept.
   affine_dimension<N> dimension() const { return ideal_dimension(basis()); }
 

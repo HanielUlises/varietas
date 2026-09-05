@@ -41,7 +41,7 @@ struct emit_options {
   // A solved system is not always the whole answer. An arm whose first joint
   // was swept out rather than adjoined needs an arctangent applied to what this
   // header returns, and that arctangent belongs in the same header as the
-  // matrices it accompanies — a caller should not have to be told separately
+  // matrices it accompanies. A caller should not have to be told separately
   // how to finish the computation.
   //
   // The text is written out exactly as given, so whatever produces it is
@@ -140,7 +140,7 @@ std::string emit_polynomial(const polynomial<rational, P, typename rational_func
 // This is the scale a denominator has to be judged against. A guard that asks
 // whether a denominator is zero is asking the wrong question in floating point,
 // because a denominator that is zero mathematically almost never evaluates to
-// zero — it evaluates to whatever the cancellation between its terms leaves
+// zero; it evaluates to whatever the cancellation between its terms leaves
 // behind, which is tiny but nonzero, and dividing by that produces a confident
 // wrong answer instead of a refusal. Comparing the result against the size of
 // the terms that produced it is the standard way to detect that the cancellation
@@ -214,8 +214,8 @@ inline std::string name_or(const std::vector<std::string>& names, std::size_t i,
 // Self-contained is meant strictly: the result includes <cstddef> and <cstdint>
 // and nothing else, names no varietas type, and can be dropped into a project
 // that has never heard of this library. That is the point of emitting at all.
-// Everything expensive — the Gröbner basis, the quotient, the cancellation of
-// the rational functions — has already happened by the time this is called, and
+// Everything expensive, the Gröbner basis, the quotient and the cancellation of
+// the rational functions, has already happened by the time this is called, and
 // what is left in the header is arithmetic on doubles.
 //
 // What the header does not do is solve the eigenproblem. The action matrices
@@ -420,7 +420,7 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
   // same order.
   //
   // Having the functional, x_i(p) is the normal form of x_i evaluated at it,
-  // divided by what it gives to 1 — the division that makes the functional an
+  // divided by what it gives to 1, the division that makes the functional an
   // evaluation rather than a multiple of one.
   enum class status {
     ok = 0,

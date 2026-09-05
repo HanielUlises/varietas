@@ -131,9 +131,9 @@ TEST(singular, the_jacobian_of_a_two_link_arm_is_the_textbook_one) {
   // In the ambient ring the minor is not sin q2 but (c1² + s1²)·s2. The
   // determinant is a polynomial identity and knows nothing of the circle; the
   // textbook formula is what it becomes on the parameter variety, where
-  // c1² + s1² is one. Reducing modulo the circle relations — which are
+  // c1² + s1² is one. Reducing modulo the circle relations, which are
   // generators of the singular ideal precisely so that this reduction is
-  // legitimate — returns the sine of the elbow angle exactly.
+  // legitimate, returns the sine of the elbow angle exactly.
   const joint_polynomial<4> circle_factor =
       cosine<4>(0) * cosine<4>(0) + sine<4>(0) * sine<4>(0);
   EXPECT_EQ(minors.front(), circle_factor * sine<4>(1));
@@ -144,8 +144,8 @@ TEST(singular, the_jacobian_of_a_two_link_arm_is_the_textbook_one) {
 TEST(singular, the_polynomial_jacobian_agrees_with_finite_differences) {
   // The construction above is a formula, and a formula is worth checking
   // against the map it claims to differentiate. Central differences of the
-  // forward kinematics are an independent statement — nothing they use came
-  // from trigonometric.hpp — so agreement to the order of the step is real
+  // forward kinematics are an independent statement, since nothing they use
+  // came from trigonometric.hpp, so agreement to the order of the step is real
   // evidence and not a tautology.
   const chain<double> robot = varietas::chain_cast<double>(planar_three_link());
   const auto jacobian = varietas::trigonometric_jacobian<6, grevlex>(robot);
@@ -211,8 +211,8 @@ TEST(singular, the_task_decides_what_singular_means) {
       << "for a task it cannot span, the arm is singular on its whole parameter space";
   EXPECT_EQ(varietas::ideal_dimension(everywhere).dimension, 3u);
 
-  // Asked for the planar pose it can span — position in the plane and heading
-  // within it — the same arm is singular on a surface, cut out by the elbow.
+  // Asked for the planar pose it can span, position in the plane and heading
+  // within it, the same arm is singular on a surface, cut out by the elbow.
   const auto planar =
       varietas::singular_ideal<6>(planar_three_link(), varietas::planar_pose_rows());
   std::vector<joint_polynomial<6>> expected = circles<6>(3);
@@ -299,7 +299,7 @@ TEST(singular, the_singular_image_of_a_two_link_arm_is_the_boundary_of_its_annul
 TEST(singular, a_torus_arm_has_singularities_only_at_complex_configurations) {
   // The tool of the torus arm is at distance 2 + cos q2 from the z axis, and
   // the arm loses rank exactly when that distance vanishes. Over the reals it
-  // never does, so the arm is nowhere singular — but the ideal is not the unit
+  // never does, so the arm is nowhere singular, but the ideal is not the unit
   // ideal, because over the closure cos q2 = -2 solves it perfectly well, with
   // a sine of -3 under the square root.
   const auto basis = varietas::singular_ideal<4>(torus_arm(2), varietas::position_rows());
@@ -314,7 +314,7 @@ TEST(singular, a_torus_arm_has_singularities_only_at_complex_configurations) {
   // The image says the same thing in the workspace, and says it in a form that
   // can be read at a glance: x² + y² = 0 and z² = -3 have no real solution, so
   // the arm meets no singularity anywhere in its motion. That an ideal cannot
-  // decide this on its own is the same fact met over unreachable poses —
+  // decide this on its own is the same fact met over unreachable poses:
   // reality is a property of points, not of ideals.
   const auto relations =
       varietas::singular_workspace_relations<4>(torus_arm(2), varietas::position_rows());
@@ -333,13 +333,13 @@ TEST(singular, a_pinched_torus_arm_is_singular_where_its_inner_circle_collapsed)
   expected.push_back(cosine<4>(1) + joint_polynomial<4>::constant(q(1)));
   EXPECT_EQ(basis, (varietas::ideal<rational, 4, grevlex>(expected).basis()));
 
-  // A circle of singular configurations — the first joint is free — all of them
+  // A circle of singular configurations, the first joint being free, all of them
   // mapping to the single point where the torus is pinched.
   EXPECT_EQ(varietas::ideal_dimension(basis).dimension, 1u);
 
   // Every singular configuration puts the tool at the origin, and elimination
   // returns x, y and z² rather than x, y and z. The variety is the same single
-  // point — that is what the Closure Theorem promises and all it promises —
+  // point, which is what the Closure Theorem promises and all it promises,
   // but the ideal is not radical, and the square is not noise: the arm reaches
   // the pinch point tangentially in z, folding back along the axis instead of
   // crossing it, and the elimination ideal records the order of contact that

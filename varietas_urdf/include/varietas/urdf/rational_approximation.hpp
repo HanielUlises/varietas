@@ -20,7 +20,7 @@ namespace urdf_import {
 // 1.57079632679, which is neither pi/2 nor a number with any exact meaning of
 // its own. Reading that literal as a rational and handing it to Buchberger
 // produces an exact answer about a robot whose axes are misaligned by 1e-12
-// radians — a robot nobody built. What is wanted is the number the author
+// radians, a robot nobody built. What is wanted is the number the author
 // meant, together with a bound on the distance to the number they wrote.
 //
 // The recovery works because of a fact about quaternions rather than about
@@ -126,7 +126,7 @@ inline double nearest_double(const rational& value) {
 // recovered number is from the double in the file; round_trips says whether
 // that gap is below the resolution of a double at all, so that the recovery is
 // not merely close to the file but indistinguishable from it. A length written
-// as 0.1575 recovers as 63/400 and round trips — the residue of 3e-17 is the
+// as 0.1575 recovers as 63/400 and round trips; the residue of 3e-17 is the
 // file's own decimal-to-binary rounding, which the recovery undoes rather than
 // commits. A truncated pi does not round trip, and should not: there the
 // recovery deliberately moves the robot onto the right angle that was meant.
@@ -152,7 +152,7 @@ inline scalar_snap snap_scalar(double value, long max_denominator = 1000000) {
 // exactly where this quantity matters. Near the identity the trace differs from
 // three by the square of the angle, so a deviation of 1e-12 radians moves the
 // trace by 1e-24, which vanishes into the rounding of a trace of order one, and
-// the answer comes back a flat zero — a rotation reported as recovered exactly
+// the answer comes back a flat zero, a rotation reported as recovered exactly
 // when it was not. The chordal form has no such cancellation: for the relative
 // rotation of angle t, the Frobenius distance ||a - b|| is 2 sqrt(2) sin(t/2)
 // exactly, and inverting that is accurate all the way down and still correct

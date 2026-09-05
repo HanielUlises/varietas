@@ -23,7 +23,7 @@ namespace varietas {
 // Zariski closure of V(I) \ V(h). That is exactly the operation the half-angle
 // substitution requires. Writing t = tan(q/2) and clearing the denominators
 // 1 + t_i^2 introduces components on which some 1 + t_i^2 vanishes, that is,
-// t_i = ±i — the images of the configurations q_i = π that the substitution
+// t_i = ±i, the images of the configurations q_i = π that the substitution
 // sent to infinity. They are not configurations of the robot, and they are
 // invisible over the reals, where 1 + t^2 never vanishes. Left in the ideal
 // they inflate dim_k A, and the finiteness verdict then counts solutions the
@@ -145,7 +145,7 @@ std::vector<polynomial<Coeff, N, Order>> saturate_by_product(
 // what it has, and it is worth being precise about what it is not.
 //
 // It is not a primary decomposition. The pieces are not irreducible, they are
-// not primary, and nothing here chooses h — a real decomposition algorithm
+// not primary, and nothing here chooses h; a real decomposition algorithm
 // finds its own splittings, and finding them needs factorisation of
 // multivariate polynomials over Q, which varietas does not have and which is a
 // project of its own. What the caller gets is the ability to say "separate the
@@ -153,8 +153,8 @@ std::vector<polynomial<Coeff, N, Order>> saturate_by_product(
 // the two answers be exact and exhaustive.
 //
 // It is nonetheless what a decomposition is made of. Applied to the singular
-// locus of an arm with a generator the geometry suggests — the sine of an elbow
-// angle, say — it separates the elbow-straight branch from the elbow-folded one
+// locus of an arm with a generator the geometry suggests, the sine of an elbow
+// angle say, it separates the elbow-straight branch from the elbow-folded one
 // and each piece can then be measured, eliminated to the workspace, or split
 // again.
 template <class Coeff, std::size_t N, class Order>

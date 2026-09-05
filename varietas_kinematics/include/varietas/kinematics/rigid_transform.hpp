@@ -214,7 +214,7 @@ double orthogonality_defect(const matrix3<Coeff>& r) {
 //
 // The Euler-Rodrigues matrix of (w, x, y, z), divided by the squared norm, is a
 // rational function of the four entries, so any nonzero rational quaternion
-// yields an exactly orthogonal rational rotation of determinant one — no
+// yields an exactly orthogonal rational rotation of determinant one, with no
 // normalisation of the quaternion is required, and no square root is taken.
 // This is the constructor a URDF front end will target: an rpy triple is
 // admissible exactly when its quaternion can be written rationally.

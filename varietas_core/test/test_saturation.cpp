@@ -154,7 +154,7 @@ TEST(saturation, returns_a_basis_under_the_requested_order) {
 // --- the case the header exists for ----------------------------------------
 
 // The half-angle substitution clears denominators 1 + t_i^2, and doing so
-// attaches to the variety the components on which those factors vanish — the
+// attaches to the variety the components on which those factors vanish: the
 // points t_i = ±i, images of the configurations q_i = π that the substitution
 // sent to infinity. Over the reals they are invisible, which is exactly why
 // they have to be removed symbolically: they are counted by dim_k A all the
@@ -187,7 +187,7 @@ TEST(saturation, stops_the_quotient_counting_configurations_that_do_not_exist) {
 
 // The severe form, and the one that actually arises: the denominator divides
 // more than one generator, so the spurious locus is not a few extra points but
-// a positive-dimensional component — here the line t0 = ±i with t1 free. The
+// a positive-dimensional component, here the line t0 = ±i with t1 free. The
 // Finiteness Theorem then returns no verdict at all, and the solver refuses the
 // system rather than the system being solved wrongly. Saturating is what makes
 // the ideal zero-dimensional in the first place.

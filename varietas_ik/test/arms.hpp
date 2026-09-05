@@ -54,7 +54,7 @@ inline chain<rational> planar_three_link() {
 //
 // The offset has to be off the second axis for this to be true. A tool offset
 // along x would lie on that axis, rotation about it would move nothing, and the
-// arm would stay planar after all — which is why the z = 0 check below is worth
+// arm would stay planar after all, which is why the z = 0 check below is worth
 // having rather than obvious.
 inline chain<rational> out_of_plane_two_link() {
   chain<rational> robot("out_of_plane_2r");
@@ -70,7 +70,7 @@ inline chain<rational> out_of_plane_two_link() {
 // sum moves the tool, so the arm has two joints and one degree of freedom in
 // the plane: the tool traces a circle, and every point on it is reached by a
 // whole curve of configurations. Two unknowns and two equations, and still
-// positive-dimensional — which is the case the dimension count has to catch and
+// positive-dimensional, which is the case the dimension count has to catch and
 // that no amount of counting generators would.
 inline chain<rational> coincident_two_link() {
   chain<rational> robot("coincident_2r");
@@ -84,7 +84,7 @@ inline chain<rational> coincident_two_link() {
 
 // The anthropomorphic arm: a base that yaws about z, then a shoulder and an
 // elbow that both pitch about y. The textbook three-joint positioning arm, and
-// the one that does not solve over Q(x, y, z) in any reasonable time — its
+// the one that does not solve over Q(x, y, z) in any reasonable time. Its
 // whole point here is that it decouples.
 inline chain<rational> anthropomorphic_three_link() {
   chain<rational> robot("anthropomorphic_3r");
@@ -101,7 +101,7 @@ inline chain<rational> anthropomorphic_three_link() {
 //
 // Turning about -z is turning about z backwards, so the decomposition holds
 // exactly as before and the reduced problem is identical. What changes is the
-// sign of the base angle recovered from the arctangent — one character in the
+// sign of the base angle recovered from the arctangent, one character in the
 // emitted wrapper, and the only thing in the decoupling that nothing else
 // exercises.
 inline chain<rational> anthropomorphic_reversed_base() {
@@ -118,7 +118,7 @@ inline chain<rational> anthropomorphic_reversed_base() {
 
 // The same arm on a pedestal. The base placement is a translation along the
 // axis it turns about, so it commutes with that rotation and the decomposition
-// still holds — it only moves the height the reduced problem is posed at.
+// still holds; it only moves the height the reduced problem is posed at.
 inline chain<rational> anthropomorphic_on_a_pedestal() {
   chain<rational> robot("anthropomorphic_3r_pedestal");
   robot.add_joint(revolute_joint<rational>(

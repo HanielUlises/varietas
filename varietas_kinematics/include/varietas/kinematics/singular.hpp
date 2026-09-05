@@ -25,7 +25,7 @@ namespace varietas {
 // map drops rank there: the arm loses, instantaneously, the ability to move its
 // tool in some direction, and every numerical inverse kinematics method in
 // existence degrades in a neighbourhood of it. The usual treatment is a
-// condition number — evaluate the Jacobian at a configuration, take its
+// condition number: evaluate the Jacobian at a configuration, take its
 // smallest singular value, and call anything below a threshold "near
 // singular". That reports a number about one configuration. It does not say
 // what the singular set *is*, how many pieces it has, or where they go in the
@@ -33,7 +33,7 @@ namespace varietas {
 // condition number is a measurement at a point.
 //
 // Algebraically the question is elementary. Rank is not a polynomial condition
-// — the rank of a matrix is not a continuous function of its entries at all —
+// (the rank of a matrix is not a continuous function of its entries at all),
 // but rank *deficiency* is: a matrix has rank less than k exactly when every
 // k by k minor vanishes. The minors of the Jacobian are polynomials in the
 // joint variables, and adjoined to the equations of the parameter space they
@@ -47,7 +47,7 @@ namespace varietas {
 // settles the choice. The construction is elimination-shaped, so it inherits
 // the cost argument from workspace.hpp; but it has its own reason as well. The
 // differential of a map restricted to a variety is not the differential of the
-// polynomials that define it — over the half-angle ring one would need the
+// polynomials that define it. Over the half-angle ring one would need the
 // Jacobian of the cleared numerators, corrected for the denominators that were
 // multiplied through, and the correction is a quotient rule in every entry. In
 // the trigonometric ring the differential is the geometric Jacobian, unchanged
@@ -55,7 +55,7 @@ namespace varietas {
 // worth stating exactly, since it is what makes the whole header legitimate:
 // along the circle c^2 + s^2 = 1 the tangent direction at (c, s) is (-s, c),
 // which is precisely (dc/dq, ds/dq), so differentiating the polynomial map
-// along the constraint reproduces d/dq — the geometric Jacobian is the
+// along the constraint reproduces d/dq, and the geometric Jacobian is the
 // differential of the map restricted to the parameter variety, with no
 // Lagrange multiplier and no correction term.
 
@@ -90,9 +90,9 @@ inline std::vector<std::size_t> planar_pose_rows() { return {0, 1, 5}; }
 // matrices trigonometric_transform composes.
 //
 // Note which frame each column is read in: a_i and p_i are taken *before* the
-// joint's own motion is applied. That is not an approximation but an identity —
+// joint's own motion is applied. That is not an approximation but an identity:
 // a rotation fixes its own axis, and the origin of the joint frame does not
-// move under it — and it is why the walk below multiplies the origin in, reads
+// move under it. It is why the walk below multiplies the origin in, reads
 // the column, and only then applies the joint.
 template <std::size_t V, class Order, class Coeff>
 dense_matrix<polynomial<Coeff, V, Order>> trigonometric_jacobian(const chain<Coeff>& robot) {
@@ -156,8 +156,8 @@ dense_matrix<polynomial<Coeff, V, Order>> trigonometric_jacobian(const chain<Coe
 // maximal minors of the task rows of the Jacobian, which say that the arm is
 // singular there.
 //
-// The minor size is min(rows, joints), so a redundant arm — more joints than
-// the task has dimensions — is singular where it cannot span the task space,
+// The minor size is min(rows, joints), so a redundant arm, one with more joints
+// than the task has dimensions, is singular where it cannot span the task space,
 // which is the right statement and the one the maximal minors make without
 // being told.
 template <std::size_t V, class Order, class Coeff>
@@ -184,8 +184,8 @@ std::vector<polynomial<Coeff, V, Order>> singular_generators(
 
 // The reduced Gröbner basis of that ideal.
 //
-// An empty variety — reported by is_unit_ideal, and equivalently by
-// ideal_dimension's is_empty — means the arm has no singular configuration at
+// An empty variety, reported by is_unit_ideal and equivalently by
+// ideal_dimension's is_empty, means the arm has no singular configuration at
 // all, over the algebraic closure and therefore in particular over the reals.
 // The converse does not hold and the tests make a point of it: a nonempty
 // singular variety may have no real points, in which case the arm is in fact
@@ -223,7 +223,7 @@ affine_dimension<V> singular_dimension(const chain<Coeff>& robot,
 // adjoined to the graph before the joint variables are eliminated. The Closure
 // Theorem applies verbatim and carries the same warning: what comes back cuts
 // out the Zariski closure of the singular image, so a semialgebraic piece of it
-// — an arc rather than a whole circle — is not something these equations can
+// (an arc rather than a whole circle) is not something these equations can
 // distinguish.
 template <std::size_t V, class Coeff>
 std::vector<polynomial<Coeff, 3, grevlex>> singular_workspace_relations(

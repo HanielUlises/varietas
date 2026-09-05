@@ -3,8 +3,8 @@
 // The two are tested together because they arrive together: the singular locus
 // is cut out by minors of a polynomial matrix, and the only useful thing to say
 // about the set that results is how big it is. The cases below are chosen so
-// that the answer is known independently of any Gröbner computation — a point,
-// a line, a plane curve, a hypersurface — and so that the two verdicts the
+// that the answer is known independently of any Gröbner computation, a point,
+// a line, a plane curve or a hypersurface, and so that the two verdicts the
 // library now offers about the size of a variety, the finiteness criterion and
 // the dimension, are checked against each other where they overlap.
 
@@ -100,7 +100,7 @@ TEST(dimension, a_curve_cut_out_by_two_surfaces_in_three_space) {
 TEST(dimension, is_read_from_leading_terms_and_so_ignores_embedded_structure) {
   // The union of a plane and a line meeting it: x·z = 0, y·z = 0 is the plane
   // z = 0 together with the z axis. Dimension is the maximum over components,
-  // which is two, and the report says nothing about the line — a dimension is
+  // which is two, and the report says nothing about the line: a dimension is
   // one number, and separating the pieces is what splitting is for.
   const auto d = dimension_of<3>({var<3>(0) * var<3>(2), var<3>(1) * var<3>(2)});
   EXPECT_EQ(d.dimension, 2u);

@@ -56,7 +56,7 @@ std::string decoupled_epilogue(const decoupled_solution<N>& solution,
   out << "// The whole arm: the reduced problem above, with its swept joint put back.\n"
       << "//\n"
       << "// Turning the base sweeps a plane around its axis, so a target is reached by\n"
-      << "// turning that plane to face it and then solving in the plane — and also by\n"
+      << "// turning that plane to face it and then solving in the plane, and also by\n"
       << "// turning half a revolution further and reaching backwards, which is why every\n"
       << "// solution of the reduced problem yields two configurations of the arm.\n"
       << "//\n"

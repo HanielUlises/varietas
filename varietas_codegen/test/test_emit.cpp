@@ -5,8 +5,8 @@
 // function, because nothing downstream ever compares it against the object it
 // was generated from. So the check here is not that the text looks right. It is
 // that the arithmetic the text describes, evaluated at a pose, equals the
-// rational functions evaluated at the same pose — the emitted expression tested
-// against the exact value it is supposed to approximate.
+// rational functions evaluated at the same pose, with the emitted expression
+// tested against the exact value it is supposed to approximate.
 //
 // The companion suite, test_generated.cpp, closes the remaining gap by actually
 // compiling a header this emitter produced.

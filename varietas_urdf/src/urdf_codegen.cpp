@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
   // Decoupling first, because it does not take a choice of coordinates at all.
   //
   // Sweeping the base joint out fixes the plane the reduced problem is posed
-  // in — a radius along one axis and a height along the swept axis — so the
+  // in, a radius along one axis and a height along the swept axis, so the
   // coordinates are read off the arm rather than chosen. Asking for both is a
   // contradiction, and refusing is better than quietly ignoring one of them.
   if (opts.decouple) {
@@ -271,7 +271,7 @@ int main(int argc, char** argv) {
     if (dof != 3) {
       std::fprintf(stderr,
                    "refused: --decouple sweeps one joint out and solves the rest against a "
-                   "radius and a height, which takes exactly two joints — so the chain needs "
+                   "radius and a height, which takes exactly two joints, so the chain needs "
                    "three, and this one has %zu\n",
                    dof);
       return 1;

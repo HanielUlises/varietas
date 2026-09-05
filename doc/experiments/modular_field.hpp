@@ -118,7 +118,7 @@ class modular_function {
 
   modular_function() : numerator_(), denominator_(parameter_polynomial::constant(modular(1))) {}
 
-  // NOLINTNEXTLINE(google-explicit-constructor) — a scalar is a constant function
+  // NOLINTNEXTLINE(google-explicit-constructor): a scalar is a constant function
   modular_function(modular c)
       : numerator_(parameter_polynomial::constant(c)),
         denominator_(parameter_polynomial::constant(modular(1))) {

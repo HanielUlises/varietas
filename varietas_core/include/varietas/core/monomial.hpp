@@ -19,7 +19,7 @@ namespace varietas {
 // past anything the ring variables reach: an underdetermined system over
 // Q(x, y) was observed to produce parameter polynomials of degree 254 in a
 // single variable, one step from wrapping an eight-bit exponent around to zero.
-// What made that dangerous was not the ceiling but the silence — a wrapped
+// What made that dangerous was not the ceiling but the silence: a wrapped
 // exponent is a different monomial, so a polynomial that divided another stops
 // dividing it, and the failure surfaces somewhere else entirely as an exact
 // division that leaves a remainder.

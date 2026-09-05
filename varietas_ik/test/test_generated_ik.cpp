@@ -2,12 +2,12 @@
 // came from.
 //
 // The header included below was produced during this build by a program that
-// knew a chain and nothing else — no pose, no target, no numbers beyond the
+// knew a chain and nothing else: no pose, no target, no numbers beyond the
 // link lengths. What it has to satisfy is the only thing an inverse kinematics
 // solver has to satisfy: driving the joints to a returned configuration puts
 // the tool where it was asked to go. That is checked here by pushing every
 // solution back through the numerical forward kinematics in
-// varietas_kinematics, which is an independent computation — trigonometry on
+// varietas_kinematics, which is an independent computation: trigonometry on
 // doubles, with no ideal and no matrix anywhere in it.
 //
 // The planar 2R arm of unit links reaches a point exactly when it lies in the
@@ -47,8 +47,8 @@ std::array<double, 2> tool_position(const std::array<double, 2>& t) {
 //
 // Eliminating under grevlex divided by x^2 + y^2 + 2x, so the one basis holds
 // everywhere except the circle (x + 1)^2 + y^2 = 1. Nothing about the arm is
-// special there — it reaches those points perfectly well, with two elbow
-// configurations like any other interior point — the circle is an artefact of
+// special there, since it reaches those points perfectly well with two elbow
+// configurations like any other interior point. The circle is an artefact of
 // how the basis was computed, and it is the generated guard's business to
 // refuse rather than answer there.
 double pole_value(double x, double y) { return x * x + y * y + 2.0 * x; }
@@ -170,7 +170,7 @@ TEST(GeneratedIk, RefusesAPoseExactlyOnThePole) {
 // (-1.6, 0.8) satisfies x^2 + y^2 + 2x = 0 exactly over the rationals, but
 // evaluated in doubles the same expression comes to about 4e-16 rather than to
 // zero. A guard comparing against 0.0 would not fire, and the action matrices
-// would then be formed by dividing by that 4e-16 — which is what this header
+// would then be formed by dividing by that 4e-16, which is what this header
 // used to do, returning two configurations of which one did not reach the
 // target and neither the count nor the status said so.
 //

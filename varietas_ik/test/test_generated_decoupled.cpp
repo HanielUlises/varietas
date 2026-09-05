@@ -10,7 +10,7 @@
 // The check is the only one that matters for an inverse kinematics solver:
 // drive the joints to a returned configuration and the tool has to be where it
 // was asked to go. Forward kinematics here is the numerical map in
-// varietas_kinematics — trigonometry on doubles, no ideal, no matrix.
+// varietas_kinematics: trigonometry on doubles, no ideal, no matrix.
 
 #include <array>
 #include <cmath>
@@ -42,7 +42,7 @@ std::array<double, 3> tool_position(const std::array<double, 3>& q) {
 }
 
 // The generated wrapper, called the way a user would call it: a target in,
-// joint angles out. Nothing about the decomposition is reconstructed here — the
+// joint angles out. Nothing about the decomposition is reconstructed here; the
 // arctangent, the two turns of the plane and the half-angle inversion are all
 // inside the emitted header now.
 std::vector<std::array<double, 3>> solve_whole_arm(double x, double y, double z) {
@@ -205,7 +205,7 @@ TEST(GeneratedDecoupled, AgreesWithTheForwardMapAcrossTheWorkspace) {
 // Turning about -z is turning about z backwards, so the base angle that reaches
 // a target is the negative of the one the forward arm uses. Nothing but this
 // test compiles that sign, and a wrong one would still return four
-// configurations at four plausible-looking angles — none of which reach the
+// configurations at four plausible-looking angles, none of which reach the
 // point. So the check is the forward map, as it has to be.
 TEST(GeneratedDecoupled, TheReversedArmAlsoReachesItsTargets) {
   const double x = 1.1, y = 0.5, z = 0.4;

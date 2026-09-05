@@ -49,13 +49,13 @@ namespace varietas {
 //     denominators dominate: the Rabinowitsch variable joins the block being
 //     eliminated, and the cleared residuals carry the denominator's degree into
 //     every S-polynomial. The trigonometric form wins, and by a margin large
-//     enough to change what is computable — measured on the torus of
+//     enough to change what is computable, measured on the torus of
 //     test_workspace, seventy seconds against ten milliseconds for the
 //     identical quartic.
 //
 // So this header is not a replacement for rationalize.hpp. It is the
-// formulation the elimination-shaped constructions use — workspace
-// implicitization now, the singular locus next — and rationalize.hpp remains
+// formulation the elimination-shaped constructions use, workspace
+// implicitization now and the singular locus next, and rationalize.hpp remains
 // the one the fibre-shaped constructions use.
 
 // The number of ring variables a chain needs in this formulation: two for each

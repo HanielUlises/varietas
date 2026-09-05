@@ -27,7 +27,7 @@ mon3 make(exponent a, exponent b, exponent c) {
 // Exponents past what a byte holds.
 //
 // The exponent used to be eight bits, and a product that carried one past 255
-// wrapped silently to a different monomial — which is not a loud failure but a
+// wrapped silently to a different monomial, which is not a loud failure but a
 // wrong answer, since every divisibility question asked afterwards is answered
 // about the wrong thing. Parameter polynomials over a function field reach this
 // range in practice; a degree of 254 in one variable was observed in an

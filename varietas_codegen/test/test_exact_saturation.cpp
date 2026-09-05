@@ -49,7 +49,7 @@ TYPED_TEST_SUITE(SaturationOverField, field_types);
 
 // The statement that holds over any field: the spurious component introduced by
 // clearing the denominator is removed, and the configuration that survives is
-// the one the arm has. The coefficients here are non-dyadic on purpose — a
+// the one the arm has. The coefficients here are non-dyadic on purpose, since a
 // third and two sevenths are the sort of thing a link length produces once a
 // pose has been substituted in.
 TYPED_TEST(SaturationOverField, removes_the_denominators_component) {
@@ -81,7 +81,7 @@ TYPED_TEST(SaturationOverField, removes_the_denominators_component) {
 // exactly {t0 - 1/3, t1 - 2/7}, and the test can say so with equality; over
 // double the same two polynomials carry the nearest representable coefficients
 // instead, and only a tolerance can be asserted. The distinction is not
-// cosmetic — the exact basis is what a generated header stores, and what its
+// cosmetic: the exact basis is what a generated header stores, and what its
 // order_id and coefficients are later compared against.
 TEST(exact_saturation, recovers_the_coefficients_exactly_over_the_rationals) {
   using Coeff = varietas::rational;
@@ -119,8 +119,8 @@ TEST(exact_saturation, over_double_the_same_basis_is_only_approximate) {
   const varietas::ideal<double, 2, grevlex> expected(
       {t0 - poly::constant(1.0 / 3.0), t1 - poly::constant(2.0 / 7.0)});
 
-  // Structurally the same basis — the shape of the answer survives rounding
-  // here — but the constants are the nearest doubles to a third and two
+  // Structurally the same basis, since the shape of the answer survives
+  // rounding here, but the constants are the nearest doubles to a third and two
   // sevenths, and the ideal they generate is not the one asked for.
   ASSERT_EQ(saturated.size(), expected.basis().size());
   for (std::size_t i = 0; i < saturated.size(); ++i) {

@@ -2,7 +2,7 @@
 //
 // This is the capability the emitter cannot have. A generated solver adjoins
 // the target to the coefficient field, and orientation cannot be adjoined at
-// any workable size — a general pose needs six parameters and two is the
+// any workable size: a general pose needs six parameters and two is the
 // working limit. Solving one pose at a time gives up the generated code and
 // gets the other nine equations in return.
 //
@@ -94,8 +94,8 @@ TEST(PoseIk, AnOrientationTheArmCannotProduceIsRefusedAsUnreachable) {
   const auto robot = load("anthropomorphic_3r.urdf");
 
   // The arm's orientation is always a yaw followed by a pitch, so any roll at
-  // all is outside its reach. Rolling the reachable pose by a right angle —
-  // exactly, so nothing is blamed on rounding — must leave no solution.
+  // all is outside its reach. Rolling the reachable pose by a right angle,
+  // exactly, so that nothing is blamed on rounding, must leave no solution.
   const std::array<rational, 3> t{rational(0), rational(0), rational(1)};
   const auto reachable = pose_at<3>(robot, t);
 

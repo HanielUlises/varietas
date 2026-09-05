@@ -24,7 +24,7 @@
 // A base joint that yaws about a fixed axis does not need to be adjoined. If
 // the rest of the arm holds the tool in a plane containing that axis, then
 // turning the base sweeps that plane around it, and the tool's position is
-// determined by where it sits in the plane — a radius and a height — together
+// determined by where it sits in the plane, a radius and a height, together
 // with the angle the plane has been turned through. The angle is recovered by
 // an arctangent, not by an eigenvalue, and what is left is a two-joint problem
 // in two parameters: the size the pipeline is comfortable with.
@@ -94,8 +94,8 @@ inline const char* to_string(decoupling_status status) {
 //
 // Turning about axis k moves the two coordinates a and b and fixes k. Writing
 // the tool position as (r cos, r sin) in the (a, b) pair and leaving k alone
-// says that the reduced problem lives in the (a, k) plane — a radius measured
-// along a, and a height measured along k — while b is the coordinate the sweep
+// says that the reduced problem lives in the (a, k) plane, a radius measured
+// along a and a height measured along k, while b is the coordinate the sweep
 // generates and must therefore vanish before the sweep is applied.
 struct sweep_frame {
   std::size_t axis = 2;    // k: the direction the first joint turns about
@@ -235,7 +235,7 @@ decoupled_solution<N> decoupled_position_ik(const chain<rational>& robot,
   // coordinate at all; if it does, turning the base does not sweep a fixed
   // plane and the position is not determined by a radius and a height.
   //
-  // It is a question about the arm, so it is asked of the arm — no Gröbner
+  // It is a question about the arm, so it is asked of the arm, with no Gröbner
   // basis, just the forward map, and a polynomial that is identically zero or
   // is not.
   {

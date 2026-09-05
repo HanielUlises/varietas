@@ -152,7 +152,7 @@ TEST(trigonometric, the_rotation_is_exactly_orthogonal_on_the_circle) {
 
 // The circle relations vanish at a configuration and the pose residuals close
 // the graph, so a reachable point together with the parameters that reach it is
-// a common zero of every generator — exactly, over the rationals.
+// a common zero of every generator, exactly, over the rationals.
 TEST(trigonometric, the_graph_generators_vanish_at_a_configuration) {
   const chain<rational> robot = torus_arm();
   const auto generators = varietas::trigonometric_workspace_generators<4>(robot);
