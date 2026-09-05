@@ -16,40 +16,62 @@
 
 #include "arms.hpp"
 
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::fprintf(stderr, "usage: %s <output-header>\n", argv[0]);
-    return 2;
-  }
+namespace {
 
-  const auto result =
-      varietas::ik::decoupled_position_ik<3>(varietas_test::anthropomorphic_three_link());
+// One arm, solved and written out. Returns false with a reason on stderr.
+bool emit_arm(const varietas::chain<varietas::rational>& robot, const std::string& name,
+              const std::string& note, const char* path) {
+  const auto result = varietas::ik::decoupled_position_ik<3>(robot);
   if (!result.ok()) {
-    std::fprintf(stderr, "the arm did not decouple: %s\n",
+    std::fprintf(stderr, "the arm %s did not decouple: %s\n", name.c_str(),
                  varietas::ik::to_string(result.status));
-    return 1;
+    return false;
   }
 
   varietas::codegen::emit_options options;
-  options.name = "anthropomorphic_ik";
+  options.name = name;
   options.name_space = "varietas_generated";
-  options.source_note =
-      "The anthropomorphic 3R arm. Its base yaw was swept out rather than adjoined: the "
-      "struct below solves shoulder and elbow against a radius and a height over "
-      "Q(radius, height), and the wrapper after it puts the base joint back.";
+  options.source_note = note;
   options.runtime = varietas::codegen::runtime_kind::eigen;
 
-  const std::string header = varietas::ik::emit_decoupled(result, options);
+  std::ofstream out(path);
+  if (!out) {
+    std::fprintf(stderr, "cannot write %s\n", path);
+    return false;
+  }
+  out << varietas::ik::emit_decoupled(result, options);
+  if (!out) {
+    std::fprintf(stderr, "write to %s failed\n", path);
+    return false;
+  }
+  return true;
+}
 
-  std::ofstream out(argv[1]);
-  if (!out) {
-    std::fprintf(stderr, "cannot write %s\n", argv[1]);
+}  // namespace
+
+int main(int argc, char** argv) {
+  if (argc != 3) {
+    std::fprintf(stderr, "usage: %s <header> <reversed-header>\n", argv[0]);
+    return 2;
+  }
+
+  if (!emit_arm(varietas_test::anthropomorphic_three_link(), "anthropomorphic_ik",
+                "The anthropomorphic 3R arm. Its base yaw was swept out rather than adjoined: "
+                "the struct below solves shoulder and elbow against a radius and a height over "
+                "Q(radius, height), and the wrapper after it puts the base joint back.",
+                argv[1])) {
     return 1;
   }
-  out << header;
-  if (!out) {
-    std::fprintf(stderr, "write to %s failed\n", argv[1]);
+
+  // The same arm with its base axis reversed. The reduced problem is identical;
+  // the sign the wrapper applies to the arctangent is not, and emitting both is
+  // the only way that sign gets compiled and run.
+  if (!emit_arm(varietas_test::anthropomorphic_reversed_base(), "anthropomorphic_reversed_ik",
+                "The anthropomorphic 3R arm with its base turning about -z. Identical to the "
+                "forward version except for the sign of the recovered base angle.",
+                argv[2])) {
     return 1;
   }
+
   return 0;
 }

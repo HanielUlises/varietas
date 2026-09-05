@@ -43,6 +43,21 @@ TEST(decoupled_ik, the_anthropomorphic_arm_reduces) {
   EXPECT_EQ(result.first_joint_name, "q1");
 }
 
+TEST(decoupled_ik, a_base_axis_pointing_the_other_way_is_still_decoupled) {
+  const auto result = decoupled_position_ik<3>(varietas_test::anthropomorphic_reversed_base());
+
+  ASSERT_TRUE(result.ok()) << varietas::ik::to_string(result.status);
+  EXPECT_EQ(result.frame.axis, 2u);
+  EXPECT_TRUE(result.frame.reversed) << "a negative axis must be recognised as reversed";
+  EXPECT_EQ(result.branches, 4u);
+
+  // The reduced problem does not know about the base at all, so reversing the
+  // base cannot change it. Only the sign applied to the arctangent changes.
+  const auto forward = decoupled_position_ik<3>(varietas_test::anthropomorphic_three_link());
+  ASSERT_TRUE(forward.ok());
+  EXPECT_EQ(result.reduced.dimension(), forward.reduced.dimension());
+}
+
 TEST(decoupled_ik, a_base_offset_along_its_own_axis_is_still_decoupled) {
   // A translation along z commutes with a rotation about z, so the pedestal
   // changes the height the reduced problem is posed at and nothing else.

@@ -97,6 +97,25 @@ inline chain<rational> anthropomorphic_three_link() {
   return robot;
 }
 
+// The same arm with its base axis pointing the other way.
+//
+// Turning about -z is turning about z backwards, so the decomposition holds
+// exactly as before and the reduced problem is identical. What changes is the
+// sign of the base angle recovered from the arctangent — one character in the
+// emitted wrapper, and the only thing in the decoupling that nothing else
+// exercises.
+inline chain<rational> anthropomorphic_reversed_base() {
+  chain<rational> robot("anthropomorphic_3r_reversed");
+  robot.add_joint(revolute_joint<rational>(
+      "q1", vector3<rational>(nil(), nil(), rational(-1)),
+      rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q2", vector3<rational>::unit(1),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q3", vector3<rational>::unit(1), along_x(1)));
+  robot.set_tool(along_x(1));
+  return robot;
+}
+
 // The same arm on a pedestal. The base placement is a translation along the
 // axis it turns about, so it commutes with that rotation and the decomposition
 // still holds — it only moves the height the reduced problem is posed at.

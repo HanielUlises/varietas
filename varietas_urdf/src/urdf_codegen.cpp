@@ -252,6 +252,33 @@ int main(int argc, char** argv) {
   std::printf("chain            %s -> %s\n", root.c_str(), tip.c_str());
   std::printf("degrees of freedom %zu\n", dof);
 
+  // Decoupling first, because it does not take a choice of coordinates at all.
+  //
+  // Sweeping the base joint out fixes the plane the reduced problem is posed
+  // in — a radius along one axis and a height along the swept axis — so the
+  // coordinates are read off the arm rather than chosen. Asking for both is a
+  // contradiction, and refusing is better than quietly ignoring one of them.
+  if (opts.decouple) {
+    if (!opts.coords.empty()) {
+      std::fprintf(stderr,
+                   "refused: --decouple takes the plane from the axis it sweeps, so it cannot "
+                   "be combined with --coords\n");
+      return 1;
+    }
+    // The reduced problem is posed against a radius and a height, which is two
+    // coordinates, and needs two joints to meet them. So the arm needs three:
+    // one to sweep and two to solve for.
+    if (dof != 3) {
+      std::fprintf(stderr,
+                   "refused: --decouple sweeps one joint out and solves the rest against a "
+                   "radius and a height, which takes exactly two joints — so the chain needs "
+                   "three, and this one has %zu\n",
+                   dof);
+      return 1;
+    }
+    return run_decoupled<3>(robot, opts);
+  }
+
   // Defaulted from the joint count rather than guessed from the geometry: an
   // arm with two joints can only be asked for a point in a plane, and one with
   // three for a point in space. Anything else has to be said out loud.
@@ -287,14 +314,6 @@ int main(int argc, char** argv) {
                  dof, p);
     return 1;
   }
-  if (opts.decouple) {
-    if (dof == 2) return run_decoupled<2>(robot, opts);
-    if (dof == 3) return run_decoupled<3>(robot, opts);
-    std::fprintf(stderr, "refused: --decouple needs two or three joints, and this chain has %zu\n",
-                 dof);
-    return 1;
-  }
-
   if (dof == 1) return run<1, 1>(robot, coordinates, opts);
   if (dof == 2) return run<2, 2>(robot, coordinates, opts);
   if (dof == 3) return run<3, 3>(robot, coordinates, opts);

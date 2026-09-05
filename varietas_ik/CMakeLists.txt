@@ -62,13 +62,14 @@ if(BUILD_TESTING)
   target_include_directories(generate_spatial_3r PRIVATE test)
 
   set(reduced_header ${generated_dir}/anthropomorphic_ik.hpp)
+  set(reversed_header ${generated_dir}/anthropomorphic_reversed_ik.hpp)
   add_custom_command(
-    OUTPUT ${reduced_header}
+    OUTPUT ${reduced_header} ${reversed_header}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${generated_dir}
-    COMMAND generate_spatial_3r ${reduced_header}
+    COMMAND generate_spatial_3r ${reduced_header} ${reversed_header}
     DEPENDS generate_spatial_3r
     COMMENT "Sweeping the base joint and emitting ${reduced_header}")
-  add_custom_target(reduced_header_target DEPENDS ${reduced_header})
+  add_custom_target(reduced_header_target DEPENDS ${reduced_header} ${reversed_header})
 
   ament_add_gtest(test_generated_decoupled test/test_generated_decoupled.cpp TIMEOUT 600)
   target_link_libraries(test_generated_decoupled ${PROJECT_NAME})
