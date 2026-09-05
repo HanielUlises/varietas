@@ -20,3 +20,4 @@ tools/
 *.swp
 *~
 .DS_Store
+*.log

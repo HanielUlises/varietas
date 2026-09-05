@@ -1,0 +1,251 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\title{The cost of a parametric Gr\"obner basis over a function field}
+\author{Haniel Ulises}
+\date{5 September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The inverse kinematics pipeline in \texttt{varietas} computes a Gr\"obner basis over
+$\mathbb{Q}(\boldsymbol{p})$, adjoining the target pose to the coefficient field so that one basis
+answers every pose. The computation completes in milliseconds with two adjoined parameters and has
+never been observed to complete with three. Earlier profiling attributed \SI{86}{\percent} of the
+running time to \texttt{polynomial\_gcd}, which raised the question of whether a modular gcd would
+remove the limit. This report answers that question by repeating the computation over
+$\mathbb{F}_p(\boldsymbol{p})$, where coefficient arithmetic costs one machine multiplication. The
+three-parameter problem does not complete over $\mathbb{F}_p$ either. A separate measurement of the
+gcd in isolation shows that the choice of field accounts for a bounded factor of about
+$13$, while the cost grows as roughly the fourth power of the number of terms in the operands. The
+limit is therefore attributable to the growth of the parameter polynomials rather than to the size
+of their coefficients, and a modular gcd built on the existing subresultant sequence would not
+remove it.
+\end{abstract}
+
+\section{Objective}
+
+The pipeline poses inverse kinematics with the target adjoined to the coefficient field. For an arm
+with $N$ actuated joints and $P$ adjoined pose coordinates, the ring is
+$\mathbb{Q}(\boldsymbol{p})[t_1,\dots,t_N]$ with $\boldsymbol{p}=(p_1,\dots,p_P)$, and a finite
+solution set requires $P=N$. The measured behaviour is
+\begin{itemize}
+  \item $P=N=2$: complete in \SIrange{5}{25}{\milli\second};
+  \item $P=N=3$: no result observed after \SI{900}{\second}.
+\end{itemize}
+
+Coefficients are elements of $\mathbb{Q}(\boldsymbol{p})$, represented as a quotient of two
+polynomials in $\boldsymbol{p}$ over $\mathbb{Q}$ and reduced to lowest terms after every arithmetic
+operation. The reduction requires a polynomial gcd, computed by a subresultant remainder sequence.
+Sampling an instrumented three-parameter run attributed approximately \SI{86}{\percent} of the
+elapsed time to that gcd.
+
+Two explanations are consistent with that measurement. Under the first, the cost lies in arithmetic
+on rational coefficients, whose numerators and denominators grow during the remainder sequence; a
+modular gcd would then remove most of it. Under the second, the cost lies in the number of terms in
+the parameter polynomials, which no change of coefficient representation affects. The objective of
+this experiment is to distinguish the two before committing to an implementation.
+
+\section{Method}
+
+\subsection{Change of field}
+
+The discriminating measurement replaces $\mathbb{Q}$ by the prime field $\mathbb{F}_p$ with
+$p=2^{31}-1$, leaving the algorithm, the monomial order, the ideal, the number of parameters and the
+sequence of operations unchanged. In $\mathbb{F}_p$ an addition or multiplication is one machine-word
+operation followed by a remainder, and coefficients do not grow. Any cost that survives the
+substitution is independent of coefficient size.
+
+The field $\mathbb{F}_p(\boldsymbol{p})$ is implemented in
+\texttt{doc/experiments/modular\_field.hpp} as a quotient of two polynomials over $\mathbb{F}_p$,
+normalised in the same three steps used for $\mathbb{Q}(\boldsymbol{p})$: division by the monomial
+content, division by the polynomial gcd, and scaling to a monic denominator. The remainder of the
+library is templated on the coefficient type and is used without modification.
+
+\subsection{Systems measured}
+
+Three systems are posed, each as a position problem with one adjoined coordinate per joint.
+
+\begin{description}
+  \item[Planar 2R.] Two joints turning about $z$, unit links, adjoining $(x,y)$. Two solutions.
+  \item[Reduced 2R.] The shoulder and elbow of an anthropomorphic arm, obtained by sweeping its base
+        joint out, adjoining a radius and a height. Two solutions.
+  \item[Anthropomorphic 3R.] A base yawing about $z$ and two joints pitching about $y$, unit links,
+        adjoining $(x,y,z)$. Four solutions, established independently by solving the same system
+        over $\mathbb{Q}$ at a fixed pose.
+\end{description}
+
+The first two serve as controls. If the change of field alters the algebraic structure of the
+answer, the prime is unlucky for these inputs and the comparison is not valid.
+
+\subsection{Isolated gcd}
+
+A second program, \texttt{doc/experiments/gcd\_cost.cpp}, measures a single gcd outside the
+pipeline. Two dense trivariate polynomials of equal degree are formed with a planted common factor,
+and the subresultant gcd is timed over both fields. Varying the degree separates the contribution of
+coefficient size from the contribution of operand size.
+
+\subsection{Environment}
+
+Measurements were taken on an Intel Core i7-10870H at \SI{2.20}{\giga\hertz}, with
+\mbox{g++ 11.4.0} at \texttt{-O2}, GMP for rational arithmetic. Times are single runs; the
+quantities of interest differ by orders of magnitude and are not sensitive to run-to-run variation.
+
+\section{Results}
+
+\subsection{Controls}
+
+Table~\ref{tab:controls} reports the two-parameter systems. The basis size, the dimension of the
+quotient algebra and the largest polynomial in the basis agree exactly between the two fields, so the
+prime is not unlucky for these inputs and the substitution preserves the computation. The change of
+field reduces the Gr\"obner phase by a factor of about four.
+
+\begin{table}[htbp]
+\centering
+\caption{Two-parameter systems. Times in seconds. Structure of the answer is identical in both
+fields.}
+\label{tab:controls}
+\begin{tabular}{llS[table-format=1.3]S[table-format=1.3]rrr}
+\toprule
+System & Field & {Forward map} & {Gr\"obner} & Basis & $\dim_k A$ & Max terms \\
+\midrule
+Planar 2R  & $\mathbb{F}_p(x,y)$ & 0.000 & 0.006 & 2 & 2 & 3 \\
+Planar 2R  & $\mathbb{Q}(x,y)$   & 0.001 & 0.023 & 2 & 2 & 3 \\
+Reduced 2R & $\mathbb{F}_p(r,z)$ & 0.000 & 0.006 & 2 & 2 & 3 \\
+Reduced 2R & $\mathbb{Q}(r,z)$   & 0.001 & 0.023 & 2 & 2 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Three parameters}
+
+The anthropomorphic 3R system with $(x,y,z)$ adjoined produced no result over
+$\mathbb{F}_p(x,y,z)$ within \SI{400}{\second}, nor over $\mathbb{Q}(x,y,z)$ within
+\SI{900}{\second}. Construction of the rational forward map and of the residuals completed in under
+\SI{0.05}{\second} in both fields, so the whole of the elapsed time is spent in the Gr\"obner
+computation.
+
+Instrumenting the pair queue shows where. Over $\mathbb{F}_p(x,y,z)$ the run enters the main loop
+with four basis elements, six pending pairs and a largest basis polynomial of fourteen terms, and
+completes one pair. No second pair completed within the following \SI{300}{\second}. The run is
+therefore not accumulating a large basis; it is inside a single reduction.
+
+Instrumenting the normalisation shows what grows during that reduction. The largest parameter
+polynomial appearing as a numerator or denominator reaches $460$ terms after \SI{93}{\second} and
+$498$ terms after \SI{129}{\second}, with intervals of tens of seconds between successive
+normalisations. Since coefficients in $\mathbb{F}_p$ do not grow, these intervals measure the cost of
+a gcd on trivariate operands of that size.
+
+\subsection{Isolated gcd}
+
+Table~\ref{tab:gcd} reports the subresultant gcd on dense trivariate operands.
+
+\begin{table}[htbp]
+\centering
+\caption{One subresultant gcd on dense trivariate polynomials with a planted common factor.}
+\label{tab:gcd}
+\begin{tabular}{rrS[table-format=2.3]S[table-format=2.3]S[table-format=2.1]}
+\toprule
+Degree & Terms per operand & {$\mathbb{F}_p$ (\si{\second})} & {$\mathbb{Q}$ (\si{\second})} &
+{Ratio} \\
+\midrule
+ 4 &  35 &  0.001 &  0.004 &  4.0 \\
+ 6 &  84 &  0.008 &  0.096 & 12.0 \\
+ 8 & 165 &  0.109 &  1.394 & 12.8 \\
+10 & 286 &  1.049 & 14.216 & 13.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two quantities are visible. The ratio between the fields rises and settles near $13$, which bounds
+what any change of coefficient representation can recover. The cost over $\mathbb{F}_p$ grows
+steeply in the number of terms: the successive ratios of running time to the corresponding ratios of
+operand size give exponents of $2.4$, $3.9$ and $4.1$, so the cost scales approximately as the fourth
+power of the operand size. Extrapolating the last measurement to the $498$ terms observed in the
+three-parameter run gives approximately \SI{9}{\second} per gcd over $\mathbb{F}_p$ and
+\SI{120}{\second} over $\mathbb{Q}$, consistent with the intervals between normalisations reported
+above.
+
+\section{Analysis}
+
+The controls establish that the substitution of $\mathbb{F}_p$ for $\mathbb{Q}$ preserves the
+computation. The three-parameter system then fails to complete in a setting where coefficient
+arithmetic is free, which excludes the first of the two explanations under test: coefficient size is
+not what prevents the run from finishing.
+
+The isolated measurement locates the remaining cost. The subresultant remainder sequence performs a
+number of polynomial multiplications and exact divisions that grows with the degree of the operands
+in the main variable, and each of those operations is itself performed on multivariate polynomials
+whose size grows with the recursion into the remaining variables. The observed fourth-power scaling
+is a property of that structure and is present over both fields.
+
+The consequence for a modular gcd depends on which construction is meant. Computing the same
+subresultant sequence over several primes and reconstructing by the Chinese remainder theorem
+addresses coefficient growth alone, and Table~\ref{tab:gcd} bounds the resulting improvement at
+about a factor of $13$. Applied to a run that has not completed in \SI{900}{\second}, that factor
+does not produce a usable result. A gcd built on evaluation and interpolation, in the manner of
+Brown or Zippel, replaces the remainder sequence itself: the multivariate problem is reduced to
+univariate gcds at sampled points and the answer is interpolated, which changes the exponent rather
+than the constant. That construction addresses the cost identified here, and a multi-prime variant of
+the existing sequence does not.
+
+Two qualifications apply. First, the extrapolation to $498$ terms spans a factor of $1.7$ beyond the
+largest measured operand and is used only to confirm consistency with the observed intervals. Second,
+the experiment establishes that a faster gcd is necessary for the three-parameter problem, and does
+not establish that it is sufficient. The parameter polynomials reach several hundred terms during a
+single reduction, and the number of reductions the run requires is unknown, since it has never
+completed. A gcd whose cost grew linearly rather than quartically would remove the present
+obstruction without guaranteeing that the run terminates in useful time.
+
+\section{Conclusions}
+
+\begin{enumerate}
+  \item The three-parameter parametric solve does not complete over $\mathbb{F}_p(x,y,z)$, so its
+        cost is not attributable to arithmetic on rational coefficients.
+  \item The subresultant gcd over a fixed prime field costs approximately the fourth power of the
+        number of terms in its operands, and the parameter polynomials reach $498$ terms within one
+        reduction of the three-parameter run.
+  \item A modular gcd formed by computing the existing remainder sequence over several primes is
+        bounded by a factor of about $13$ and would not make the three-parameter problem tractable.
+  \item A gcd based on evaluation and interpolation addresses the measured cost. Whether it is
+        sufficient is not established by this experiment and would itself require measurement.
+  \item The recommendation is to treat $P=2$ as the working limit and to obtain three-joint arms by
+        the decoupling already implemented, which reduces such an arm to a two-parameter problem
+        solved in \SI{25}{\milli\second}.
+\end{enumerate}
+
+\section{Reproduction}
+
+From the repository root:
+
+\begin{verbatim}
+g++ -std=c++17 -O2 doc/experiments/field_cost.cpp -o field_cost \
+  -Ivarietas_core/include -Ivarietas_codegen/include \
+  -Ivarietas_kinematics/include -Idoc/experiments \
+  -I/usr/include/eigen3 -lgmpxx -lgmp
+
+./field_cost planar      # two-parameter control, both fields
+./field_cost reduced     # two-parameter control, both fields
+./field_cost spatial-fp  # three parameters over F_p; does not terminate
+./field_cost spatial-q   # three parameters over Q;   does not terminate
+
+g++ -std=c++17 -O2 doc/experiments/gcd_cost.cpp -o gcd_cost \
+  -Ivarietas_core/include -Ivarietas_codegen/include \
+  -Idoc/experiments -I/usr/include/eigen3 -lgmpxx -lgmp
+
+./gcd_cost
+\end{verbatim}
+
+Adding \texttt{-DVARIETAS\_EXPERIMENT\_TRACE} to the first build reports the largest parameter
+polynomial seen during normalisation. The pair-queue figures were obtained with a temporary
+instrumented copy of \texttt{varietas\_core/include/varietas/core/ideal/buchberger.hpp} printing the
+basis size, the pending count and the largest basis polynomial on each pass through the main loop.
+
+\end{document}
