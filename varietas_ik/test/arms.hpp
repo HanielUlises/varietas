@@ -82,6 +82,50 @@ inline chain<rational> coincident_two_link() {
   return robot;
 }
 
+// The anthropomorphic arm: a base that yaws about z, then a shoulder and an
+// elbow that both pitch about y. The textbook three-joint positioning arm, and
+// the one that does not solve over Q(x, y, z) in any reasonable time — its
+// whole point here is that it decouples.
+inline chain<rational> anthropomorphic_three_link() {
+  chain<rational> robot("anthropomorphic_3r");
+  robot.add_joint(revolute_joint<rational>("q1", vector3<rational>::unit(2),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q2", vector3<rational>::unit(1),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q3", vector3<rational>::unit(1), along_x(1)));
+  robot.set_tool(along_x(1));
+  return robot;
+}
+
+// The same arm on a pedestal. The base placement is a translation along the
+// axis it turns about, so it commutes with that rotation and the decomposition
+// still holds — it only moves the height the reduced problem is posed at.
+inline chain<rational> anthropomorphic_on_a_pedestal() {
+  chain<rational> robot("anthropomorphic_3r_pedestal");
+  robot.add_joint(revolute_joint<rational>(
+      "q1", vector3<rational>::unit(2),
+      rigid_transform<rational>::translation_only(
+          vector3<rational>(nil(), nil(), rational(2)))));
+  robot.add_joint(revolute_joint<rational>("q2", vector3<rational>::unit(1),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q3", vector3<rational>::unit(1), along_x(1)));
+  robot.set_tool(along_x(1));
+  return robot;
+}
+
+// The same arm with its base shifted sideways, off its own axis. The placement
+// no longer commutes with the rotation, the axis itself is carried around, and
+// there is no fixed plane to sweep.
+inline chain<rational> anthropomorphic_off_axis() {
+  chain<rational> robot("anthropomorphic_3r_offset");
+  robot.add_joint(revolute_joint<rational>("q1", vector3<rational>::unit(2), along_x(1)));
+  robot.add_joint(revolute_joint<rational>("q2", vector3<rational>::unit(1),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q3", vector3<rational>::unit(1), along_x(1)));
+  robot.set_tool(along_x(1));
+  return robot;
+}
+
 }  // namespace varietas_test
 
 #endif

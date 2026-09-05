@@ -25,6 +25,7 @@
 #include <urdf/model.h>
 
 #include "varietas/codegen/emit.hpp"
+#include "varietas/ik/decoupled_ik.hpp"
 #include "varietas/ik/parametric_ik.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
@@ -39,6 +40,7 @@ struct options {
   std::string name = "urdf_ik";
   std::string name_space = "varietas_generated";
   varietas::codegen::runtime_kind runtime = varietas::codegen::runtime_kind::eigen;
+  bool decouple = false;
 };
 
 bool parse(int argc, char** argv, options& out) {
@@ -62,6 +64,8 @@ bool parse(int argc, char** argv, options& out) {
       out.name = value("--name");
     } else if (arg == "--namespace") {
       out.name_space = value("--namespace");
+    } else if (arg == "--decouple") {
+      out.decouple = true;
     } else if (arg == "--matrices-only") {
       out.runtime = varietas::codegen::runtime_kind::matrices_only;
     } else if (!arg.empty() && arg[0] == '-') {
@@ -150,6 +154,75 @@ int run(const varietas::chain<varietas::rational>& robot,
   return 0;
 }
 
+inline std::string letter(std::size_t coordinate) {
+  static const char* const names[3] = {"x", "y", "z"};
+  return coordinate < 3 ? names[coordinate] : "?";
+}
+
+// The same, for an arm solved by sweeping its first joint out.
+//
+// What is emitted is the reduced problem alone. The base angle is an
+// arctangent of the target, which needs no algebra and no generated code, but
+// it does need to be applied — so the recipe for applying it is written into
+// the header's banner, where whoever includes it will find it.
+template <std::size_t N>
+int run_decoupled(const varietas::chain<varietas::rational>& robot, const options& opts) {
+  const auto result = varietas::ik::decoupled_position_ik<N>(robot);
+  if (!result.ok()) {
+    std::fprintf(stderr, "refused: %s\n", varietas::ik::to_string(result.status));
+    if (result.status == varietas::ik::decoupling_status::reduced_problem_refused) {
+      std::fprintf(stderr, "  the reduced problem: %s\n",
+                   varietas::ik::to_string(result.reduced_status));
+    }
+    return 1;
+  }
+
+  const auto& frame = result.frame;
+  const std::string radial = letter(frame.radial);
+  const std::string swept = letter(frame.swept);
+  const std::string axial = letter(frame.axis);
+  const std::string sign = frame.reversed ? "-" : "";
+
+  std::printf("decoupled        base joint %s about %s\n", result.first_joint_name.c_str(),
+              axial.c_str());
+  std::printf("reduced problem  %zu joints against (%s, %s)\n", N - 1, radial.c_str(),
+              axial.c_str());
+  std::printf("branches         %zu\n", result.branches);
+
+  varietas::codegen::emit_options emit_options;
+  emit_options.name = opts.name;
+  emit_options.name_space = opts.name_space;
+  emit_options.runtime = opts.runtime;
+  emit_options.source_note =
+      "Reduced inverse kinematics of " + robot.name() + ", from " + opts.urdf +
+      ". The base joint " + result.first_joint_name + ", which turns about " + axial +
+      ", has been swept out; this header solves only the remaining " + std::to_string(N - 1) +
+      " joints, against a radius and a height, over Q(radius, height). The unknowns are "
+      "t = tan(q/2).\n"
+      "//\n"
+      "// To solve the whole arm for a target (" +
+      letter(0) + ", " + letter(1) + ", " + letter(2) +
+      "):\n"
+      "//   radius  = hypot(target." + radial + ", target." + swept +
+      ")\n"
+      "//   heading = " + sign + "atan2(target." + swept + ", target." + radial +
+      ")\n"
+      "// then solve this header at pose {radius, target." + axial +
+      "} and take the base\n"
+      "// angle to be heading; then again at pose {-radius, target." + axial +
+      "} with the base\n"
+      "// angle heading + pi. Each call returns up to " +
+      std::to_string(result.reduced.dimension()) + " solutions, for " +
+      std::to_string(result.branches) + " configurations of the arm in all.";
+
+  if (!write(opts.output, varietas::codegen::emit(result.reduced, emit_options))) {
+    return 1;
+  }
+  std::printf("wrote            %s (reduced problem only; see its banner)\n",
+              opts.output.c_str());
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -158,7 +231,7 @@ int main(int argc, char** argv) {
     std::fprintf(stderr,
                  "usage: %s <file.urdf> <output.hpp> [--tip L] [--root L]\n"
                  "          [--coords xy|xz|yz|xyz] [--name N] [--namespace NS]\n"
-                 "          [--matrices-only]\n",
+                 "          [--decouple] [--matrices-only]\n",
                  argv[0]);
     return 2;
   }
@@ -225,6 +298,14 @@ int main(int argc, char** argv) {
                  dof, p);
     return 1;
   }
+  if (opts.decouple) {
+    if (dof == 2) return run_decoupled<2>(robot, opts);
+    if (dof == 3) return run_decoupled<3>(robot, opts);
+    std::fprintf(stderr, "refused: --decouple needs two or three joints, and this chain has %zu\n",
+                 dof);
+    return 1;
+  }
+
   if (dof == 1) return run<1, 1>(robot, coordinates, opts);
   if (dof == 2) return run<2, 2>(robot, coordinates, opts);
   if (dof == 3) return run<3, 3>(robot, coordinates, opts);

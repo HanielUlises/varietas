@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!-- The anthropomorphic three-joint positioning arm: a base that yaws about z,
+     then a shoulder and an elbow that pitch about y, with unit links.
+
+     This is the arm that does not solve over Q(x, y, z) in any time worth
+     waiting for, and that reduces in a fraction of a second once its base joint
+     is swept out. It is here so that urdf_codegen --decouple has something real
+     to be run on. -->
+<robot name="anthropomorphic_3r">
+  <link name="base_link"/>
+  <link name="shoulder"/>
+  <link name="upper_arm"/>
+  <link name="forearm"/>
+  <link name="tool"/>
+
+  <joint name="q1" type="revolute">
+    <parent link="base_link"/>
+    <child link="shoulder"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="q2" type="revolute">
+    <parent link="shoulder"/>
+    <child link="upper_arm"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="q3" type="revolute">
+    <parent link="upper_arm"/>
+    <child link="forearm"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="tool_mount" type="fixed">
+    <parent link="forearm"/>
+    <child link="tool"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

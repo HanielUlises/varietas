@@ -29,6 +29,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_parametric_ik ${PROJECT_NAME})
   target_include_directories(test_parametric_ik PRIVATE test)
 
+  ament_add_gtest(test_decoupled_ik test/test_decoupled_ik.cpp TIMEOUT 600)
+  target_link_libraries(test_decoupled_ik ${PROJECT_NAME})
+  target_include_directories(test_decoupled_ik PRIVATE test)
+
   # The same discipline varietas_codegen applies to its own emitter, applied to
   # the whole pipeline: a program that links the bridge solves a real arm over
   # Q(x, y) during the build and leaves a header behind, and the test below
@@ -52,6 +56,24 @@ if(BUILD_TESTING)
   target_link_libraries(test_generated_ik ${PROJECT_NAME})
   target_include_directories(test_generated_ik PRIVATE ${generated_dir} test)
   add_dependencies(test_generated_ik planar_2r_header)
+  # The decoupled pipeline, generated and compiled the same way.
+  add_executable(generate_spatial_3r test/generate_spatial_3r.cpp)
+  target_link_libraries(generate_spatial_3r ${PROJECT_NAME})
+  target_include_directories(generate_spatial_3r PRIVATE test)
+
+  set(reduced_header ${generated_dir}/anthropomorphic_reduced.hpp)
+  add_custom_command(
+    OUTPUT ${reduced_header}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${generated_dir}
+    COMMAND generate_spatial_3r ${reduced_header}
+    DEPENDS generate_spatial_3r
+    COMMENT "Sweeping the base joint and emitting ${reduced_header}")
+  add_custom_target(reduced_header_target DEPENDS ${reduced_header})
+
+  ament_add_gtest(test_generated_decoupled test/test_generated_decoupled.cpp TIMEOUT 600)
+  target_link_libraries(test_generated_decoupled ${PROJECT_NAME})
+  target_include_directories(test_generated_decoupled PRIVATE ${generated_dir} test)
+  add_dependencies(test_generated_decoupled reduced_header_target)
 endif()
 
 ament_package()
