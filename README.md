@@ -8,6 +8,8 @@ Given a URDF, the library recovers the chain exactly over $\mathbb{Q}$, rational
 
 Where IKFast pattern-matches known kinematic structures and fails silently outside them, varietas either produces a solution set with a proof of completeness or reports precisely which hypothesis of the Extension Theorem was violated.
 
+**Documentation:** https://varietas.readthedocs.io — the theory, the user guide, and the API reference. Build it locally with `sphinx-build -b html docs docs/_build/html`.
+
 <p align="center">
   <img src="docs/figures/pipeline.svg" alt="The varietas pipeline, from a robot description to the three constructions the ideal supports" width="980">
 </p>
@@ -98,7 +100,7 @@ is the ideal of the Zariski closure of the reachable workspace, by the Closure T
 | `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit; `urdf_codegen` | `varietas_ik` |
 | `varietas_demo` | RViz demonstration of the recovered chain | ROS 2 |
 
-`varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator. Build and test instructions are in [BUILD.md](BUILD.md).
+`varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator. Build and test instructions are in [BUILD.md](BUILD.md), and the full documentation is in [`docs/`](docs/).
 
 #### Representation
 

@@ -1,0 +1,10 @@
+/* Wider content column: the prose here is long-form and the default 800px
+   measure breaks the tables of package contents across too many lines. */
+.wy-nav-content { max-width: 1000px; }
+
+/* Figures are diagrams, not screenshots, so they should not be clipped. */
+.rst-content img { max-width: 100%; height: auto; }
+
+/* Status tables read better without the alternating stripe fighting the
+   monospace in the first column. */
+.rst-content table.docutils td { vertical-align: top; }
