@@ -36,7 +36,8 @@ Coeff coeff(std::int64_t numerator, std::int64_t denominator = 1) {
 }
 
 template <std::size_t N>
-varietas::monomial<N> mon(const std::array<std::uint8_t, N>& exponents) {
+varietas::monomial<N> mon(
+    const std::array<typename varietas::monomial<N>::exponent_type, N>& exponents) {
   return varietas::monomial<N>(exponents);
 }
 

@@ -23,8 +23,12 @@ using mon3 = varietas::monomial<3>;
 using poly_lex = varietas::polynomial<double, 3, lex>;
 using poly_grlex = varietas::polynomial<double, 3, grlex>;
 
-mon3 make(std::uint8_t a, std::uint8_t b, std::uint8_t c) {
-  return mon3(std::array<std::uint8_t, 3>{a, b, c});
+// Written in terms of the monomial's own exponent type rather than a fixed
+// width, so that widening it does not have to be followed through the tests.
+using exponent = mon3::exponent_type;
+
+mon3 make(exponent a, exponent b, exponent c) {
+  return mon3(std::array<exponent, 3>{a, b, c});
 }
 
 // x, y, z as polynomials under lex.

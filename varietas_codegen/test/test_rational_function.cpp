@@ -106,8 +106,9 @@ TEST(RationalFunction, ArithmeticAgreesWithEvaluationOnRandomFunctions) {
         if (c == 0) {
           continue;
         }
-        const std::array<std::uint8_t, 2> e{static_cast<std::uint8_t>(exponent(rng)),
-                                            static_cast<std::uint8_t>(exponent(rng))};
+        using exponent_type = varietas::monomial<2>::exponent_type;
+        const std::array<exponent_type, 2> e{static_cast<exponent_type>(exponent(rng)),
+                                             static_cast<exponent_type>(exponent(rng))};
         p = p + param::from_monomial(varietas::monomial<2>(e), make_rational(c));
       }
       if (!p.is_zero()) {
@@ -187,8 +188,12 @@ TEST(RationalFunction, RepeatedArithmeticDoesNotInflateTheRepresentation) {
 
 TEST(RationalFunction, NormalisationWritesEqualFunctionsTheSameWay) {
   // A common factor and a negative denominator, both of which normalise away.
-  const param n({{varietas::monomial<2>(std::array<std::uint8_t, 2>{2, 0}), make_rational(-2)}});
-  const param d({{varietas::monomial<2>(std::array<std::uint8_t, 2>{1, 0}), make_rational(-4)}});
+  const param n(
+      {{varietas::monomial<2>(std::array<varietas::monomial<2>::exponent_type, 2>{2, 0}),
+        make_rational(-2)}});
+  const param d(
+      {{varietas::monomial<2>(std::array<varietas::monomial<2>::exponent_type, 2>{1, 0}),
+        make_rational(-4)}});
   const field f(n, d);
 
   EXPECT_EQ(f, x() / constant(2));

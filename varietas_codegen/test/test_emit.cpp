@@ -195,8 +195,11 @@ TEST(Emit, DistinctDenominatorsProduceDistinctGuards) {
       << "guards must be written inline, or two of them collide";
 
   // Both poles are actually guarded.
-  EXPECT_NE(header.find("if ((pose[0]) == 0.0) { return false; }"), std::string::npos);
-  EXPECT_NE(header.find("+ (1.0)) == 0.0) { return false; }"), std::string::npos)
+  // Each pole is judged against the size of its own terms, not against zero.
+  EXPECT_NE(header.find("if (!well_conditioned(pose[0], magnitude(pose[0]))) { return false; }"),
+            std::string::npos);
+  EXPECT_NE(header.find("+ (1.0), magnitude(pose[1]) + (1.0))) { return false; }"),
+            std::string::npos)
       << header;
 }
 
@@ -210,7 +213,7 @@ TEST(Emit, RepeatedDenominatorsAreGuardedOnce) {
 
   const std::string header = emit(solution);
 
-  const std::string guard = "if ((pose[0]) == 0.0)";
+  const std::string guard = "if (!well_conditioned(pose[0], magnitude(pose[0])))";
   std::size_t count = 0;
   for (std::size_t at = header.find(guard); at != std::string::npos;
        at = header.find(guard, at + 1)) {

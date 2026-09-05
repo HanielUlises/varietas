@@ -16,8 +16,31 @@ using varietas::lex;
 
 using mon3 = varietas::monomial<3>;
 
-mon3 make(std::uint8_t a, std::uint8_t b, std::uint8_t c) {
-  return mon3(std::array<std::uint8_t, 3>{a, b, c});
+// Written in terms of the monomial's own exponent type rather than a fixed
+// width, so that widening it does not have to be followed through the tests.
+using exponent = mon3::exponent_type;
+
+mon3 make(exponent a, exponent b, exponent c) {
+  return mon3(std::array<exponent, 3>{a, b, c});
+}
+
+// Exponents past what a byte holds.
+//
+// The exponent used to be eight bits, and a product that carried one past 255
+// wrapped silently to a different monomial — which is not a loud failure but a
+// wrong answer, since every divisibility question asked afterwards is answered
+// about the wrong thing. Parameter polynomials over a function field reach this
+// range in practice; a degree of 254 in one variable was observed in an
+// underdetermined system before this was widened.
+TEST(Monomial, ExponentsPastAByteAreExact) {
+  const mon3 a = make(200, 0, 0);
+  const mon3 b = make(100, 0, 0);
+  const mon3 product = a * b;
+
+  EXPECT_EQ(product[0], 300u) << "the exponent wrapped instead of growing";
+  EXPECT_EQ(product.degree(), 300u);
+  EXPECT_TRUE(mon3::divides(a, product));
+  EXPECT_EQ(mon3::divide(product, a), b);
 }
 
 TEST(Monomial, DegreeAndProduct) {

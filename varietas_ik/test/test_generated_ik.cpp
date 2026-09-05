@@ -125,12 +125,18 @@ TEST(GeneratedIk, AgreesWithTheForwardMapAcrossTheAnnulus) {
       if (r < 0.15 || r > 1.9) {
         continue;  // stay off the boundary circles, where the branches merge
       }
-      if (std::abs(pole_value(x, y)) < 1e-3) {
-        continue;  // and off the pole, which the test below covers separately
-      }
 
       const auto result = solve_at(x, y);
-      ASSERT_GE(result.count, 0) << "solve failed at (" << x << ", " << y << ")";
+      if (result.count < 0) {
+        // The guard refused this pose. That is its business, and the tests
+        // above pin down exactly which poses it refuses; here it is enough that
+        // a refusal is a refusal and not a wrong answer.
+        EXPECT_EQ(result.state, solver::status::bad_pose);
+        EXPECT_LT(std::abs(pole_value(x, y)), 1e-9)
+            << "only poses on the pole should be refused, but (" << x << ", " << y
+            << ") is not one";
+        continue;
+      }
       ASSERT_EQ(result.count, 2) << "interior point (" << x << ", " << y << ")";
       ++poses_with_two_branches;
 
@@ -163,40 +169,44 @@ TEST(GeneratedIk, RefusesAPoseExactlyOnThePole) {
 //
 // (-1.6, 0.8) satisfies x^2 + y^2 + 2x = 0 exactly over the rationals, but
 // evaluated in doubles the same expression comes to about 4e-16 rather than to
-// zero. The guard compares against 0.0 exactly, so it does not fire, and the
-// action matrices are then formed by dividing by that 4e-16.
+// zero. A guard comparing against 0.0 would not fire, and the action matrices
+// would then be formed by dividing by that 4e-16 — which is what this header
+// used to do, returning two configurations of which one did not reach the
+// target and neither the count nor the status said so.
 //
-// This test records what the generated code does today rather than what it
-// ought to do: it answers, and one of the two branches it returns does not
-// reach the requested point. The guard is exact, so it catches a pose that
-// lands on the pole in binary and misses one that merely lies within rounding
-// of it, and there is no signal to the caller either way. That the other branch
-// survives is what makes the failure mode nasty — the count is right, the
-// status is ok, and half the answer is silently wrong.
-//
-// Closing the gap means giving the emitted guard a tolerance, which is a
-// numerical policy decision for the emitter and not something this test can
-// paper over.
-TEST(GeneratedIk, NearThePoleTheGuardDoesNotFireAndOneBranchIsWrong) {
+// The guard now compares the denominator against the size of the terms that
+// produced it, so total cancellation is recognised whether or not it landed
+// exactly on zero, and the pose is refused.
+TEST(GeneratedIk, RefusesAPoseWithinRoundingOfThePole) {
   const double x = 0.2 * -8;  // -1.6000000000000001
   const double y = 0.2 * 4;   //  0.8
   EXPECT_NE(pole_value(x, y), 0.0) << "the premise of this test is that rounding hides the pole";
   EXPECT_LT(std::abs(pole_value(x, y)), 1e-12) << "and that it is nevertheless on it";
 
   const auto result = solve_at(x, y);
-  ASSERT_GE(result.count, 0) << "the guard is exact, so it is expected not to fire here";
+  EXPECT_EQ(result.count, -1) << "a pose within rounding of the pole must be refused";
+  EXPECT_EQ(result.state, solver::status::bad_pose);
+}
 
-  int reaching = 0;
+// And a pose that is merely near the pole, not on it, is still answered.
+//
+// A relative guard has to refuse total cancellation without refusing every pose
+// in the neighbourhood, or it would carve a hole out of the workspace instead
+// of a circle.
+TEST(GeneratedIk, APoseNearButNotOnThePoleIsStillAnswered) {
+  // Off the circle by about a hundredth, which is enormous next to 1e-12.
+  const double x = -1.59;
+  const double y = 0.8;
+  ASSERT_GT(std::abs(pole_value(x, y)), 1e-3);
+
+  const auto result = solve_at(x, y);
+  ASSERT_GE(result.count, 0) << "the guard must not refuse a pose merely close to the pole";
+  ASSERT_EQ(result.count, 2);
   for (const auto& t : result.configurations) {
     const auto reached = tool_position(t);
-    if (std::abs(reached[0] - x) < 1e-6 && std::abs(reached[1] - y) < 1e-6) {
-      ++reaching;
-    }
+    EXPECT_NEAR(reached[0], x, 1e-7);
+    EXPECT_NEAR(reached[1], y, 1e-7);
   }
-  EXPECT_LT(reaching, result.count)
-      << "every branch reached the target, so the guard has gained a tolerance or the "
-         "conditioning improved; this test should then become an expectation that solve "
-         "refuses instead";
 }
 
 TEST(GeneratedIk, PointsOutsideTheAnnulusHaveNoRealSolution) {

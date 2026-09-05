@@ -61,7 +61,7 @@ if(BUILD_TESTING)
   target_link_libraries(generate_spatial_3r ${PROJECT_NAME})
   target_include_directories(generate_spatial_3r PRIVATE test)
 
-  set(reduced_header ${generated_dir}/anthropomorphic_reduced.hpp)
+  set(reduced_header ${generated_dir}/anthropomorphic_ik.hpp)
   add_custom_command(
     OUTPUT ${reduced_header}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${generated_dir}

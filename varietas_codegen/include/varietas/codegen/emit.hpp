@@ -35,6 +35,20 @@ struct emit_options {
   std::string guard;                     // defaulted from the namespace and name
   std::string source_note;               // free text recorded in the banner
   runtime_kind runtime = runtime_kind::matrices_only;
+
+  // Verbatim declarations placed inside the namespace, after the struct.
+  //
+  // A solved system is not always the whole answer. An arm whose first joint
+  // was swept out rather than adjoined needs an arctangent applied to what this
+  // header returns, and that arctangent belongs in the same header as the
+  // matrices it accompanies — a caller should not have to be told separately
+  // how to finish the computation.
+  //
+  // The text is written out exactly as given, so whatever produces it is
+  // responsible for it compiling. It is a hook for a layer that knows more
+  // about the problem than the emitter does, which is why the emitter does not
+  // try to guess at it.
+  std::string epilogue;
 };
 
 namespace detail {
@@ -112,6 +126,56 @@ std::string emit_polynomial(const polynomial<rational, P, typename rational_func
     if (factors.empty()) {
       out << "(" << coefficient << ")";
     } else if (t.coeff == 1) {
+      out << factors;
+    } else {
+      out << "(" << coefficient << ") * " << factors;
+    }
+  }
+  return out.str();
+}
+
+// The same polynomial with every sign removed: the sum of the magnitudes of its
+// terms.
+//
+// This is the scale a denominator has to be judged against. A guard that asks
+// whether a denominator is zero is asking the wrong question in floating point,
+// because a denominator that is zero mathematically almost never evaluates to
+// zero — it evaluates to whatever the cancellation between its terms leaves
+// behind, which is tiny but nonzero, and dividing by that produces a confident
+// wrong answer instead of a refusal. Comparing the result against the size of
+// the terms that produced it is the standard way to detect that the cancellation
+// was total, and it costs one more expression per pole.
+template <std::size_t P>
+std::string emit_polynomial_scale(
+    const polynomial<rational, P, typename rational_function<P>::parameter_order>& p,
+    const std::string& pose) {
+  if (p.is_zero()) {
+    return "0.0";
+  }
+
+  std::ostringstream out;
+  bool first = true;
+  for (const auto& t : p.terms()) {
+    if (!first) {
+      out << " + ";
+    }
+    first = false;
+
+    std::string factors;
+    for (std::size_t i = 0; i < P; ++i) {
+      for (unsigned e = 0; e < static_cast<unsigned>(t.mon[i]); ++e) {
+        if (!factors.empty()) {
+          factors += " * ";
+        }
+        factors += "magnitude(" + pose + "[" + std::to_string(i) + "])";
+      }
+    }
+
+    const rational size = t.coeff < 0 ? -t.coeff : t.coeff;
+    const std::string coefficient = emit_rational(size);
+    if (factors.empty()) {
+      out << "(" << coefficient << ")";
+    } else if (size == 1) {
       out << factors;
     } else {
       out << "(" << coefficient << ") * " << factors;
@@ -216,6 +280,27 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
   }
   out << "\n";
 
+  out << "  // Absolute value, written out rather than taken from <cmath>, so that a\n"
+      << "  // matrices_only header still needs nothing but <cstddef> and <cstdint>.\n"
+      << "  static double magnitude(double value) { return value < 0.0 ? -value : value; }\n"
+      << "\n"
+      << "  // Whether a denominator can be divided by at this pose.\n"
+      << "  //\n"
+      << "  // `value` is the denominator and `scale` the sum of the magnitudes of the\n"
+      << "  // terms that were added to produce it. Their ratio is what survived the\n"
+      << "  // cancellation between those terms: when it falls below the relative\n"
+      << "  // tolerance the denominator is zero as far as this arithmetic can tell,\n"
+      << "  // whether or not the subtraction happened to land exactly on 0.0.\n"
+      << "  //\n"
+      << "  // Comparing against 0.0 instead would refuse only a pose that lands on the\n"
+      << "  // pole in binary and would accept one that merely lies within rounding of\n"
+      << "  // it, which is the same pose to any caller who arrived at it by arithmetic.\n"
+      << "  static constexpr double pole_tolerance = 1e-12;\n"
+      << "  static bool well_conditioned(double value, double scale) {\n"
+      << "    return magnitude(value) > pole_tolerance * magnitude(scale);\n"
+      << "  }\n"
+      << "\n";
+
   out << "  // Writes the action matrix of unknown `variable` at `" << pose << "` into\n"
       << "  // `out`, column-major, dimension * dimension entries. Returns false if\n"
       << "  // `variable` is out of range or a denominator vanished at this pose,\n"
@@ -240,6 +325,7 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
     // the same reason, so the guard costs one comparison per pole and not one
     // per entry.
     std::vector<std::string> guards;
+    std::vector<std::string> scales;
     for (std::size_t j = 0; j < d; ++j) {
       for (std::size_t i = 0; i < d; ++i) {
         const auto& f = matrix(i, j);
@@ -248,12 +334,14 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
         }
         std::string g = detail::emit_polynomial<P>(f.denominator(), pose);
         if (std::find(guards.begin(), guards.end(), g) == guards.end()) {
+          scales.push_back(detail::emit_polynomial_scale<P>(f.denominator(), pose));
           guards.push_back(std::move(g));
         }
       }
     }
-    for (const std::string& g : guards) {
-      out << "        if ((" << g << ") == 0.0) { return false; }\n";
+    for (std::size_t g = 0; g < guards.size(); ++g) {
+      out << "        if (!well_conditioned(" << guards[g] << ", " << scales[g]
+          << ")) { return false; }\n";
     }
 
     for (std::size_t j = 0; j < d; ++j) {
@@ -290,17 +378,20 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
         << detail::name_or(solution.unknown_names, v, "x") << "\n";
 
     std::vector<std::string> guards;
+    std::vector<std::string> scales;
     for (const auto& f : row) {
       if (f.is_zero() || f.denominator().degree() == 0) {
         continue;
       }
       std::string g = detail::emit_polynomial<P>(f.denominator(), pose);
       if (std::find(guards.begin(), guards.end(), g) == guards.end()) {
+        scales.push_back(detail::emit_polynomial_scale<P>(f.denominator(), pose));
         guards.push_back(std::move(g));
       }
     }
-    for (const std::string& g : guards) {
-      out << "        if ((" << g << ") == 0.0) { return false; }\n";
+    for (std::size_t g = 0; g < guards.size(); ++g) {
+      out << "        if (!well_conditioned(" << guards[g] << ", " << scales[g]
+          << ")) { return false; }\n";
     }
     for (std::size_t m = 0; m < d; ++m) {
       out << "        out[" << m << "] = "
@@ -407,8 +498,11 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
 )CODE";
   }
 
-  out << "};\n\n"
-      << "}  // namespace " << options.name_space << "\n\n"
+  out << "};\n";
+  if (!options.epilogue.empty()) {
+    out << "\n" << options.epilogue << "\n";
+  }
+  out << "\n}  // namespace " << options.name_space << "\n\n"
       << "#endif\n";
 
   return out.str();

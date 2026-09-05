@@ -26,6 +26,7 @@
 
 #include "varietas/codegen/emit.hpp"
 #include "varietas/ik/decoupled_ik.hpp"
+#include "varietas/ik/emit_decoupled.hpp"
 #include "varietas/ik/parametric_ik.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
@@ -161,12 +162,18 @@ inline std::string letter(std::size_t coordinate) {
 
 // The same, for an arm solved by sweeping its first joint out.
 //
-// What is emitted is the reduced problem alone. The base angle is an
-// arctangent of the target, which needs no algebra and no generated code, but
-// it does need to be applied — so the recipe for applying it is written into
-// the header's banner, where whoever includes it will find it.
+// What is emitted is the reduced problem together with the arctangent that puts
+// the swept joint back, so the header solves the whole arm. The wrapper needs
+// the reduced solver to call, so --matrices-only cannot be combined with this.
 template <std::size_t N>
 int run_decoupled(const varietas::chain<varietas::rational>& robot, const options& opts) {
+  if (opts.runtime != varietas::codegen::runtime_kind::eigen) {
+    std::fprintf(stderr,
+                 "refused: --decouple emits a wrapper that calls the reduced solver, so it "
+                 "cannot be combined with --matrices-only\n");
+    return 1;
+  }
+
   const auto result = varietas::ik::decoupled_position_ik<N>(robot);
   if (!result.ok()) {
     std::fprintf(stderr, "refused: %s\n", varietas::ik::to_string(result.status));
@@ -178,15 +185,10 @@ int run_decoupled(const varietas::chain<varietas::rational>& robot, const option
   }
 
   const auto& frame = result.frame;
-  const std::string radial = letter(frame.radial);
-  const std::string swept = letter(frame.swept);
-  const std::string axial = letter(frame.axis);
-  const std::string sign = frame.reversed ? "-" : "";
-
   std::printf("decoupled        base joint %s about %s\n", result.first_joint_name.c_str(),
-              axial.c_str());
-  std::printf("reduced problem  %zu joints against (%s, %s)\n", N - 1, radial.c_str(),
-              axial.c_str());
+              letter(frame.axis).c_str());
+  std::printf("reduced problem  %zu joints against (%s, %s)\n", N - 1,
+              letter(frame.radial).c_str(), letter(frame.axis).c_str());
   std::printf("branches         %zu\n", result.branches);
 
   varietas::codegen::emit_options emit_options;
@@ -194,32 +196,19 @@ int run_decoupled(const varietas::chain<varietas::rational>& robot, const option
   emit_options.name_space = opts.name_space;
   emit_options.runtime = opts.runtime;
   emit_options.source_note =
-      "Reduced inverse kinematics of " + robot.name() + ", from " + opts.urdf +
-      ". The base joint " + result.first_joint_name + ", which turns about " + axial +
-      ", has been swept out; this header solves only the remaining " + std::to_string(N - 1) +
-      " joints, against a radius and a height, over Q(radius, height). The unknowns are "
-      "t = tan(q/2).\n"
-      "//\n"
-      "// To solve the whole arm for a target (" +
-      letter(0) + ", " + letter(1) + ", " + letter(2) +
-      "):\n"
-      "//   radius  = hypot(target." + radial + ", target." + swept +
-      ")\n"
-      "//   heading = " + sign + "atan2(target." + swept + ", target." + radial +
-      ")\n"
-      "// then solve this header at pose {radius, target." + axial +
-      "} and take the base\n"
-      "// angle to be heading; then again at pose {-radius, target." + axial +
-      "} with the base\n"
-      "// angle heading + pi. Each call returns up to " +
-      std::to_string(result.reduced.dimension()) + " solutions, for " +
-      std::to_string(result.branches) + " configurations of the arm in all.";
+      "Inverse kinematics of " + robot.name() + ", from " + opts.urdf + ". The base joint " +
+      result.first_joint_name + ", which turns about " + letter(frame.axis) +
+      ", was swept out rather than adjoined: the struct below solves the remaining " +
+      std::to_string(N - 1) +
+      " joints against a radius and a height over Q(radius, height), and the wrapper after "
+      "it puts the base joint back with an arctangent. Call the wrapper; it returns joint "
+      "angles in radians.";
 
-  if (!write(opts.output, varietas::codegen::emit(result.reduced, emit_options))) {
+  if (!write(opts.output, varietas::ik::emit_decoupled(result, emit_options))) {
     return 1;
   }
-  std::printf("wrote            %s (reduced problem only; see its banner)\n",
-              opts.output.c_str());
+  std::printf("wrote            %s (%s solves the whole arm)\n", opts.output.c_str(),
+              opts.name.c_str());
   return 0;
 }
 

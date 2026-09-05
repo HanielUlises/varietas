@@ -1,10 +1,10 @@
-// The reduced solver for the anthropomorphic arm, written at build time.
+// A solver for the anthropomorphic arm, written at build time.
 //
 // The arm this comes from does not solve over Q(x, y, z) in any time worth
 // waiting for. What is emitted here is the two-joint problem left after its
-// base joint is swept out, which solves in a fraction of a second — and the
-// base angle the sweep left behind is an arctangent, which needs no algebra at
-// all. test_generated_decoupled puts the two back together.
+// base joint is swept out, which solves in a fraction of a second, together
+// with the arctangent that puts the base joint back — so the header is a
+// solver for the whole arm and not for most of it.
 
 #include <cstdio>
 #include <fstream>
@@ -12,6 +12,7 @@
 
 #include "varietas/codegen/emit.hpp"
 #include "varietas/ik/decoupled_ik.hpp"
+#include "varietas/ik/emit_decoupled.hpp"
 
 #include "arms.hpp"
 
@@ -30,15 +31,15 @@ int main(int argc, char** argv) {
   }
 
   varietas::codegen::emit_options options;
-  options.name = "anthropomorphic_reduced";
+  options.name = "anthropomorphic_ik";
   options.name_space = "varietas_generated";
   options.source_note =
-      "The anthropomorphic 3R arm with its base yaw swept out: shoulder and elbow against a "
-      "radius and a height, solved once over Q(radius, height). The unknowns are t = tan(q/2); "
-      "the base angle is an arctangent of the target and is not part of this system.";
+      "The anthropomorphic 3R arm. Its base yaw was swept out rather than adjoined: the "
+      "struct below solves shoulder and elbow against a radius and a height over "
+      "Q(radius, height), and the wrapper after it puts the base joint back.";
   options.runtime = varietas::codegen::runtime_kind::eigen;
 
-  const std::string header = varietas::codegen::emit(result.reduced, options);
+  const std::string header = varietas::ik::emit_decoupled(result, options);
 
   std::ofstream out(argv[1]);
   if (!out) {
