@@ -10,6 +10,7 @@
 //     -Ivarietas_kinematics/include -Itools/experiments \
 //     -I/usr/include/eigen3 -lgmpxx -lgmp
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -97,6 +98,13 @@ struct measurement {
   std::size_t quotient_dimension = 0;
   bool zero_dimensional = false;
   std::size_t largest_basis_polynomial = 0;  // terms
+
+  // The multiset of leading monomials of the reduced basis, written as a sorted
+  // list of exponent vectors. Two computations that agree here have the same
+  // initial ideal, which is a stronger statement than agreement of the basis
+  // size and the quotient dimension, and is what has to hold if the change of
+  // coefficient field is to be a valid substitution.
+  std::string initial_ideal;
 };
 
 // The parametric position problem, posed and solved over the given field.
@@ -113,9 +121,7 @@ measurement solve(const varietas::chain<Field>& robot,
   const auto map = varietas::rational_forward_kinematics<N, grevlex>(robot);
   const poly denominator = map.denominator();
   const auto phase1 = std::chrono::steady_clock::now();
-  std::fprintf(stderr, "  [forward map done in %.1f s]\n",
-               std::chrono::duration<double>(phase1 - phase0).count());
-  std::fflush(stderr);
+
 
   std::vector<poly> residuals;
   residuals.reserve(P);
@@ -124,9 +130,7 @@ measurement solve(const varietas::chain<Field>& robot,
                         denominator * poly::constant(Field::parameter(k)));
   }
   const auto phase2 = std::chrono::steady_clock::now();
-  std::fprintf(stderr, "  [residuals done in %.1f s]\n",
-               std::chrono::duration<double>(phase2 - phase1).count());
-  std::fflush(stderr);
+
 
   const auto start = phase2;
   const auto basis = varietas::kinematic_ideal_generators<N, grevlex>(robot, residuals);
@@ -141,18 +145,29 @@ measurement solve(const varietas::chain<Field>& robot,
   m.basis_size = basis.size();
   m.zero_dimensional = quotient.is_zero_dimensional;
   m.quotient_dimension = quotient.dimension();
+  std::vector<std::string> leading;
   for (const auto& g : basis) {
     if (g.size() > m.largest_basis_polynomial) {
       m.largest_basis_polynomial = g.size();
     }
+    std::string exponents = "(";
+    for (std::size_t v = 0; v < N; ++v) {
+      exponents += std::to_string(static_cast<unsigned>(g.leading_monomial()[v]));
+      exponents += v + 1 < N ? "," : "";
+    }
+    leading.push_back(exponents + ")");
+  }
+  std::sort(leading.begin(), leading.end());
+  for (const auto& l : leading) {
+    m.initial_ideal += l;
   }
   return m;
 }
 
 void report(const char* system, const char* field, const measurement& m) {
-  std::printf("%-28s %-12s %8.3f %8.3f %10.3f %7zu %8zu %8zu\n", system, field,
-              m.forward_map_seconds, m.residual_seconds, m.seconds, m.basis_size,
-              m.quotient_dimension, m.largest_basis_polynomial);
+  std::printf("%-24s %-11s %8.3f %8.3f %7zu %7zu %7zu  %s\n", system, field,
+              m.forward_map_seconds + m.residual_seconds, m.seconds, m.basis_size,
+              m.quotient_dimension, m.largest_basis_polynomial, m.initial_ideal.c_str());
   std::fflush(stdout);
 }
 
@@ -161,8 +176,8 @@ void report(const char* system, const char* field, const measurement& m) {
 int main(int argc, char** argv) {
   const std::string which = argc > 1 ? argv[1] : "all";
 
-  std::printf("%-28s %-12s %8s %8s %10s %7s %8s %8s\n", "system", "field", "fwd map",
-              "residual", "groebner", "basis", "dim_k A", "maxterm");
+  std::printf("%-24s %-11s %8s %8s %7s %7s %7s  %s\n", "system", "field", "setup",
+              "groebner", "basis", "dim_k A", "maxterm", "initial ideal");
   std::fflush(stdout);
 
   if (which == "all" || which == "planar") {
