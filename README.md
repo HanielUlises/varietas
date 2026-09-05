@@ -337,6 +337,7 @@ What is deliberately not claimed is a primary decomposition. `split_along` is ex
 | Code emission | complete |
 | URDF → header pipeline | complete |
 | First-joint decoupling | complete |
+| Modular gcd over $\mathbb{Q}(\boldsymbol{p})$ | coprimality test only |
 | Factorisation over $\mathbb{Q}$ | not begun |
 
 `emit` takes a system solved over $\mathbb{Q}(\boldsymbol{p})$ — the pose adjoined to the coefficient field rather than to the polynomial ring, so that one basis answers every pose instead of one basis per pose — and writes a header. It holds the action matrices as expressions in the pose, the coordinates of each variable's normal form (a variable is usually not a standard monomial, having been reduced away), the `order_id` the basis was computed under, and a guard on every denominator, so a pose on the locus the parametric basis fails to describe is refused rather than answered with infinities.
