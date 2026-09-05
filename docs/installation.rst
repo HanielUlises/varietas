@@ -80,5 +80,7 @@ Building this documentation
    python3 -m pip install -r docs/requirements.txt
    sphinx-build -b html docs docs/_build/html
 
-The published site is built by Read the Docs from ``.readthedocs.yaml`` at the
-repository root.
+The published site at https://hanielulises.github.io/varietas/ is built and
+deployed by ``.github/workflows/docs.yml`` on every push to ``main``. That
+workflow builds with ``-W``, so a dead cross-reference or a malformed table
+fails the check rather than shipping.

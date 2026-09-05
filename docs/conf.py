@@ -29,6 +29,10 @@ cpp_index_common_prefix = ["varietas::", "varietas::urdf_import::"]
 
 # -- HTML output --------------------------------------------------------------
 
+# Published at https://hanielulises.github.io/varietas/ by .github/workflows/docs.yml.
+# sphinx.ext.githubpages writes the .nojekyll that keeps Pages from hiding _static/.
+html_baseurl = "https://hanielulises.github.io/varietas/"
+
 html_theme = "sphinx_rtd_theme"
 html_title = "varietas"
 html_short_title = "varietas"

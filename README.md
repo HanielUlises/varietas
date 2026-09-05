@@ -8,7 +8,7 @@ Given a URDF, the library recovers the chain exactly over $\mathbb{Q}$, rational
 
 Where IKFast pattern-matches known kinematic structures and fails silently outside them, varietas either produces a solution set with a proof of completeness or reports precisely which hypothesis of the Extension Theorem was violated.
 
-**Documentation:** https://varietas.readthedocs.io — the theory, the user guide, and the API reference. Build it locally with `sphinx-build -b html docs docs/_build/html`.
+**Documentation:** https://hanielulises.github.io/varietas/ — the theory, the user guide, and the API reference. Build it locally with `sphinx-build -b html docs docs/_build/html`.
 
 <p align="center">
   <img src="docs/figures/pipeline.svg" alt="The varietas pipeline, from a robot description to the three constructions the ideal supports" width="980">
