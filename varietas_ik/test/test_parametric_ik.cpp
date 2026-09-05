@@ -197,6 +197,18 @@ TEST(parametric_ik, refuses_more_unknowns_than_coordinates_without_computing) {
   EXPECT_EQ(result.status, parametric_ik_status::underdetermined);
 }
 
+TEST(parametric_ik, refuses_more_coordinates_than_unknowns_without_computing) {
+  // A two-joint planar arm asked for a point in space. The tool sweeps a
+  // two-dimensional region, a general point of three-space is not in it, and
+  // the ideal is the unit ideal — which the solve would discover, expensively,
+  // over Q(x, y, z). Counting gets there first.
+  const auto result =
+      parametric_position_ik<2, 3>(varietas_test::planar_two_link(), {0, 1, 2});
+
+  EXPECT_EQ(result.status, parametric_ik_status::overdetermined);
+  EXPECT_EQ(result.branches, 0u);
+}
+
 TEST(parametric_ik, refuses_a_positive_dimensional_system_that_counting_cannot_catch) {
   // Two joints about the same axis through the same point, so only their sum
   // moves the tool. The generator count says nothing here — two equations in two

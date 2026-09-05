@@ -212,19 +212,26 @@ int main(int argc, char** argv) {
 
   std::printf("coordinates      %zu\n", coordinates.size());
 
-  // Only P >= N can give a finite solution set, and P is at most three; the
-  // bridge says so itself, but there is no point instantiating the rest.
+  // One coordinate per unknown, and no other arrangement. Fewer leaves a curve
+  // of configurations over each point; more asks the arm for a point it cannot
+  // reach at all. The bridge refuses both by counting, so the only cases worth
+  // instantiating are the three where the counts agree.
   const std::size_t p = coordinates.size();
-  if (dof == 1 && p == 1) return run<1, 1>(robot, coordinates, opts);
-  if (dof == 1 && p == 2) return run<1, 2>(robot, coordinates, opts);
-  if (dof == 1 && p == 3) return run<1, 3>(robot, coordinates, opts);
-  if (dof == 2 && p == 2) return run<2, 2>(robot, coordinates, opts);
-  if (dof == 2 && p == 3) return run<2, 3>(robot, coordinates, opts);
-  if (dof == 3 && p == 3) return run<3, 3>(robot, coordinates, opts);
+  if (dof != p) {
+    std::fprintf(stderr,
+                 "refused: %zu joints against %zu coordinates. A parametric solver needs one "
+                 "coordinate per joint: fewer leaves a curve of configurations over each "
+                 "point, more puts a general pose out of the arm's reach.\n",
+                 dof, p);
+    return 1;
+  }
+  if (dof == 1) return run<1, 1>(robot, coordinates, opts);
+  if (dof == 2) return run<2, 2>(robot, coordinates, opts);
+  if (dof == 3) return run<3, 3>(robot, coordinates, opts);
 
   std::fprintf(stderr,
-               "refused: %zu joints against %zu coordinates cannot give a finite solution "
-               "set; a tool position constrains at most three unknowns\n",
-               dof, p);
+               "refused: a tool position constrains at most three unknowns, and this chain "
+               "has %zu\n",
+               dof);
   return 1;
 }

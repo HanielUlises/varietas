@@ -64,6 +64,21 @@ enum class parametric_ik_status {
   // the most expensive way to learn it.
   underdetermined,
 
+  // More pose coordinates than unknowns, which cannot have a solution at a
+  // general pose and is likewise caught before anything expensive runs.
+  //
+  // The tool positions an N-joint arm can reach form a variety of dimension at
+  // most N, and the parameters are transcendentals — a general point of
+  // P-space, not a point of that image. With P > N the image is a proper
+  // subvariety of the space the pose ranges over, a general pose does not lie
+  // on it, and the ideal is the unit ideal: the arm simply cannot reach the
+  // point it is being asked about.
+  //
+  // Taken with the case above this leaves P = N as the only arrangement that
+  // can produce a parametric solver, which is worth knowing before choosing
+  // --coords rather than after waiting for a Grobner basis to say so.
+  overdetermined,
+
   // A coordinate that was *not* requested is nevertheless moved by the arm.
   //
   // Leaving a coordinate out of the parameter list drops its equation, and
@@ -92,6 +107,8 @@ inline const char* to_string(parametric_ik_status status) {
       return "pose coordinates must be distinct indices below three";
     case parametric_ik_status::underdetermined:
       return "fewer pose coordinates than unknowns, so the solution set cannot be finite";
+    case parametric_ik_status::overdetermined:
+      return "more pose coordinates than unknowns, so a general pose is out of reach";
     case parametric_ik_status::dropped_coordinate_is_not_identically_zero:
       return "an unrequested coordinate is moved by the arm, so its equation cannot be dropped";
     case parametric_ik_status::not_zero_dimensional:
@@ -170,10 +187,15 @@ parametric_ik_result<N, P> parametric_position_ik(
 
   parametric_ik_result<N, P> result;
 
-  // Checked first, and by counting rather than by computing. See the comment on
-  // the status for why P < N settles the question on its own.
+  // Checked first, and by counting rather than by computing. Only P = N can
+  // give a finite, nonempty solution set at a general pose; see the comments on
+  // the two statuses for why each of the other cases settles itself.
   if (P < N) {
     result.status = parametric_ik_status::underdetermined;
+    return result;
+  }
+  if (P > N) {
+    result.status = parametric_ik_status::overdetermined;
     return result;
   }
 
