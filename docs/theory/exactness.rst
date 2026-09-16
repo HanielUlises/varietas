@@ -104,7 +104,7 @@ stores.
    varietas from the exactly recovered chain, and what the recording shows is
    that it stays on the arm the file poses and on the curve it drew, at every
    configuration of the sweep. How closely the two agree it does not show, and
-   no image could: the figure is drawn at about four millimetres to the pixel
+   no image could: the figure is drawn at under three millimetres to the pixel
    and the disagreement is :math:`10^{-12}` metres. The orange spheres are the
    URDF's own, drawn at every joint origin, so the one beside the marker is
    the wrist, not a second estimate of the tool pose.

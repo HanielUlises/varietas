@@ -602,7 +602,7 @@ class branch_node : public rclcpp::Node {
     auto m = base_marker("label", 0, stamp);
     m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     m.pose.position.z = label_height_;
-    m.scale.z = 0.13;
+    m.scale.z = 0.17;
     m.color.r = m.color.g = m.color.b = 0.93;
     m.color.a = 0.95;
     std::string line = solved_name_ + "\n" + wrap(std::to_string(solver::num_joints) +
@@ -622,15 +622,15 @@ class branch_node : public rclcpp::Node {
     m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     m.pose.position.x = refused_offset_.size() > 0 ? refused_offset_[0] : 0.0;
     m.pose.position.y = refused_offset_.size() > 1 ? refused_offset_[1] : -2.9;
-    m.pose.position.z = 1.50;
-    m.scale.z = 0.105;
+    m.pose.position.z = 1.52;
+    m.scale.z = 0.145;
     m.color.r = 0.96;
     m.color.g = 0.62;
     m.color.b = 0.25;
     m.color.a = 0.95;
     m.text = refused_name_ + "\n" +
-             wrap(std::to_string(refused_joints_) + " joints refused:", 30) + "\n" +
-             wrap(refused_reason_, 30);
+             wrap(std::to_string(refused_joints_) + " joints refused:", 26) + "\n" +
+             wrap(refused_reason_, 26);
     return m;
   }
 

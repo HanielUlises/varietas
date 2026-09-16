@@ -98,6 +98,36 @@ A solver for the whole arm, in two parts:
    const int found = solver::solve(target, out, solver::max_configurations, &state);
    // out + k * num_joints is one configuration, the swept joint first.
 
+Every branch at once
+====================
+
+``varietas_demo``'s branch demonstration is the generated solver driving a
+picture: a target is moved along a closed path, the solver is asked for the
+configurations that reach it, and all of them are drawn together.
+
+.. code-block:: sh
+
+   ros2 launch varietas_demo branches.launch.py
+
+.. figure:: ../figures/branches.gif
+   :width: 85%
+   :alt: Every configuration that reaches a moving target, drawn together
+
+   The four postures, and the count carried on the target's own path. It steps
+   four, two, zero going out rather than four straight to zero: the four are
+   two solutions of the reduced problem taken twice over, facing the target and
+   turned half a revolution from it, and a shoulder displaced from the base
+   axis gives those two families reaches differing by twice the offset. In the
+   annulus between them only the facing family arrives. Beside it stands the
+   KUKA LBR iiwa, posed but not solved, labelled with what
+   :cpp:func:`varietas::ik::parametric_position_ik` actually answers when it is
+   asked for a position solver over seven joints.
+
+The header it uses is emitted during the build from the URDF, by this same
+path, so the demonstration compiles against varietas's own output rather than
+against a copy checked in beside it: if the emitter regresses, the
+demonstration stops building.
+
 .. important::
 
    The wrapper returns **joint angles in radians**, not the ring's variables,

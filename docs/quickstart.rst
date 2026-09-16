@@ -109,13 +109,51 @@ you asked of it.
 Watch it move
 =============
 
+Two demonstrations, answering the two different questions.
+
+The first is the forward one. ``sweep.launch.py`` drives the joints through a
+closed trajectory, lets ``robot_state_publisher`` pose the arm from the
+decimals in the file, and puts a marker at the tool pose computed from the
+chain varietas recovered exactly. Nothing is solved here; what it shows is that
+the marker stays on the arm the file poses, at every configuration.
+
 .. code-block:: sh
 
    ros2 launch varietas_demo sweep.launch.py urdf:=arm.urdf period:=12.0
 
 .. figure:: figures/urdf_sweep.gif
    :width: 70%
-   :alt: A generated solver driving a chain through a swept target
+   :alt: A URDF posed from the chain varietas recovered from it, with the tool pose marked
 
-   The demonstration sweeps a target and drives the chain with the generated
-   solver, in RViz.
+   The arm posed by ``robot_state_publisher`` from the file, the closed curve
+   its tool traces over one period, and the marker at the tool pose computed
+   from the exactly recovered chain. The agreement is :math:`10^{-12}` metres,
+   which no image resolves; the node measures it and prints it to the log.
+
+The second is the question the library exists for. ``branches.launch.py`` moves
+a target through the workspace and draws **every** configuration the generated
+solver returns for it. The solver is emitted from the URDF during the build, by
+the path ``urdf_codegen --decouple`` takes, so the demonstration compiles
+against varietas's own output rather than a copy checked in beside it.
+
+.. code-block:: sh
+
+   ros2 launch varietas_demo branches.launch.py
+
+.. figure:: figures/branches.gif
+   :width: 80%
+   :alt: Every configuration that reaches a moving target, drawn together
+
+   All four postures at once, and the count on the target's path: it steps
+   four, two, zero on the way out, because the shoulder is displaced from the
+   base axis and the family facing the target therefore reaches further than
+   the family turned away from it. Beside it stands the KUKA LBR iiwa, posed
+   but not solved, carrying the sentence
+   :cpp:func:`varietas::ik::parametric_position_ik` returns when it is asked
+   for a position solver over seven joints.
+
+.. note::
+
+   The arm ``branches.launch.py`` solves is fixed, because the header was
+   generated for it at build time; ``urdf:=`` alone will not retarget it. See
+   :doc:`guide/decoupling`.

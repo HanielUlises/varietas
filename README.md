@@ -176,7 +176,7 @@ The search is therefore projective: divide by the largest entry, then approximat
   behind the tool, so that the arm is seen moving through a fixed object. The green marker is the tool
   pose computed by varietas from the exactly recovered chain, and what the recording shows is that it
   stays on the arm the file poses and on the curve it drew, at every configuration of the sweep. How
-  closely the two agree it does not show, and no image could: the figure is drawn at about four
+  closely the two agree it does not show, and no image could: the figure is drawn at under three
   millimetres to the pixel and the disagreement is $10^{-12}$ metres. That number is measured rather
   than seen, below. The orange spheres are the URDF's own, drawn at every joint origin, so the
   one beside the marker is the wrist, not a second estimate of the tool pose.</em>
@@ -364,6 +364,27 @@ Most of those calls return 1, so normalisation now asks a cheap question first. 
 It is worth being plain about what that buys, which is not much: on the reduced two-joint problem it takes about twenty-nine milliseconds down to about twenty-five, and the three-parameter system still produces no answer. The bottleneck is real but the fast path only avoids the cheap half of it. Replacing the subresultant sequence with a modular gcd proper, meaning evaluation, interpolation and rational reconstruction rather than a coprimality test bolted to the front, is what would actually change the picture, and it has not been done. `doc/parametric_cost.pdf` reports an experiment that narrows what such a construction would have to be: repeating the three-parameter solve over $\mathbb{F}_p(x,y,z)$, where coefficient arithmetic is a machine multiplication, does not complete either, and an isolated measurement puts the subresultant gcd at about the fourth power of the number of terms in its operands with the choice of field worth a bounded factor of thirteen. Computing the same remainder sequence over several primes is therefore not enough; only a gcd built on evaluation and interpolation addresses the cost that was measured. Until it is, two adjoined parameters remains the working limit; since $P=N$, that is to say two joints, and the way to solve a three-joint arm today is to sweep one of them out rather than adjoin it.
 
 Two joints is less of a restriction than it sounds, because the joint that costs the most is often the one that need not be adjoined at all. `decoupled_position_ik` sweeps the first joint out instead of solving for it. If the base turns about a fixed axis and the rest of the arm holds the tool in a plane containing that axis, then turning the base sweeps that plane around it: the tool's position is a radius and a height in the plane together with the angle the plane has been turned through, and that angle is an arctangent of the target rather than an eigenvalue. What is left is a two-joint problem in two parameters. The anthropomorphic arm, base yawing about $z$ with shoulder and elbow pitching about $y$, reduces this way in about forty-five milliseconds, against the fifteen minutes that produced nothing when all three coordinates were adjoined, and `ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --decouple` goes from the URDF to the reduced header in about a second. Each solution of the reduced problem is a configuration of the arm twice over, facing the target and reversed half a turn away, which recovers the four postures such an arm is known to have, the same count that solving the whole system over $\mathbb{Q}$ at a fixed pose reports.
+
+<p align="center">
+  <img src="docs/figures/branches.gif" alt="Every configuration of an anthropomorphic arm that reaches a moving target, drawn together, beside the KUKA iiwa that varietas refuses" width="720">
+</p>
+
+<p align="center">
+  <em><strong>Figure 8.</strong> Every configuration at once. A target is moved along a closed path and the
+  generated solver &mdash; emitted from the URDF during the build, by the path <code>urdf_codegen --decouple</code>
+  takes &mdash; is asked for all the configurations that reach it, and all of them are drawn. This is the thing
+  an iterative solver cannot produce: an iteration started somewhere returns whichever branch it fell into,
+  whereas $\dim_k A$ says how many there are and the eigenvalue method returns them, so the picture can be
+  complete rather than representative. The path is coloured by the count, which steps four, two, zero on the
+  way out rather than four straight to zero. The two is not an artefact of sampling: the four postures are two
+  solutions of the reduced problem taken twice over, once with the base facing the target and once turned half
+  a revolution away, and because the shoulder is displaced from the base axis the two families differ in reach
+  by twice that offset. Between the two radii only the family facing the target arrives, so the arms go in
+  pairs. Beside it stands the KUKA LBR iiwa, posed but not solved. Its refusal is not written into the figure:
+  the demonstration imports it with the same front end and asks <code>parametric_position_ik</code> for a
+  position solver over its seven joints, and the sentence drawn beside the arm is the one that call returns.
+  Seven joints against three coordinates is settled by counting, before any Gr&ouml;bner basis is attempted.</em>
+</p>
 
 Whether an arm admits the decomposition is a question about the arm, so it is asked of the arm: the axis must be a coordinate direction, the base placement must commute with its own rotation, and the tool's coordinate along the swept direction must be identically zero with the base held still. A planar arm fails the last of these, since its base turns in the plane the arm already works in and there is nothing to sweep, so it is refused rather than reduced. What is generated is a solver for the whole arm: the reduced problem, and after it a wrapper carrying the arctangent, the pairing of each reduced solution with the two turns of the plane, and the inversion of the half-angle substitution. The wrapper returns joint angles rather than the ring's variables, deliberately, because the reversed family puts the base angle near $\pi$ routinely, and $\tan(q/2)$ is unbounded there.
 
