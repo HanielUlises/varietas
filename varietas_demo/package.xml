@@ -4,11 +4,24 @@
   <name>varietas_demo</name>
   <version>0.1.0</version>
   <description>
-    Shows the exact chain driving a real robot description: the arm is posed by
+    Two RViz demonstrations, answering the two different questions.
+
+    sweep.launch.py is the forward one: the arm is posed by
     robot_state_publisher from the decimals in the URDF, and a marker is placed
     at the tool pose computed by varietas from the exactly recovered chain. The
     two coincide at every configuration, which is what the recording in the
-    README shows. Demonstration only; nothing in the pipeline depends on it.
+    README shows, and the node measures the agreement and logs it, because it
+    is 1e-12 m and no image resolves that.
+
+    branches.launch.py is the inverse one: a target is moved through the
+    workspace and every configuration the generated solver returns for it is
+    drawn at once, which is what an iterative solver cannot produce. The solver
+    is emitted from the URDF during this build, by the path urdf_codegen
+    --decouple takes, so a regression in the emitter stops this package
+    building. Beside the solved arm stands the KUKA LBR iiwa, posed but not
+    solved, carrying the refusal parametric_position_ik returns for it.
+
+    Demonstration only; nothing in the pipeline depends on it.
   </description>
   <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
   <license>Apache-2.0</license>

@@ -55,7 +55,10 @@ First tagged version. Everything in :doc:`status` marked *complete* is in it.
   sweeping the base joint out.
 * ``emit``: self-contained headers in two runtimes, with a denominator guard
   that recognises cancellation rather than comparing against zero.
-* ``urdf_report``, ``urdf_codegen``, ``urdf_solve``, and an RViz demonstration.
+* ``urdf_report``, ``urdf_codegen``, ``urdf_solve``, and two RViz
+  demonstrations: one driving a model from the chain recovered from it, one
+  drawing every configuration the generated solver returns for a moving
+  target, against a solver emitted from the URDF during the build.
 
 .. rubric:: Known limits
 

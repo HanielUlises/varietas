@@ -98,7 +98,7 @@ is the ideal of the Zariski closure of the reachable workspace, by the Closure T
 | `varietas_kinematics` | Chains, rationalisation, workspace, singularities | `varietas_core` |
 | `varietas_ik` | Inverse kinematics posed over $\mathbb{Q}(\boldsymbol{p})$, ready to emit | `varietas_kinematics`, `varietas_codegen` |
 | `varietas_urdf` | URDF → exact chain over $\mathbb{Q}$, with an audit; `urdf_codegen` | `varietas_ik` |
-| `varietas_demo` | RViz demonstration of the recovered chain | ROS 2 |
+| `varietas_demo` | RViz demonstrations: the recovered chain driving a robot, and every branch the generated solver returns | ROS 2 |
 
 `varietas_core` is header-only and depends on Eigen alone. It is templated on the coefficient field so that the same code runs over `double` at runtime and over an exact rational type in the offline generator. Build and test instructions are in [BUILD.md](BUILD.md), and the full documentation is in [`docs/`](docs/).
 

@@ -43,7 +43,7 @@ colcon test --packages-select varietas_codegen
 | `varietas_kinematics` | Chains, rationalisation, workspace, singularities | `varietas_core` |
 | `varietas_ik` | Inverse kinematics over Q(pose), ready to emit | `varietas_kinematics`, `varietas_codegen` |
 | `varietas_urdf` | URDF to exact chain, the audit, and `urdf_codegen` | `varietas_ik`, `urdf` |
-| `varietas_demo` | RViz demonstration | `varietas_urdf`, `rclcpp` |
+| `varietas_demo` | RViz demonstrations, sweep and branches | `varietas_urdf`, `rclcpp` |
 
 `varietas_core`, `varietas_codegen`, `varietas_kinematics` and `varietas_ik` are header-only interface targets.
 
@@ -77,5 +77,11 @@ ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --decouple   # swee
 # One pose, solved exactly, orientation included. Up to five joints in practice.
 ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z [--rpy R P Y | --quat X Y Z W]
 ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z --position-only
+# Drive a model from the chain recovered from it, and mark the tool pose.
 ros2 launch varietas_demo sweep.launch.py urdf:=<file.urdf> period:=12.0
+
+# Draw every configuration the generated solver returns for a moving target.
+# The arm is fixed: the header is emitted for it during the build, so urdf:=
+# alone will not retarget it.
+ros2 launch varietas_demo branches.launch.py period:=24.0
 ```
