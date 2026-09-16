@@ -1,0 +1,80 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+    Tree Height: 600
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 0.5
+      Plane Cell Count: 16
+      Color: 70; 74; 86
+      Alpha: 0.22
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+    - Class: rviz_default_plugins/RobotModel
+      Name: RefusedArm
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /refused/robot_description
+      Alpha: 0.8
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Branches
+      Enabled: true
+      Namespaces:
+        limb: true
+        joints: true
+        base: true
+        refused: true
+        target: true
+        reach: true
+        trail: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /varietas_markers
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+      Show Names: false
+      Marker Scale: 0.2
+  Global Options:
+    Background Color: 24; 26; 31
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 5.6
+      Focal Point:
+        X: 0.1
+        Y: -1.25
+        Z: 0.55
+      Pitch: 0.42
+      Yaw: 1.15
+      Target Frame: <Fixed Frame>
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 720
+  Width: 1180
+  QMainWindow State: ""

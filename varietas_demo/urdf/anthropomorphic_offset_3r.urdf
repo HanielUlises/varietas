@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<!-- The anthropomorphic arm the branch demonstration draws, with the shoulder
+     displaced from the axis its base turns about.
+
+     The fixture in varietas_urdf/test/data puts the shoulder on the base axis,
+     which is right for the algebra and wrong for a picture. With no offset,
+     turning the base half a revolution and negating the radius of the reduced
+     problem returns the arm to the place it started: the four solutions the
+     solver reports are four distinct joint tuples, all of them reaching the
+     target, but they occupy only two shapes in space, and a recording of them
+     shows two arms where the count says four.
+
+     Displacing the shoulder by 0.28 along x and 0.32 along z separates the two
+     families: the base facing the target and the base turned away from it now
+     put the shoulder on opposite sides of the axis, and the four solutions are
+     four arms. The offset lies in the x-z plane, so the tool's y is still
+     identically zero with the base held still and the chain decouples exactly
+     as the fixture does.
+
+     Links carry visual geometry, which the fixture also lacks: a model with no
+     <visual> draws nothing at all in RViz. -->
+<robot name="anthropomorphic_offset_3r">
+  <material name="steel">
+    <color rgba="0.62 0.66 0.72 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.06"/>
+      <geometry><cylinder radius="0.18" length="0.12"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+
+  <link name="shoulder">
+    <visual>
+      <origin xyz="0 0 0.19"/>
+      <geometry><cylinder radius="0.11" length="0.26"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+
+  <link name="upper_arm">
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry><cylinder radius="0.075" length="1.0"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+
+  <link name="forearm">
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry><cylinder radius="0.058" length="1.0"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+
+  <link name="tool"/>
+
+  <joint name="q1" type="revolute">
+    <parent link="base_link"/>
+    <child link="shoulder"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <!-- The offset. It is a translation in the x-z plane, so the swept coordinate
+       stays identically zero and decoupled_position_ik still accepts the arm. -->
+  <joint name="q2" type="revolute">
+    <parent link="shoulder"/>
+    <child link="upper_arm"/>
+    <origin xyz="0.28 0 0.32" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="q3" type="revolute">
+    <parent link="upper_arm"/>
+    <child link="forearm"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="10" velocity="1"/>
+  </joint>
+
+  <joint name="tool_mount" type="fixed">
+    <parent link="forearm"/>
+    <child link="tool"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>
