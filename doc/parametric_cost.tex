@@ -475,7 +475,23 @@ g++ -std=c++17 -O2 doc/experiments/gcd_cost.cpp -o gcd_cost \
   -Idoc/experiments -I/usr/include/eigen3 -lgmpxx -lgmp
 
 ./gcd_cost               # Table 2 and the fitted exponents
+
+g++ -std=c++17 -O2 doc/experiments/solver_cost.cpp -o solver_cost \
+  -Ivarietas_core/include -Ivarietas_codegen/include \
+  -Ivarietas_kinematics/include -Ivarietas_ik/include \
+  -Ibuild/varietas_demo/generated \
+  -I/usr/include/eigen3 -lgmpxx -lgmp
+
+./solver_cost            # run-time cost of the emitted solver, and a
+                         # damped-least-squares baseline to compare it with
 \end{verbatim}
+
+\noindent
+The last of these measures the other end of the pipeline. Everything above is
+the cost of \emph{producing} a solver; \texttt{solver\_cost} is the cost of
+\emph{calling} one, which is what a user pays and the only figure in this
+document that a control loop has to budget for. It wants the generated header,
+so \texttt{colcon build} has to have run first.
 
 Adding \verb|-DVARIETAS_EXPERIMENT_TRACE| to the first build reports the largest parameter
 polynomial encountered during normalisation, which is the source of the figure $m = 498$. The

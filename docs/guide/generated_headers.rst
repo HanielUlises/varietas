@@ -138,6 +138,88 @@ writing anything, because a header generated from an inconsistent solution
 compiles perfectly and answers wrongly, which is the worst failure this code can
 have.
 
+What it costs
+=============
+
+Measured rather than asserted, by ``doc/experiments/solver_cost.cpp``, on the
+three-joint arm of :doc:`decoupling` with the header emitted for it:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 22 22 22
+
+   * -
+     - median
+     - 99th
+     - ratio
+   * - ``branch_ik::solve``, target reachable
+     - 0.9 µs
+     - 1.3 µs
+     - 1
+   * - ``branch_ik::solve``, target out of reach
+     - 0.8 µs
+     - 1.2 µs
+     - 0.85
+   * - :cpp:func:`varietas::forward_kinematics`, same arm
+     - 0.36 µs
+     - 0.6 µs
+     - 0.4
+   * - damped least squares, one seed
+     - 19 µs
+     - 330 µs
+     - 21
+
+A solve costs about **two and a half forward-kinematics evaluations**, which is
+the useful way to hold it: the eigenvalue work on a 2×2 action matrix is
+cheaper than the trigonometry around it. That is a little over a million solves
+a second on one core, so the generated solver is not the expensive part of any
+control loop it is likely to sit in.
+
+Generating the header costs about **0.35 s, once, offline** — the equivalent of
+some four hundred thousand solves, or six minutes of a 1 kHz loop. It is paid
+by the build, not by the caller.
+
+Against a numerical solver
+--------------------------
+
+The comparison is not really about speed, though the speed is not close. A
+damped least squares iteration from a random seed takes about twenty times as
+long as one generated solve, converges from only about **91%** of seeds, and
+when it does converge returns **one** configuration: whichever one the seed fell
+into, with no way to say how many others exist.
+
+Recovering the whole solution set numerically means restarting it. Over three
+hundred targets, taking the generated solver's answer as the roll of postures
+that exist — certified by :math:`\dim_k A`, which is the point — it took about
+**ten seeds per target** to find them all, missed a branch entirely on one
+target inside a budget of sixty seeds, and cost some **370 µs per target against 0.9** for the single generated call.
+
+So the generated solver is roughly four hundred times cheaper than the
+numerical route for the answer the library actually promises, and unlike it,
+returns a count that is a theorem rather than a hope.
+
+Accuracy
+--------
+
+Over 71,658 returned configurations, each put back through the forward map and
+compared against the target it was asked for:
+
+* median :math:`3\times10^{-16}` m, which is the arithmetic's own floor;
+* 99th centile :math:`6\times10^{-14}` m;
+* worst :math:`6\times10^{-8}` m, with 0.25% of configurations above
+  :math:`10^{-12}` m and 0.02% above :math:`10^{-10}` m.
+
+The tail is real and is not yet explained. The two obvious candidates were
+checked and neither holds: the worst case sits over half the reach inside the
+workspace boundary, and its elbow is nowhere near straight or folded, so it is
+neither a target leaving the reachable set nor the double root where the
+elbow-up and elbow-down solutions coincide. The remaining suspect is the
+`denominator guard`_ admitting a pose at which cancellation has already cost
+most of the significance, which would be a tolerance worth revisiting. It has
+not been run down.
+
+.. _denominator guard: #the-denominator-guard
+
 The epilogue hook
 =================
 
