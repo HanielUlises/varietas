@@ -21,9 +21,20 @@ Visualization Manager:
       Name: RobotModel
       Enabled: true
       Description Source: Topic
+      # Transient Local, because robot_state_publisher latches the description:
+      # it publishes it once, at start-up, and then never again. A volatile
+      # subscriber is compatible with that publisher and so connects without
+      # complaint, but it is only handed messages published after it
+      # subscribed, and rviz subscribes when it has finished loading, which is
+      # later. The display then sits in error with no model at all, or with a
+      # model it cannot place, and the arm draws as a white shape that is not
+      # the robot. It came up either way depending on which process won the
+      # race, which is the worst way for it to be wrong. Asking for the
+      # durability the publisher offers makes the description arrive every
+      # time.
       Description Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot_description
@@ -57,12 +68,12 @@ Visualization Manager:
     Current:
       Class: rviz_default_plugins/Orbit
       Name: Current View
-      Distance: 2.22
+      Distance: 1.95
       Focal Point:
-        X: -0.06
-        Y: 0.08
-        Z: 0.54
-      Pitch: 0.36
+        X: -0.04
+        Y: 0.06
+        Z: 0.58
+      Pitch: 0.30
       Yaw: 0.85
       Target Frame: <Fixed Frame>
     Saved: ~

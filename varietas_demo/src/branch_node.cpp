@@ -156,7 +156,7 @@ class branch_node : public rclcpp::Node {
     measure_reach();
     // Clear of the tallest posture rather than at a height chosen by eye, so
     // the label does not end up behind an arm on a model of another size.
-    label_height_ = reach_ * 0.95;
+    label_height_ = reach_ * 1.06;
     RCLCPP_INFO(get_logger(),
                 "%s: %zu joints, reach %.3f m, up to %zu configurations per target",
                 exact.name().c_str(), exact.degrees_of_freedom(), reach_,
@@ -183,8 +183,14 @@ class branch_node : public rclcpp::Node {
   // demonstration says something else, which is the point of not hardcoding it.
   void setup_refused_arm() {
     const std::string path = declare_parameter<std::string>("refused_urdf", "");
+    // Clear of the workspace rather than merely beside it. The solved arm
+    // reaches about 2.4 m, so an offset of 1.9 m stood the iiwa inside the
+    // set the four coloured arms sweep through, and they passed through it
+    // several times a period. The default is now outside that reach, so the
+    // two arms read as two robots on a bench rather than as one drawing
+    // superimposed on another.
     refused_offset_ = declare_parameter<std::vector<double>>("refused_offset",
-                                                             {0.0, -1.9, 0.0});
+                                                             {0.0, -2.9, 0.0});
     if (path.empty()) {
       return;
     }
@@ -231,7 +237,7 @@ class branch_node : public rclcpp::Node {
     placement.header.frame_id = root_link_;
     placement.child_frame_id = refused_root_;
     placement.transform.translation.x = refused_offset_.size() > 0 ? refused_offset_[0] : 0.0;
-    placement.transform.translation.y = refused_offset_.size() > 1 ? refused_offset_[1] : -1.9;
+    placement.transform.translation.y = refused_offset_.size() > 1 ? refused_offset_[1] : -2.9;
     placement.transform.translation.z = refused_offset_.size() > 2 ? refused_offset_[2] : 0.0;
     placement.transform.rotation.w = 1.0;
     static_tf_->sendTransform(placement);
@@ -294,15 +300,33 @@ class branch_node : public rclcpp::Node {
   //
   // The overshoot is small on purpose. What is worth watching is the approach
   // rather than the vanishing: as the target nears the boundary the arm
-  // straightens and the elbow-up and elbow-down solutions converge, so the four
-  // arms close into two before they go. The count itself steps from four
-  // straight to zero, because the surface where exactly two remain has measure
-  // zero and no sampled tick lands on it. The merging is geometric, and the
-  // picture is where it is legible.
+  // straightens and the elbow-up and elbow-down solutions converge, so the
+  // four arms close into two before they go.
+  //
+  // What the count does on the way out is the part worth having, and it is
+  // not what was written here before. It steps four, two, zero rather than
+  // four straight to zero, and two is not a measure-zero accident that the
+  // sampling misses: it is held over a band of radii, about a quarter of all
+  // ticks. The offset shoulder is the reason. The four postures are two
+  // solutions of the reduced two-joint problem taken twice over, once with
+  // the base facing the target and once with it turned half a revolution
+  // away, and the offset puts the shoulder on the near side of the base axis
+  // in the first family and on the far side in the second. The two families
+  // therefore have different reach -- they differ by twice the offset -- and
+  // between the two radii only the facing family arrives. So the annulus
+  // where exactly two configurations exist is genuinely thick, the arms go in
+  // pairs rather than all at once, and the trail is coloured by the count
+  // below so that the two boundaries can be seen on the curve itself.
+  //
+  // The elevation is held positive. It swung through zero once, which sent
+  // the target and its trail below the floor for part of every revolution:
+  // the curve left the frame through the grid, and an arm reaching under the
+  // bench it is bolted to is not a picture of anything. The band is set so
+  // the lowest point of the path clears the plinth instead.
   std::array<double, 3> target_at(double t) const {
     const double u = 2.0 * M_PI * t / period_;
     const double radius = reach_ * (0.66 + 0.36 * std::sin(2.0 * u));
-    const double elevation = 0.40 * std::sin(3.0 * u) + 0.16;
+    const double elevation = 0.36 * std::sin(3.0 * u) + 0.40;
     const double c = std::cos(elevation);
     return {radius * c * std::cos(u), radius * c * std::sin(u), radius * std::sin(elevation)};
   }
@@ -510,13 +534,26 @@ class branch_node : public rclcpp::Node {
     return c;
   }
 
-  // Breaks a sentence onto lines of at most `columns` characters, at spaces.
+  // Breaks a sentence onto lines of at most `columns` characters and sets the
+  // spaces in underscores.
   //
+  // Two constraints of the renderer, neither of them negotiable from here.
   // The refusal the library returns is a sentence rather than a token, and a
   // TEXT_VIEW_FACING marker lays a line out in world units: at a legible
   // height, seventy characters on one line is metres wide and runs off both
-  // sides of the frame. Wrapping keeps the sentence verbatim, which is the
-  // point of showing it at all, and makes it fit the picture.
+  // sides of the frame, so it has to be wrapped. And rviz_rendering's
+  // MovableText advances a space by a width of its own choosing rather than
+  // the font's, which comes out at some eight characters: a line of ordinary
+  // prose arrives with its words scattered across the frame and unreadable.
+  // The marker message has no field for it -- MovableText::setSpaceWidth is
+  // not reachable through visualization_msgs -- so the text cannot contain a
+  // space. Underscores are what is left, and they are not out of place here,
+  // since both arms are named in the picture by their URDF identifiers, which
+  // are written that way already.
+  //
+  // What matters is that the wrapping and the substitution are typographic
+  // only: every word of the library's own sentence survives them in order, so
+  // the label cannot come to say something the library does not.
   static std::string wrap(const std::string& text, std::size_t columns) {
     std::string out;
     std::size_t line = 0;
@@ -536,6 +573,11 @@ class branch_node : public rclcpp::Node {
       out.append(text, i, word);
       line += word;
       i = end + 1;
+    }
+    for (char& c : out) {
+      if (c == ' ') {
+        c = '_';
+      }
     }
     return out;
   }
@@ -563,16 +605,11 @@ class branch_node : public rclcpp::Node {
     m.scale.z = 0.13;
     m.color.r = m.color.g = m.color.b = 0.93;
     m.color.a = 0.95;
-    std::string line = solved_name_ + "\n" + std::to_string(solver::num_joints) +
-                       " joints, solved\n";
-    if (found < 0) {
-      line += "solver declined";
-    } else if (found == 0) {
-      line += "0 of " + std::to_string(kMaxBranches) + " reach it";
-    } else {
-      line += std::to_string(found) + " of " + std::to_string(kMaxBranches) +
-              " reach it";
-    }
+    std::string line = solved_name_ + "\n" + wrap(std::to_string(solver::num_joints) +
+                                                   " joints solved exactly", 30) +
+                       "\nconfigurations_drawn:";
+    line += (found < 0) ? "declined"
+                        : std::to_string(found) + "/" + std::to_string(kMaxBranches);
     m.text = line;
     return m;
   }
@@ -584,15 +621,16 @@ class branch_node : public rclcpp::Node {
     auto m = base_marker("refused", 0, stamp);
     m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     m.pose.position.x = refused_offset_.size() > 0 ? refused_offset_[0] : 0.0;
-    m.pose.position.y = refused_offset_.size() > 1 ? refused_offset_[1] : -1.9;
-    m.pose.position.z = 1.45;
-    m.scale.z = 0.115;
+    m.pose.position.y = refused_offset_.size() > 1 ? refused_offset_[1] : -2.9;
+    m.pose.position.z = 1.50;
+    m.scale.z = 0.105;
     m.color.r = 0.96;
     m.color.g = 0.62;
     m.color.b = 0.25;
     m.color.a = 0.95;
-    m.text = refused_name_ + "\n" + std::to_string(refused_joints_) +
-             " joints, recovered exactly, then refused:\n" + wrap(refused_reason_, 34);
+    m.text = refused_name_ + "\n" +
+             wrap(std::to_string(refused_joints_) + " joints refused:", 30) + "\n" +
+             wrap(refused_reason_, 30);
     return m;
   }
 
@@ -659,7 +697,7 @@ class branch_node : public rclcpp::Node {
   std::string refused_name_;
   std::string solved_name_;
   double label_height_ = 2.0;
-  std::vector<double> refused_offset_{0.0, -1.9, 0.0};
+  std::vector<double> refused_offset_{0.0, -2.9, 0.0};
   std::size_t refused_joints_ = 0;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_;

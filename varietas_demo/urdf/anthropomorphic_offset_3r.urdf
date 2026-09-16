@@ -18,17 +18,22 @@
      as the fixture does.
 
      Links carry visual geometry, which the fixture also lacks: a model with no
-     <visual> draws nothing at all in RViz. -->
+     <visual> draws nothing at all in RViz.
+
+     The colour is written out at every visual rather than declared once at the
+     top and referred to by name. A name declared on the robot and referenced
+     from a link is legal URDF and the parser resolves it, but RViz drew the
+     arm flat white from it, with no shading and no colour at all. The iiwa
+     fixture is inline for the same reason, so this file now matches it: a
+     description that renders correctly wherever it is opened is worth more
+     than four saved lines. -->
 <robot name="anthropomorphic_offset_3r">
-  <material name="steel">
-    <color rgba="0.62 0.66 0.72 1.0"/>
-  </material>
 
   <link name="base_link">
     <visual>
       <origin xyz="0 0 0.06"/>
       <geometry><cylinder radius="0.18" length="0.12"/></geometry>
-      <material name="steel"/>
+      <material name="steel"><color rgba="0.62 0.66 0.72 1.0"/></material>
     </visual>
   </link>
 
@@ -36,7 +41,7 @@
     <visual>
       <origin xyz="0 0 0.19"/>
       <geometry><cylinder radius="0.11" length="0.26"/></geometry>
-      <material name="steel"/>
+      <material name="steel"><color rgba="0.62 0.66 0.72 1.0"/></material>
     </visual>
   </link>
 
@@ -44,7 +49,7 @@
     <visual>
       <origin xyz="0.5 0 0" rpy="0 1.5707963267948966 0"/>
       <geometry><cylinder radius="0.075" length="1.0"/></geometry>
-      <material name="steel"/>
+      <material name="steel"><color rgba="0.62 0.66 0.72 1.0"/></material>
     </visual>
   </link>
 
@@ -52,7 +57,7 @@
     <visual>
       <origin xyz="0.5 0 0" rpy="0 1.5707963267948966 0"/>
       <geometry><cylinder radius="0.058" length="1.0"/></geometry>
-      <material name="steel"/>
+      <material name="steel"><color rgba="0.62 0.66 0.72 1.0"/></material>
     </visual>
   </link>
 

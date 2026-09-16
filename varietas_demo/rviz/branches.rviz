@@ -21,9 +21,12 @@ Visualization Manager:
       Name: RefusedArm
       Enabled: true
       Description Source: Topic
+      # Transient Local: robot_state_publisher latches the description and a
+      # volatile subscriber misses it, which leaves the arm undrawn or drawn
+      # wrong depending on which process starts first. See rviz/sweep.rviz.
       Description Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /refused/robot_description
@@ -63,12 +66,12 @@ Visualization Manager:
     Current:
       Class: rviz_default_plugins/Orbit
       Name: Current View
-      Distance: 5.6
+      Distance: 5.7
       Focal Point:
-        X: 0.1
-        Y: -1.25
-        Z: 0.55
-      Pitch: 0.42
+        X: 0.0
+        Y: -0.35
+        Z: 1.15
+      Pitch: 0.28
       Yaw: 1.15
       Target Frame: <Fixed Frame>
     Saved: ~
