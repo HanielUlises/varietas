@@ -31,6 +31,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -151,7 +152,11 @@ class branch_node : public rclcpp::Node {
       }
     }
 
+    solved_name_ = exact.name();
     measure_reach();
+    // Clear of the tallest posture rather than at a height chosen by eye, so
+    // the label does not end up behind an arm on a model of another size.
+    label_height_ = reach_ * 0.95;
     RCLCPP_INFO(get_logger(),
                 "%s: %zu joints, reach %.3f m, up to %zu configurations per target",
                 exact.name().c_str(), exact.degrees_of_freedom(), reach_,
@@ -208,6 +213,7 @@ class branch_node : public rclcpp::Node {
       }
     }
     refused_joints_ = exact.degrees_of_freedom();
+    refused_name_ = exact.name();
 
     // Seven joints against three position coordinates. The counting check
     // settles it: P < N cannot cut out a finite solution set, whatever the arm.
@@ -318,7 +324,7 @@ class branch_node : public rclcpp::Node {
       ++seen_[static_cast<std::size_t>(found)];
     }
 
-    trail_.push_back(target);
+    trail_.push_back({target, found});
     const std::size_t capacity =
         static_cast<std::size_t>(period_ * 1000.0 / static_cast<double>(kTick.count()));
     while (trail_.size() > capacity) {
@@ -440,17 +446,38 @@ class branch_node : public rclcpp::Node {
     goal.color.a = 1.0;
     array.markers.push_back(goal);
 
+    // The trail, coloured by how many configurations reached each point of it.
+    //
+    // A flat grey curve said only where the target had been, which the moving
+    // sphere already says. Coloured by the count it carries the thing the
+    // demonstration is about: the curve is one closed loop, and the places
+    // where it changes colour are where the target crossed a boundary of the
+    // reachable set. Those crossings are the same instants at which arms
+    // appear and vanish, so the still frame explains the motion.
+    //
+    // It is a LINE_LIST rather than a LINE_STRIP because a strip takes one
+    // colour for the whole curve; a list takes a colour per vertex, and each
+    // segment is emitted as its two endpoints. The count belongs to the
+    // segment rather than to either end, so both endpoints are given the
+    // count of the later sample, which puts the change of colour exactly at
+    // the tick where the count changed.
     auto path = base_marker("trail", 0, stamp);
-    path.type = visualization_msgs::msg::Marker::LINE_STRIP;
-    path.scale.x = 0.008;
-    path.color.r = path.color.g = path.color.b = 0.85;
-    path.color.a = 0.12;
-    for (const auto& p : trail_) {
-      geometry_msgs::msg::Point q;
-      q.x = p[0]; q.y = p[1]; q.z = p[2];
-      path.points.push_back(q);
+    path.type = visualization_msgs::msg::Marker::LINE_LIST;
+    path.scale.x = 0.012;
+    path.color.a = 1.0;
+    for (std::size_t i = 1; i < trail_.size(); ++i) {
+      const std_msgs::msg::ColorRGBA c = trail_colour(trail_[i].found);
+      path.points.push_back(point_of_array(trail_[i - 1].at));
+      path.colors.push_back(c);
+      path.points.push_back(point_of_array(trail_[i].at));
+      path.colors.push_back(c);
     }
     array.markers.push_back(path);
+
+    array.markers.push_back(verdict_label(found, stamp));
+    if (!refused_reason_.empty()) {
+      array.markers.push_back(refused_label(stamp));
+    }
 
     markers_->publish(array);
 
@@ -461,6 +488,112 @@ class branch_node : public rclcpp::Node {
       js.position.assign(out.begin(), out.begin() + solver::num_joints);
       joint_states_->publish(js);
     }
+  }
+
+  // The same three verdicts the target sphere carries, so that a reader who
+  // has learned the sphere's colours can read the curve without a key: white
+  // where every configuration was found, amber where none was, and the count
+  // between them where the target is reachable by one family of postures and
+  // not the other.
+  static std_msgs::msg::ColorRGBA trail_colour(int found) {
+    std_msgs::msg::ColorRGBA c;
+    c.a = 0.85f;
+    if (found < 0) {
+      c.r = 0.92f; c.g = 0.22f; c.b = 0.22f;
+    } else if (found == 0) {
+      c.r = 0.96f; c.g = 0.76f; c.b = 0.18f;
+    } else if (found < kMaxBranches) {
+      c.r = 0.55f; c.g = 0.80f; c.b = 0.95f;
+    } else {
+      c.r = 0.93f; c.g = 0.93f; c.b = 0.95f;
+    }
+    return c;
+  }
+
+  // Breaks a sentence onto lines of at most `columns` characters, at spaces.
+  //
+  // The refusal the library returns is a sentence rather than a token, and a
+  // TEXT_VIEW_FACING marker lays a line out in world units: at a legible
+  // height, seventy characters on one line is metres wide and runs off both
+  // sides of the frame. Wrapping keeps the sentence verbatim, which is the
+  // point of showing it at all, and makes it fit the picture.
+  static std::string wrap(const std::string& text, std::size_t columns) {
+    std::string out;
+    std::size_t line = 0;
+    for (std::size_t i = 0; i < text.size();) {
+      std::size_t end = text.find(' ', i);
+      if (end == std::string::npos) {
+        end = text.size();
+      }
+      const std::size_t word = end - i;
+      if (line != 0 && line + 1 + word > columns) {
+        out += '\n';
+        line = 0;
+      } else if (line != 0) {
+        out += ' ';
+        ++line;
+      }
+      out.append(text, i, word);
+      line += word;
+      i = end + 1;
+    }
+    return out;
+  }
+
+  static geometry_msgs::msg::Point point_of_array(const std::array<double, 3>& a) {
+    geometry_msgs::msg::Point p;
+    p.x = a[0];
+    p.y = a[1];
+    p.z = a[2];
+    return p;
+  }
+
+  // What the arms are, said in the frame rather than in the log.
+  //
+  // The count is live because it is the reading: an arm that has just vanished
+  // is indistinguishable in a still from an arm hidden behind another, and the
+  // number settles it. The wording follows the verdict rather than the count
+  // alone, since zero configurations found and a solver that declined to
+  // answer are different statements and the picture should not merge them.
+  visualization_msgs::msg::Marker verdict_label(int found,
+                                                const rclcpp::Time& stamp) const {
+    auto m = base_marker("label", 0, stamp);
+    m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    m.pose.position.z = label_height_;
+    m.scale.z = 0.13;
+    m.color.r = m.color.g = m.color.b = 0.93;
+    m.color.a = 0.95;
+    std::string line = solved_name_ + "\n" + std::to_string(solver::num_joints) +
+                       " joints, solved\n";
+    if (found < 0) {
+      line += "solver declined";
+    } else if (found == 0) {
+      line += "0 of " + std::to_string(kMaxBranches) + " reach it";
+    } else {
+      line += std::to_string(found) + " of " + std::to_string(kMaxBranches) +
+              " reach it";
+    }
+    m.text = line;
+    return m;
+  }
+
+  // The refusal, beside the arm it is about. The string is the one
+  // parametric_position_ik returned at start-up, not a paraphrase of it, so
+  // this label cannot drift away from what the library actually says.
+  visualization_msgs::msg::Marker refused_label(const rclcpp::Time& stamp) const {
+    auto m = base_marker("refused", 0, stamp);
+    m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    m.pose.position.x = refused_offset_.size() > 0 ? refused_offset_[0] : 0.0;
+    m.pose.position.y = refused_offset_.size() > 1 ? refused_offset_[1] : -1.9;
+    m.pose.position.z = 1.45;
+    m.scale.z = 0.115;
+    m.color.r = 0.96;
+    m.color.g = 0.62;
+    m.color.b = 0.25;
+    m.color.a = 0.95;
+    m.text = refused_name_ + "\n" + std::to_string(refused_joints_) +
+             " joints, recovered exactly, then refused:\n" + wrap(refused_reason_, 34);
+    return m;
   }
 
   visualization_msgs::msg::Marker base_marker(const std::string& ns, int id,
@@ -505,7 +638,13 @@ class branch_node : public rclcpp::Node {
   double period_ = 20.0;
   double reach_ = 1.0;
 
-  std::vector<std::array<double, 3>> trail_;
+  // A point of the target's path together with the number of configurations
+  // that reached it, which is what the curve is coloured by.
+  struct waypoint {
+    std::array<double, 3> at;
+    int found;
+  };
+  std::vector<waypoint> trail_;
   int last_count_ = 0;
   solver::status last_state_ = solver::status::ok;
   long ticks_ = 0;
@@ -517,6 +656,9 @@ class branch_node : public rclcpp::Node {
   std::vector<std::string> refused_names_;
   std::string refused_root_;
   std::string refused_reason_;
+  std::string refused_name_;
+  std::string solved_name_;
+  double label_height_ = 2.0;
   std::vector<double> refused_offset_{0.0, -1.9, 0.0};
   std::size_t refused_joints_ = 0;
 

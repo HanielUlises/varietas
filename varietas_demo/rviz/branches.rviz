@@ -38,8 +38,8 @@ Visualization Manager:
         joints: true
         base: true
         refused: true
+        label: true
         target: true
-        reach: true
         trail: true
       Topic:
         Depth: 5
