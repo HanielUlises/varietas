@@ -422,7 +422,7 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
 
   // The equations themselves, when the solution carries them, for the Newton
   // steps solve() takes. Written in the unknowns t with the pose as a
-  // parameter, exactly as posed: residual k is numerator_k(t) -
+  // parameter, exactly as posed, so that residual k is numerator_k(t) -
   // denominator(t) pose[k].
   const bool polish = options.runtime == runtime_kind::eigen && !solution.residual_numerators.empty();
   if (polish) {

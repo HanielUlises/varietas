@@ -15,7 +15,7 @@
 // rather than once per request in a control loop. That trade is the reason the
 // offline half of this library exists.
 //
-// --reconstruct computes the same matrices another way: by solving the arm at
+// --reconstruct computes the same matrices another way, by solving the arm at
 // many poses over prime fields and recovering each entry as a rational function
 // of the pose from its values. It is far cheaper on arms with offsets, where
 // the symbolic solve drowns in intermediate expressions it never needed to

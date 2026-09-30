@@ -39,7 +39,7 @@ class residue {
 
   // Set when a rational was mapped here whose denominator the prime divides.
   // The image is then undefined, the residue made from it is meaningless, and
-  // whatever used it has to be discarded: the flag is how the caller learns
+  // whatever used it has to be discarded. The flag is how the caller learns
   // that it happened, and it stays set until cleared.
   static bool undefined_image() noexcept { return undefined_; }
   static void clear_undefined_image() noexcept { undefined_ = false; }

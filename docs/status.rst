@@ -154,10 +154,10 @@ The first difficulty was cancellation
 =====================================
 
 ``rational_function`` normalises after every coefficient operation, and with the
-subresultant gcd the cancellation was what the run was made of: about **86%**
+subresultant gcd the cancellation was what the run was made of, about **86%**
 of the time, at a cost per call growing as about the **fourth power** of the
 number of terms in the operands. ``doc/parametric_cost.pdf`` reports the
-experiment that settled what to do about it: repeating the three-parameter
+experiment that settled what to do about it. Repeating the three-parameter
 solve over :math:`\F_p(x,y,z)`, where coefficient arithmetic is a machine
 multiplication, did not complete either, and the choice of field was worth a
 bounded factor of thirteen. Computing the same remainder sequence over several
@@ -188,7 +188,7 @@ symbolic solve stays the default of ``urdf_codegen`` because it is certified;
 ``--reconstruct`` is the route for the arms it cannot reach.
 
 The way to solve a three-joint arm that admits it is still to sweep the base
-joint out (:doc:`guide/decoupling`): it is exact, it takes tens of
+joint out (:doc:`guide/decoupling`), which is exact, takes tens of
 milliseconds, and its header is several times cheaper to call.
 
 Against a real robot
@@ -201,7 +201,7 @@ The chain recovers exactly, with the audit moving no joint by more than
 :math:`5\times10^{-12}` radians, and then has **seven joints**, which is four
 more than a tool position can constrain, so ``urdf_codegen`` says so and stops.
 
-Truncating the chain does not rescue it either: taking the tip to be
+Truncating the chain does not rescue it either. Taking the tip to be
 ``lbr_iiwa_link_3`` gives three joints, but that link's frame is the third
 joint's own frame, so the tool sits on the axis that joint turns about and
 cannot be moved by it. The position problem is a two-joint problem wearing three
@@ -209,7 +209,7 @@ joints, the reduced system comes out positive-dimensional, and the dimension
 check catches it in about half a second. **There is no link boundary on this arm
 where a well-posed three-joint positioning problem appears.**
 
-That is a fair summary of the present reach of the parametric path: it is a tool
+That is a fair summary of the present reach of the parametric path, which is a tool
 for positioning subsystems of up to three joints, not for a seven-axis
 manipulator, and the thing it does well is refuse promptly and say which of the
 three reasons applies.

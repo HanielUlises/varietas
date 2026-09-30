@@ -110,7 +110,7 @@ Reconstructed inverse kinematics
    finishes, the two agree entry for entry.
 
    Use it for three-joint arms with offsets, where the symbolic solve drowns in
-   intermediate expressions: the demonstration's arm reconstructs in about three
+   intermediate expressions. The demonstration's arm reconstructs in about three
    seconds, where the symbolic solve had not finished after twenty-seven
    minutes.
 

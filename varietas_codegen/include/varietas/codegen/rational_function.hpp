@@ -187,7 +187,7 @@ class rational_function {
   // The polynomial common factor, divided out of each.
   //
   // This is where a parametric solve spends much of its time, and the gcd is
-  // the modular one for that reason: the subresultant remainder sequence
+  // the modular one for that reason. The subresultant remainder sequence
   // costs about the fourth power of the operand size and held the pipeline to
   // two parameters (doc/parametric_cost.pdf). With it replaced, three
   // parameters finish on the anthropomorphic arm, and the gcd is about half of
@@ -196,7 +196,7 @@ class rational_function {
   // Most of these calls find nothing to cancel, and there was once a cheap
   // specialisation test in front of the gcd to skip them. It is gone because
   // the modular gcd answers the same question at about the same price with a
-  // proof rather than a heuristic: an image modulo one prime that is constant
+  // proof rather than a heuristic, because an image modulo one prime that is constant
   // shows the gcd is constant, since every image is a multiple of the true one.
   // So the representation is now always in lowest terms, not merely usually.
   //

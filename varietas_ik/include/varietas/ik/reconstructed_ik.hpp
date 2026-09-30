@@ -31,7 +31,7 @@
 // parameters, but on arms with offsets the rational functions it carries on
 // the way swell to thousands of terms, while the action matrices it finally
 // produces have entries of tens of terms. This computes the same matrices without
-// ever forming the intermediate functions: it solves the arm at many poses,
+// ever forming the intermediate functions. It solves the arm at many poses,
 // each one an ordinary Grobner basis over a prime field with no parameters,
 // and recovers every matrix entry as a rational function of the pose from its
 // values (varietas/codegen/reconstruct.hpp).
@@ -42,7 +42,7 @@
 //
 // What is given up is certainty. The symbolic solve is exact; this one is right
 // with high probability, since reconstruction from samples has no final exact
-// test. So the result is checked here, exactly, at a few rational poses: the
+// test. So the result is checked here, exactly, at a few rational poses, where the
 // fixed-pose basis is computed over Q there and its action matrices compared
 // with the reconstructed ones evaluated at the same pose. A disagreement
 // anywhere is reported as a failure rather than returned.
@@ -155,12 +155,12 @@ parametric_ik_result<N, P> reconstructed_position_ik(const chain<rational>& robo
   }
 
   // The shape of the solution set at a general pose, from three rational poses
-  // drawn at random: the standard monomials two of them agree on. A pose on a
+  // drawn at random, taken as the standard monomials two of them agree on. A pose on a
   // special fibre gives a different shape, and two such poses agreeing with
   // each other is not a case worth planning for.
   //
   // The same poses serve for the exact check at the end, and there the way they
-  // are drawn matters: each coordinate is uniform over the 2^21 + 1 dyadic
+  // are drawn matters. Each coordinate is uniform over the 2^21 + 1 dyadic
   // rationals k / 1024 with |k| <= 2^20, so that a wrong entry, a rational
   // function whose difference from the right one has a numerator of total
   // degree d, agrees with it at a check pose with probability at most

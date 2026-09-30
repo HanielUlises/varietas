@@ -23,7 +23,7 @@
 // (reconstructed_ik.hpp), in seconds.
 //
 // The decoupling remains the better route wherever it applies, for three
-// reasons that have nothing to do with feasibility: it is exact, where the
+// reasons that have nothing to do with feasibility. It is exact, where the
 // reconstruction is checked rather than certified; it is faster to produce,
 // tens of milliseconds; and the header it produces is faster to call, a two by
 // two eigenproblem and an arctangent against a four by four.

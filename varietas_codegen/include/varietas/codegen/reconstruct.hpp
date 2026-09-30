@@ -65,7 +65,7 @@ namespace reconstruction {
 //
 // Unlike the modular gcd this has no final exact test, because the functions
 // are only available as a black box, and the answer is therefore right with
-// high probability rather than certainly: a wrong one requires a sample, a
+// high probability rather than certainly, since a wrong one requires a sample, a
 // line or a prime to fall on the zero set of some fixed nonzero polynomial,
 // with every choice made from a set of size about 2^31. The caller is expected
 // to check the result against an exact computation at a few rational points,
@@ -78,7 +78,7 @@ using point = std::array<residue, P>;
 
 // Values of every function at a point, for the prime currently selected. False
 // if the point is unusable, which the reconstruction treats as a draw to be
-// thrown away: a pole, or a pose whose solution set has a different shape
+// thrown away, such as a pole or a pose whose solution set has a different shape
 // from the general one.
 template <std::size_t P>
 using black_box = std::function<bool(const point<P>&, std::vector<residue>&)>;
@@ -250,7 +250,7 @@ inline std::vector<word> kernel_line(std::vector<std::vector<word>> a, std::size
   return x;
 }
 
-// One function modulo the current prime: coefficients over the monomials of
+// One function modulo the current prime, as coefficients over the monomials of
 // its degree bounds, normalised so that the leading coefficient of the
 // denominator is one.
 template <std::size_t P>
@@ -325,7 +325,7 @@ bool reconstruct(const black_box<P>& black, const prime_hook& prepare, std::size
     std::vector<std::vector<residue>> values;
     std::vector<residue> buffer;
 
-    // Step 1, on the first usable prime: degrees from a line.
+    // Step 1, on the first usable prime, finds the degrees from a line.
     if (!degrees_known) {
       const point<P> base = random_point();
       const point<P> direction = random_point();
@@ -345,7 +345,7 @@ bool reconstruct(const black_box<P>& black, const prime_hook& prepare, std::size
         }
         ++s.samples;
         ++s.line_samples;
-        // Kept out of the linear systems below: points on one line do not
+        // Kept out of the linear systems below, because points on one line do not
         // determine a polynomial in P variables, and a system filled with
         // them has a nullspace larger than a line.
         ts.push_back(t);

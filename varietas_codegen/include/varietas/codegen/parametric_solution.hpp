@@ -146,7 +146,7 @@ struct parametric_solution {
   std::vector<std::vector<rational_function<P>>> variable_coordinates;
 
   // The equations the solutions satisfy, when the problem that produced them
-  // is a position problem: residual k is residual_numerators[k] -
+  // is a position problem, in which residual k is residual_numerators[k] -
   // residual_denominator * pose[k], a polynomial in the unknowns over Q.
   //
   // Optional. When present the emitter writes them out with their Jacobian,

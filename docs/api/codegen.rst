@@ -43,7 +43,7 @@ The function field
 
    Normalisation needs a polynomial gcd after every operation, and with the
    subresultant :cpp:func:`varietas::polynomial_gcd` that was where the run
-   went: about **86%** of the time, at a cost growing as the fourth power of the
+   went, about **86%** of the time, at a cost growing as the fourth power of the
    operand size. Normalisation now calls
    :cpp:func:`varietas::modular_gcd_with_cofactors`, and every fraction is held
    in lowest terms, not merely usually.
@@ -59,7 +59,7 @@ Modular gcd
                                              const polynomial<rational, N, Order>& b)
 
    The gcd of two polynomials over :math:`\Q`, monic under ``Order``, together
-   with ``a / gcd`` and ``b / gcd``. Brown's dense algorithm: the primitive
+   with ``a / gcd`` and ``b / gcd``, by Brown's dense algorithm. The primitive
    integer operands are reduced modulo word-sized primes, specialised one
    variable at a time down to a Euclidean algorithm on machine words, and
    rebuilt by Newton interpolation; images modulo several primes are joined by
@@ -104,10 +104,10 @@ Reconstruction
                                                    const options& opts = options())
 
    Recovers ``count`` rational functions of ``P`` parameters from a black box
-   that evaluates them at points of :math:`\mathbb{Z}/p`. Per prime: degrees from
-   a random line by univariate rational reconstruction under the maximal
-   quotient rule, then coefficients from one linear system per function,
-   normalised so the leading coefficient of the denominator is one; after the
+   that evaluates them at points of :math:`\mathbb{Z}/p`. For each prime the
+   degrees come from a random line by univariate rational reconstruction under
+   the maximal quotient rule, and the coefficients from one linear system per
+   function, normalised so the leading coefficient of the denominator is one; after the
    first prime only the monomials it found are solved for. Primes are joined as
    in the modular gcd, until two consecutive ones change nothing.
 

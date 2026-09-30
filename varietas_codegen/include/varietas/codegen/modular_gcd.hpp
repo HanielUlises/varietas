@@ -108,7 +108,7 @@ struct prime_field {
     return result;
   }
 
-  // Extended Euclid rather than Fermat: a few dozen divisions against the
+  // Extended Euclid rather than Fermat, a few dozen divisions against the
   // thirty-one squarings of a^(p-2), on the path every univariate division
   // takes, which made it the most frequent single call in a parametric solve.
   word inv(word a) const noexcept {
@@ -321,7 +321,7 @@ mpoly<N> join(const std::vector<run<N>>& runs, std::size_t k) {
   return a;
 }
 
-// x_k set to alpha. Contiguity again: every run collapses to one term.
+// x_k set to alpha. Contiguity again makes every run collapse to one term.
 template <std::size_t N>
 mpoly<N> specialise(const prime_field& F, const std::vector<run<N>>& runs, word alpha) {
   mpoly<N> a;
@@ -416,7 +416,7 @@ mpoly<N> brown(const prime_field& F, const mpoly<N>& a, const mpoly<N>& b, std::
   }
 
   if (k == 0) {
-    // One variable left: Euclid on dense vectors.
+    // With one variable left, Euclid on dense vectors.
     upoly ua = split(a, 0).front().coefficient;
     upoly ub = split(b, 0).front().coefficient;
     std::vector<run<N>> g(1);
@@ -463,7 +463,7 @@ mpoly<N> brown(const prime_field& F, const mpoly<N>& a, const mpoly<N>& b, std::
   // points plus one determine it.
   const int bound = degree(gamma) + std::min(degree_a, degree_b);
 
-  // The candidate the interpolant stands for: its primitive part in x_0, ...,
+  // The candidate the interpolant stands for, which is its primitive part in x_0, ...,
   // x_{k-1}, the content of the answer put back, and the lexicographic leading
   // coefficient made one. Accepted only if it divides both operands.
   const auto accept = [&](const std::vector<run<N>>& h, mpoly<N>& out) {
@@ -518,7 +518,7 @@ mpoly<N> brown(const prime_field& F, const mpoly<N>& a, const mpoly<N>& b, std::
       have = true;
       points = 1;
     } else {
-      // Newton: h + (image - h(alpha)) q / q(alpha), monomial by monomial,
+      // Newton interpolation, h + (image - h(alpha)) q / q(alpha), monomial by monomial,
       // over the union of the two supports.
       const word q_inverse = F.inv(evaluate(F, q, alpha));
       stable = true;
@@ -558,7 +558,7 @@ mpoly<N> brown(const prime_field& F, const mpoly<N>& a, const mpoly<N>& b, std::
     // is determined, so a failure there means some image was wrong, which the
     // division catches and more points repair. Before the bound, a point that
     // changed nothing suggests the interpolant has already stopped moving,
-    // which is the common case: the bound is for the worst case, and sparse
+    // which is the common case, since the bound is for the worst case and sparse
     // answers of low degree settle long before it.
     if (points > bound || stable) {
       mpoly<N> result;
@@ -658,7 +658,7 @@ integer_form<N> primitive_integer(const polynomial<rational, N, Order>& p) {
 // Exact division over Z, or false as soon as it is clear there is none.
 //
 // This is the certificate the whole algorithm rests on, and it used to be the
-// general division routine over Q, which was most of the cost of a gcd: it
+// general division routine over Q, which was most of the cost of a gcd because it
 // rewrites the entire remainder at every step, rational coefficients and all.
 // Over Z, with the remainder held in an ordered map and updated in place, a
 // step costs the size of the divisor rather than the size of the remainder,
@@ -776,13 +776,13 @@ gcd_and_cofactors<polynomial<rational, N, Order>> modular_gcd_with_cofactors(
   const auto A = primitive_integer(a);
   const auto B = primitive_integer(b);
   // The leading coefficients under Order. A prime that divides neither keeps
-  // the leading monomial of the true gcd in its image, by Gauss's lemma: the
+  // the leading monomial of the true gcd in its image by Gauss's lemma, since the
   // primitive gcd divides the primitive operands over Z, so its leading
   // coefficient divides theirs.
   const mpz_class& lead_a = A.terms.front().second;
   const mpz_class& lead_b = B.terms.front().second;
 
-  // The images combined so far: coefficient residues modulo `modulus`, keyed
+  // The images combined so far, as coefficient residues modulo `modulus` keyed
   // by monomial, for the images that share the smallest leading monomial seen.
   std::map<std::array<std::uint16_t, N>, mpz_class> residues;
   mpz_class modulus = 1;
@@ -849,7 +849,7 @@ gcd_and_cofactors<polynomial<rational, N, Order>> modular_gcd_with_cofactors(
     modulus *= static_cast<unsigned long>(p);
 
     // Rational reconstruction, and a trial division once two consecutive
-    // reconstructions agree: the check is exact and is the expensive part, so
+    // reconstructions agree, because the check is exact and is the expensive part, so
     // it waits for the coefficients to stop moving.
     std::vector<typename poly::term> terms;
     bool reconstructed = true;
@@ -872,7 +872,7 @@ gcd_and_cofactors<polynomial<rational, N, Order>> modular_gcd_with_cofactors(
       continue;
     }
 
-    // The candidate is monic already: every image was scaled to lead with one,
+    // The candidate is monic already, since every image was scaled to lead with one
     // and one reconstructs to one. It is certified by dividing both primitive
     // operands by its primitive integer form, and the quotients are then
     // scaled back into the cofactors over Q: with a = c_a A and the candidate

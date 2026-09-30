@@ -42,7 +42,7 @@ A faster fixed-pose basis over a prime field
 ============================================
 
 **Why.** Reconstruction spends most of its time in the black box, one
-Gröbner basis per sample: about 17 ms each on the arm with its axes in general
+Gröbner basis per sample, about 17 ms each on the arm with its axes in general
 position, which is 60% of the 47 s that arm takes.
 
 **What is needed.** A completion algorithm of the F4 family, which reduces

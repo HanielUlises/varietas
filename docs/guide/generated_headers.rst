@@ -150,7 +150,7 @@ it lowers the residual.
 
 The reason is the eigenvectors. The eigenvalue method recovers a point from an
 eigenvector of the separating form, and an eigenvector is computed only to
-backward stability: near a pose where two solutions give that form nearly the
+backward stability, so near a pose where two solutions give that form nearly the
 same value, the eigenvectors lose digits that the matrices never lost, and so do
 the points read off them. Newton on the original equations recovers those digits
 at the cost of a few polynomial evaluations. A point already at rounding level
@@ -203,7 +203,7 @@ Against a numerical solver
 The comparison is not really about speed, though the speed is not close. A
 damped least squares iteration from a random seed takes about thirteen times as
 long as one generated solve, converges from only about **91%** of seeds, and
-when it does converge returns **one** configuration: whichever one the seed fell
+when it does converge returns **one** configuration, whichever one the seed fell
 into, with no way to say how many others exist.
 
 Recovering the whole solution set numerically means restarting it. Over three
@@ -266,7 +266,7 @@ circle of configurations is about to appear and the Jacobian cannot be trusted.
 The full header also refuses a whole plane of targets, and the reason is the
 half-angle substitution rather than the solve. A target with :math:`y = 0` is
 reached, if at all, with the base at :math:`q_1 = 0` or :math:`q_1 = \pi`, and
-:math:`t_1 = \tan(q_1/2)` sends the second to infinity: over :math:`\Q` the
+:math:`t_1 = \tan(q_1/2)` sends the second to infinity. Over :math:`\Q` the
 quotient at such a pose has dimension two rather than four, so the parametric
 basis has a pole along the plane, and ``solve()`` reports ``bad_pose`` there.
 Just off the plane it answers correctly, the configurations with the base near
