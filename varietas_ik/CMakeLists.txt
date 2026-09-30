@@ -29,6 +29,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_parametric_ik ${PROJECT_NAME})
   target_include_directories(test_parametric_ik PRIVATE test)
 
+  ament_add_gtest(test_reconstructed_ik test/test_reconstructed_ik.cpp TIMEOUT 300)
+  target_link_libraries(test_reconstructed_ik ${PROJECT_NAME})
+  target_include_directories(test_reconstructed_ik PRIVATE test)
+
   ament_add_gtest(test_decoupled_ik test/test_decoupled_ik.cpp TIMEOUT 600)
   target_link_libraries(test_decoupled_ik ${PROJECT_NAME})
   target_include_directories(test_decoupled_ik PRIVATE test)

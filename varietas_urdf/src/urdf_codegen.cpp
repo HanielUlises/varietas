@@ -2,7 +2,7 @@
 //
 // Usage: urdf_codegen <file.urdf> <output.hpp> [--tip L] [--root L]
 //                     [--coords xy|xz|yz|xyz] [--name N] [--namespace NS]
-//                     [--matrices-only]
+//                     [--matrices-only] [--reconstruct]
 //
 // This is the whole pipeline as a command. The URDF is read and made exact,
 // the chain is posed with the target adjoined to the coefficient field, one
@@ -14,6 +14,14 @@
 // The expensive step is the Grobner basis over Q(p), and it happens once, here,
 // rather than once per request in a control loop. That trade is the reason the
 // offline half of this library exists.
+//
+// --reconstruct computes the same matrices another way: by solving the arm at
+// many poses over prime fields and recovering each entry as a rational function
+// of the pose from its values. It is far cheaper on arms with offsets, where
+// the symbolic solve drowns in intermediate expressions it never needed to
+// keep, but it is right with high probability rather than by construction, so
+// its result is checked exactly against Q at rational poses before it is
+// written, and refused if any check fails.
 
 #include <array>
 #include <cstddef>
@@ -28,6 +36,7 @@
 #include "varietas/ik/decoupled_ik.hpp"
 #include "varietas/ik/emit_decoupled.hpp"
 #include "varietas/ik/parametric_ik.hpp"
+#include "varietas/ik/reconstructed_ik.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
 namespace {
@@ -42,6 +51,7 @@ struct options {
   std::string name_space = "varietas_generated";
   varietas::codegen::runtime_kind runtime = varietas::codegen::runtime_kind::eigen;
   bool decouple = false;
+  bool reconstruct = false;
 };
 
 bool parse(int argc, char** argv, options& out) {
@@ -67,6 +77,8 @@ bool parse(int argc, char** argv, options& out) {
       out.name_space = value("--namespace");
     } else if (arg == "--decouple") {
       out.decouple = true;
+    } else if (arg == "--reconstruct") {
+      out.reconstruct = true;
     } else if (arg == "--matrices-only") {
       out.runtime = varietas::codegen::runtime_kind::matrices_only;
     } else if (!arg.empty() && arg[0] == '-') {
@@ -124,7 +136,15 @@ int run(const varietas::chain<varietas::rational>& robot,
     selected[k] = coordinates[k];
   }
 
-  const auto result = varietas::ik::parametric_position_ik<N, P>(robot, selected);
+  varietas::ik::reconstruction_report report;
+  const auto result = opts.reconstruct
+                          ? varietas::ik::reconstructed_position_ik<N, P>(robot, selected, &report)
+                          : varietas::ik::parametric_position_ik<N, P>(robot, selected);
+  if (opts.reconstruct) {
+    std::printf("reconstructed    %zu samples over %zu primes; exact checks %zu, %s\n",
+                report.sampling.samples, report.sampling.primes, report.exact_checks,
+                report.checks_passed ? "passed" : "FAILED");
+  }
   if (!result.ok()) {
     std::fprintf(stderr, "refused: %s\n", varietas::ik::to_string(result.status));
     if (result.status ==
@@ -144,9 +164,13 @@ int run(const varietas::chain<varietas::rational>& robot,
   emit_options.name = opts.name;
   emit_options.name_space = opts.name_space;
   emit_options.runtime = opts.runtime;
-  emit_options.source_note = "Position inverse kinematics of " + robot.name() +
-                             ", solved once over Q(pose) by varietas_ik from " + opts.urdf +
-                             ". The unknowns are t = tan(q/2) for revolute joints.";
+  emit_options.source_note =
+      "Position inverse kinematics of " + robot.name() +
+      (opts.reconstruct
+           ? ", reconstructed over Q(pose) by varietas_ik from fixed-pose solves over prime "
+             "fields, and checked exactly at rational poses, from "
+           : ", solved once over Q(pose) by varietas_ik from ") +
+      opts.urdf + ". The unknowns are t = tan(q/2) for revolute joints.";
 
   if (!write(opts.output, varietas::codegen::emit(result.solution, emit_options))) {
     return 1;
@@ -220,7 +244,7 @@ int main(int argc, char** argv) {
     std::fprintf(stderr,
                  "usage: %s <file.urdf> <output.hpp> [--tip L] [--root L]\n"
                  "          [--coords xy|xz|yz|xyz] [--name N] [--namespace NS]\n"
-                 "          [--decouple] [--matrices-only]\n",
+                 "          [--decouple] [--matrices-only] [--reconstruct]\n",
                  argv[0]);
     return 2;
   }
@@ -259,6 +283,12 @@ int main(int argc, char** argv) {
   // coordinates are read off the arm rather than chosen. Asking for both is a
   // contradiction, and refusing is better than quietly ignoring one of them.
   if (opts.decouple) {
+    if (opts.reconstruct) {
+      std::fprintf(stderr,
+                   "refused: --decouple solves a two-parameter problem symbolically, which is "
+                   "cheap, so it is not combined with --reconstruct\n");
+      return 1;
+    }
     if (!opts.coords.empty()) {
       std::fprintf(stderr,
                    "refused: --decouple takes the plane from the axis it sweeps, so it cannot "
