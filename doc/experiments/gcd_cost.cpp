@@ -1,4 +1,5 @@
-// Cost of one subresultant gcd on dense trivariate polynomials.
+// Cost of one gcd on dense trivariate polynomials, by the subresultant
+// remainder sequence and by evaluation and interpolation.
 //
 // Isolates the two contributions to the cost of the cancellation that
 // rational_function performs after every coefficient operation: the size of the
@@ -17,6 +18,11 @@
 //
 // Output is one row per (field, degree) in a form a plotting script can read,
 // followed by a least-squares fit of log t against log m.
+//
+// The third series is the modular gcd of varietas/codegen/modular_gcd.hpp on the
+// same rational inputs. It is what the first two were measured to motivate: the
+// remainder sequence costs the same power of the operand size over both fields,
+// so the question is whether replacing the sequence changes that power.
 
 #include <algorithm>
 #include <array>
@@ -24,10 +30,12 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "modular_field.hpp"
 
+#include "varietas/codegen/modular_gcd.hpp"
 #include "varietas/codegen/rational.hpp"
 #include "varietas/core/gcd.hpp"
 #include "varietas/core/order/grevlex.hpp"
@@ -66,7 +74,21 @@ struct sample {
   std::size_t gcd_terms = 0;
 };
 
-template <class Coeff>
+struct subresultant {
+  template <class Poly>
+  Poly operator()(const Poly& a, const Poly& b) const {
+    return varietas::polynomial_gcd(a, b);
+  }
+};
+
+struct interpolating {
+  template <class Poly>
+  Poly operator()(const Poly& a, const Poly& b) const {
+    return varietas::modular_gcd(a, b);
+  }
+};
+
+template <class Coeff, class Gcd = subresultant>
 sample measure(int degree, int repeats) {
   std::vector<double> times;
   sample s;
@@ -77,7 +99,7 @@ sample measure(int degree, int repeats) {
     const auto b = dense<Coeff>(degree / 2, rng) * factor;
 
     const auto start = std::chrono::steady_clock::now();
-    const auto result = varietas::polynomial_gcd(a, b);
+    const auto result = Gcd()(a, b);
     const auto stop = std::chrono::steady_clock::now();
 
     times.push_back(std::chrono::duration<double>(stop - start).count());
@@ -104,7 +126,7 @@ double fitted_exponent(const std::vector<sample>& samples) {
   return (n * sxy - sx * sy) / (n * sxx - sx * sx);
 }
 
-template <class Coeff>
+template <class Coeff, class Gcd = subresultant>
 std::vector<sample> sweep(const char* field, int lowest, int highest) {
   std::vector<sample> samples;
   for (int degree = lowest; degree <= highest; degree += 2) {
@@ -112,7 +134,7 @@ std::vector<sample> sweep(const char* field, int lowest, int highest) {
     // measured once, since the quantity of interest spans four orders of
     // magnitude and is not sensitive to run-to-run variation.
     const int repeats = degree <= 8 ? 5 : 1;
-    const sample s = measure<Coeff>(degree, repeats);
+    const sample s = measure<Coeff, Gcd>(degree, repeats);
     samples.push_back(s);
     std::printf("%-6s %3d %7zu %7zu %12.6f\n", field, degree, s.operand_terms, s.gcd_terms,
                 s.seconds);
@@ -123,15 +145,23 @@ std::vector<sample> sweep(const char* field, int lowest, int highest) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  const std::string which = argc > 1 ? argv[1] : "all";
   std::printf("%-6s %3s %7s %7s %12s\n", "field", "deg", "terms", "gcd", "seconds");
 
   // The prime field is carried further, being cheaper; the rational field stops
   // where a single measurement would begin to dominate the run.
-  const auto modular = sweep<varietas::modular>("Fp", 4, 16);
-  const auto rational = sweep<varietas::rational>("Q", 4, 12);
+  if (which == "all" || which == "subresultant") {
+    const auto modular = sweep<varietas::modular>("Fp", 4, 16);
+    const auto rational = sweep<varietas::rational>("Q", 4, 12);
+    std::printf("\nfitted exponent of terms, Fp:    %.2f\n", fitted_exponent(modular));
+    std::printf("fitted exponent of terms, Q:     %.2f\n", fitted_exponent(rational));
+  }
 
-  std::printf("\nfitted exponent of terms, Fp: %.2f\n", fitted_exponent(modular));
-  std::printf("fitted exponent of terms, Q:  %.2f\n", fitted_exponent(rational));
+  // The interpolating gcd is cheap enough to be carried well past both.
+  if (which == "all" || which == "interpolating") {
+    const auto interpolated = sweep<varietas::rational, interpolating>("Q-mod", 4, 30);
+    std::printf("fitted exponent of terms, Q-mod: %.2f\n", fitted_exponent(interpolated));
+  }
   return 0;
 }

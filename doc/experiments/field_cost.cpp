@@ -168,6 +168,20 @@ void report(const char* system, const char* field, const measurement& m) {
   std::printf("%-24s %-11s %8.3f %8.3f %7zu %7zu %7zu  %s\n", system, field,
               m.forward_map_seconds + m.residual_seconds, m.seconds, m.basis_size,
               m.quotient_dimension, m.largest_basis_polynomial, m.initial_ideal.c_str());
+
+  // Over Q(p) the cancellation is done by the modular gcd, which keeps its own
+  // account. Read and reset here, so each row reports its own run.
+  auto& gcd = varietas::modular_gcd_counters();
+  if (gcd.calls != 0) {
+    std::printf("    gcd: %zu calls, %zu primes, %zu trial divisions (%zu failed), "
+                "largest operand %zu terms, %.3f s in gcd of which %.3f s in trial division\n",
+                gcd.calls, gcd.primes, gcd.trial_divisions, gcd.failed_trials,
+                gcd.largest_operand, gcd.seconds, gcd.trial_seconds);
+    std::printf("         %zu evaluation points, %zu divisions modulo p inside the recursion "
+                "(%zu rejected)\n",
+                gcd.evaluation_points, gcd.interpolation_checks, gcd.interpolation_rejections);
+  }
+  gcd = varietas::modular_gcd_statistics{};
   std::fflush(stdout);
 }
 
