@@ -141,7 +141,7 @@ the way.
      - :math:`\Q(x,y,z)`
      - not after 60 min
      - 2.5 s
-   * - Axes in general position (no sweep)
+   * - Three pairwise skew axes (no sweep)
      - :math:`\Q(x,y,z)`
      - not after 60 min
      - 47 s

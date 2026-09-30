@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<!-- A three-joint arm whose three axes are pairwise skew.
+
+     The base turns about z; the shoulder about (3/5, 4/5, 0), half a link out
+     and a third of one up; the elbow about (2/7, 3/7, 6/7), a link further on
+     and a fifth of one to the side; and the tool sits a link beyond that and
+     half a link up. No two axes are parallel and no two meet (the first two
+     are perpendicular, but two fifths of a link apart), so there is no plane for
+     the base to sweep. The decoupling refuses this arm, and the solve over
+     Q(x, y, z) had produced nothing after an hour. varietas_demo reconstructs its solver from fixed poses during the
+     build, and solve_all.launch.py draws every configuration it returns.
+
+     The decimals are the exact rationals written out: the importer recovers
+     3/5, 4/5, 2/7, 3/7, 6/7 and 1/3 from them, and reports how far it moved
+     each value to do so. -->
+<robot name="general_3r">
+  <link name="base_link"/>
+
+  <link name="upper">
+    <visual>
+      <origin xyz="0.25 0 0.1667" rpy="0 0 0"/>
+      <geometry><box size="0.5 0.06 0.06"/></geometry>
+    </visual>
+  </link>
+  <link name="fore">
+    <visual>
+      <origin xyz="0.5 0.1 0" rpy="0 0 0"/>
+      <geometry><box size="1.0 0.06 0.06"/></geometry>
+    </visual>
+  </link>
+  <link name="hand">
+    <visual>
+      <origin xyz="0.5 0 0.25" rpy="0 0 0"/>
+      <geometry><box size="1.0 0.05 0.05"/></geometry>
+    </visual>
+  </link>
+  <link name="tool"/>
+
+  <joint name="q1" type="revolute">
+    <parent link="base_link"/>
+    <child link="upper"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2"/>
+  </joint>
+  <joint name="q2" type="revolute">
+    <parent link="upper"/>
+    <child link="fore"/>
+    <origin xyz="0.5 0 0.3333333333333333" rpy="0 0 0"/>
+    <axis xyz="0.6 0.8 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2"/>
+  </joint>
+  <joint name="q3" type="revolute">
+    <parent link="fore"/>
+    <child link="hand"/>
+    <origin xyz="1 0.2 0" rpy="0 0 0"/>
+    <axis xyz="0.2857142857142857 0.42857142857142855 0.8571428571428571"/>
+    <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2"/>
+  </joint>
+  <joint name="tool_mount" type="fixed">
+    <parent link="hand"/>
+    <child link="tool"/>
+    <origin xyz="1 0 0.5" rpy="0 0 0"/>
+  </joint>
+</robot>

@@ -85,4 +85,8 @@ ros2 launch varietas_demo sweep.launch.py urdf:=<file.urdf> period:=12.0
 # The arm is fixed: the header is emitted for it during the build, so urdf:=
 # alone will not retarget it.
 ros2 launch varietas_demo branches.launch.py period:=24.0
+
+# An arm with pairwise skew axes, which only the reconstruction can solve, drawn
+# with every configuration beside a damped least squares iteration.
+ros2 launch varietas_demo solve_all.launch.py
 ```

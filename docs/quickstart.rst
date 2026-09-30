@@ -111,7 +111,8 @@ you asked of it.
 Watch it move
 =============
 
-Two demonstrations, answering the two different questions.
+Three demonstrations. The first two answer the two different questions, and
+the third sets the library beside the method it replaces.
 
 The first is the forward one. ``sweep.launch.py`` drives the joints through a
 closed trajectory, lets ``robot_state_publisher`` pose the arm from the
@@ -159,3 +160,38 @@ against varietas's own output rather than a copy checked in beside it.
    The arm ``branches.launch.py`` solves is fixed, because the header was
    generated for it at build time; ``urdf:=`` alone will not retarget it. See
    :doc:`guide/decoupling`.
+
+The third, ``solve_all.launch.py``, takes an arm nothing else in the library
+could solve before 0.2.0. Its three axes are pairwise skew, so the decoupling
+refuses it, and the symbolic solve over :math:`\Q(x,y,z)` does not finish in an
+hour. Its solver is reconstructed from fixed poses during the build, in about
+forty seconds, and two copies of the arm follow one target. The first draws
+every configuration the generated solver returns, each branch keeping its
+colour from frame to frame. The second is driven by damped least squares
+warm-started from its last answer, as a tracking controller would drive it,
+and is drawn in the colour of whichever branch it is on.
+
+.. code-block:: sh
+
+   ros2 launch varietas_demo solve_all.launch.py
+
+.. figure:: figures/solve_all.gif
+   :width: 100%
+   :alt: Every configuration beside one damped least squares iteration
+
+   Over one revolution the iteration stalls three times, twice while two
+   configurations exist that it has no way to find, and changes branch as it
+   recovers. The captions are typeset from the trace the node writes and the
+   record the build keeps of the reconstruction, so they report only what the
+   programs did. The node writes that trace when it is given ``trace:=`` with
+   a file name.
+
+.. note::
+
+   Solve times are left out of the captions on purpose. The recording renders
+   in software, and a solver timed on a machine busy rendering reports the
+   renderer's cost as its own. On a quiet machine the generated solver for
+   this arm takes about 40 µs a call, more than a warm-started iteration that
+   converges, which takes a few. What it buys is the whole solution set and a
+   count that is a theorem, not speed. The solver times in
+   :doc:`guide/generated_headers` are measured without a renderer.

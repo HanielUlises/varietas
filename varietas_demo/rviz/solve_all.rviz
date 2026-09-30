@@ -1,0 +1,60 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+    Tree Height: 600
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Reference Frame: world
+      Cell Size: 0.5
+      Plane Cell Count: 28
+      Color: 70; 74; 86
+      Alpha: 0.2
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+    - Class: rviz_default_plugins/MarkerArray
+      Name: SolveAll
+      Enabled: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /varietas_markers
+  Global Options:
+    Background Color: 22; 24; 29
+    Fixed Frame: world
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      # From -x, so that the generated solver's arm, at the origin, is on the
+      # left of the frame and the iterating copy, 4.4 m along -y, on the right.
+      Distance: 7.4
+      Focal Point:
+        X: 0.0
+        Y: -2.2
+        Z: 0.55
+      Pitch: 0.34
+      Yaw: 3.05
+      Target Frame: <Fixed Frame>
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: true
+  Hide Left Dock: true
+  Hide Right Dock: true
+  Height: 860
+  Width: 1600
+  X: 0
+  Y: 0

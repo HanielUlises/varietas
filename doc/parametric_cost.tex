@@ -100,7 +100,7 @@ problem through two bottlenecks and removes each.
   offsets lies in intermediate expression swell, and a reconstruction of the action matrices from
   fixed-pose solves over prime fields~\cite{kaltofen1990,vonmanteuffel2015,peraro2016} that avoids it,
   checked exactly at rational poses (Section~\ref{sec:reconstruction}). Every three-joint arm tested,
-  including three the decoupling cannot treat, one of them with axes in general position, is solved
+  including three the decoupling cannot treat, one of them with three pairwise skew axes, is solved
   in under a minute.
 \item A Newton refinement on the equations as posed, emitted into the generated solver, which removes
   the error the eigenvalue method incurs through ill-conditioned eigenvectors
@@ -906,7 +906,7 @@ exact checks into a proof, is not provided.
 
 \paragraph{Scope of the arms.} Five three-joint arms were measured. They cover the shapes that decide
 the cost in this setting, links with and without offsets, a base that does and does not admit the
-decoupling, and axes in general position, but they are not a sample of industrial manipulators, whose
+decoupling, and pairwise skew axes, but they are not a sample of industrial manipulators, whose
 positioning subsystems are mostly of the first two kinds. Arms with prismatic joints were not
 measured.
 
@@ -942,7 +942,7 @@ still does not finish in an hour, and the reason is no longer the gcd but the si
 intermediate rational functions, which exceed the final ones by three orders of magnitude.
 Reconstructing the final ones from fixed-pose solves over prime fields avoids them entirely, and
 every three-joint arm measured is then solved in under a minute, most in under a second, including three the
-decoupling cannot treat, one with its axes in general position, and every result agrees exactly
+decoupling cannot treat, one with three pairwise skew axes, and every result agrees exactly
 with an independent computation over $\QQ$ at rational poses and configurations.
 
 The emitted solvers are fast and, with a Newton step on the equations as posed, accurate to

@@ -22,6 +22,19 @@ outside them, varietas either produces a solution set with a proof of
 completeness or reports precisely which hypothesis of the Extension Theorem was
 violated.
 
+.. figure:: figures/solve_all.gif
+   :width: 100%
+   :alt: Every configuration of an arm with three pairwise skew axes, beside a
+         damped least squares iteration that follows one and stalls
+
+   **Every configuration, beside one.** An arm whose three axes are pairwise
+   skew follows a moving target twice. On the left, the solver varietas
+   reconstructed from its URDF during the build returns every configuration,
+   four, then two, then none as the target leaves the workspace. On the right,
+   damped least squares warm-started from its last answer finds one at most,
+   stalls while two configurations exist, and lands on a different branch when it
+   recovers. See :doc:`quickstart` to run it.
+
 .. figure:: figures/pipeline.svg
    :width: 100%
    :alt: The varietas pipeline, from a robot description to the three

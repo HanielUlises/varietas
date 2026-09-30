@@ -35,6 +35,14 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
   lowers the residual. The worst residual of the decoupled demonstration
   solver goes from :math:`6.5\times10^{-8}` m to :math:`1.6\times10^{-15}` m.
 
+.. rubric:: Demonstrations
+
+* ``solve_all.launch.py``, a third demonstration. An arm with three pairwise
+  skew axes, solved in full by reconstruction during the build, drawn with
+  every configuration beside a warm-started damped least squares iteration.
+  The node can write a trace of every tick, from which the published
+  recording is captioned.
+
 0.1.0
 =====
 

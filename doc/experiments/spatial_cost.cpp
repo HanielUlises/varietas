@@ -85,8 +85,8 @@ struct arm {
 
 // Five arms, ordered roughly by how far each is from the textbook case. Every
 // axis is a rational unit vector, which is what an exact chain needs; the last
-// arm's axes are points of the unit sphere with rational coordinates, chosen
-// to be in no special position relative to one another.
+// arm's axes are points of the unit sphere with rational coordinates, placed so
+// that the three are pairwise skew: no two parallel and no two meeting.
 std::vector<arm> arms() {
   const auto I = rigid_transform<rational>::identity();
   std::vector<arm> out;

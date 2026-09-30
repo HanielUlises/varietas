@@ -4,7 +4,7 @@
   <name>varietas_demo</name>
   <version>0.2.0</version>
   <description>
-    Two RViz demonstrations, answering the two different questions.
+    Three RViz demonstrations.
 
     sweep.launch.py is the forward one: the arm is posed by
     robot_state_publisher from the decimals in the URDF, and a marker is placed
@@ -21,6 +21,13 @@
     building. Beside the solved arm stands the KUKA LBR iiwa, posed but not
     solved, carrying the refusal parametric_position_ik returns for it.
 
+    solve_all.launch.py sets the library beside the method it replaces. The
+    arm, general_3r, has three pairwise skew axes, so it cannot be decoupled,
+    and its solver is reconstructed from fixed poses during this build. Every
+    configuration that solver returns is drawn beside a copy of the arm driven
+    by damped least squares, which finds one at most and is drawn in the
+    colour of the branch it is on.
+
     Demonstration only; nothing in the pipeline depends on it.
   </description>
   <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
@@ -34,6 +41,8 @@
   <depend>urdf</depend>
   <depend>tf2_ros</depend>
   <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>eigen</depend>
   <depend>varietas_urdf</depend>
 
   <exec_depend>robot_state_publisher</exec_depend>
