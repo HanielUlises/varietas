@@ -28,32 +28,37 @@
 \newcommand{\In}{\operatorname{in}}
 \newcommand{\LM}{\operatorname{LM}}
 
-\title{\bfseries The cost of parametric Gr\"obner basis computation\\ over a rational function field}
+\title{\bfseries Measuring and removing the costs\\ of parametric Gr\"obner bases\\
+for generated inverse kinematics}
 \author{Haniel Ulises}
-\date{4 September 2026}
+\date{30 September 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 \noindent
-Inverse kinematics can be posed so that the target pose is adjoined to the coefficient field rather
-than substituted into the polynomial ring. A single Gr\"obner basis over $\QQ(\bp)$ then answers
-every pose, which is what permits an offline solve and generated runtime code. In the implementation
-studied here that computation completes in milliseconds with two adjoined parameters and has not been
-observed to complete with three. Profiling attributes approximately \SI{86}{\percent} of the running
-time to the polynomial greatest common divisor invoked when coefficients are reduced to lowest terms,
-which suggests that a modular gcd would remove the limitation. This report tests that suggestion by
-repeating the computation over $\FF_p(\bp)$, where coefficient arithmetic is a single machine-word
-operation and coefficients do not grow. The three-parameter problem fails to terminate over $\FF_p$
-as well. An independent measurement of the subresultant gcd over both fields, on dense trivariate
-operands ranging from $35$ to $969$ terms, gives fitted cost exponents of $3.79$ over $\FF_p$ and
-$3.81$ over $\QQ$, with a ratio between the fields that rises to and settles near $13$. The choice of
-coefficient field therefore governs a bounded multiplicative constant while the growth in operand size
-governs the exponent. Since the operands reached during a single reduction of the three-parameter run
-number $498$ terms, a value interior to the measured range, a modular gcd formed by computing the
-existing remainder sequence over several primes cannot make the problem tractable, and only a gcd
-based on evaluation and interpolation addresses the measured cost.
+Inverse kinematics can be posed with the target adjoined to the coefficient field rather than
+substituted into the polynomial ring, so that one Gr\"obner basis over $\QQ(\bp)$ answers every pose
+and its action matrices can be emitted as source code. In the implementation studied here that
+computation completed in milliseconds with two adjoined parameters and never with three, although a
+tool position has three coordinates. We locate the cost, remove it, and locate and remove the cost
+that appears behind it. Profiling attributes \SI{86}{\percent} of the time to the polynomial gcd used
+to keep coefficients in lowest terms; repeating the computation over $\FF_p(\bp)$, and measuring the
+subresultant gcd in isolation over both fields, shows that the cost grows as the $3.8$th power of the
+operand size whatever the field, so that only a gcd built on evaluation and interpolation can help.
+Brown's dense modular algorithm, certified by exact division over $\mathbb{Z}$ and returning the
+cofactors that division computes, brings the exponent to $1.47$ and a gcd of $455$-term operands from
+\SI{91}{\second} to \SI{4.6}{\milli\second}, and the three-parameter solve of the anthropomorphic arm,
+which had not finished in \SI{900}{\second}, to about \SI{20}{\second}. On arms with offsets it still
+does not finish in an hour: the parameter polynomials carried through the completion swell to
+$16\,000$ terms, while the matrices finally produced have entries of fourteen. Reconstructing those
+entries from fixed-pose solves over prime fields, by rational function interpolation, never forms the
+intermediate expressions and solves every arm tested, three of which the usual decoupling of the base
+joint cannot treat, in \SI{0.25}{\second} to \SI{47}{\second}; each result is checked exactly over
+$\QQ$ at rational poses and agrees entry for entry with the symbolic solve where that finishes. Finally, a Newton step on the equations as posed
+removes the residual tail of the emitted solvers, whose worst error falls from
+\SI{6.5e-8}{\metre} to \SI{1.6e-15}{\metre} at a cost of \SI{0.6}{\micro\second} per call.
 \end{abstract}
 
 \section{Introduction}
@@ -63,35 +68,51 @@ The inverse kinematics of a serial manipulator with revolute joints becomes a po
 the tangent half-angle substitution $t_i = \tan(q_i/2)$, and the resulting zero-dimensional ideal can
 be solved by the eigenvalue method of M\"oller and Stetter~\cite{moller1995}. Classical treatments of
 the general $6R$ arm reduce the problem to a univariate resultant of degree
-sixteen~\cite{leeliang1988,raghavanroth1993,manochacanny1994}. The system studied here takes a
-different route. The target pose is adjoined to the coefficient field, so that the Gr\"obner basis is
-computed once for the manipulator and evaluated at each requested pose, and the action matrices of
-the quotient algebra are emitted as source code.
+sixteen~\cite{leeliang1988,raghavanroth1993,manochacanny1994,husty2007}, and code generators such as
+IKFast~\cite{diankov2010} match an arm against a catalogue of solvable structures. The system studied
+here takes a different route. The target pose is adjoined to the coefficient field, so that the
+Gr\"obner basis is computed once for the manipulator and evaluated at each requested pose, and the
+action matrices of the quotient algebra are emitted as source code. The number of solutions is then
+the dimension of the quotient algebra, a certificate that no branch has been missed, and a call to the
+emitted solver costs about as much as a few evaluations of the forward kinematics.
 
-The cost of that formulation is the subject of this report. Writing $N$ for the number of actuated
-joints and $P$ for the number of adjoined pose coordinates, the implementation completes the case
-$P = N = 2$ in between \SI{6}{\milli\second} and \SI{33}{\milli\second}, and has produced no result
-for $P = N = 3$ after \SI{900}{\second}. An instrumented run of the three-parameter problem attributes
-approximately \SI{86}{\percent} of elapsed time to the polynomial gcd invoked during normalisation of
-the coefficients.
+The obstacle is the cost of the offline computation. Writing $N$ for the number of actuated joints and
+$P$ for the number of adjoined pose coordinates, only $P = N$ can give a finite, nonempty solution set
+(Section~\ref{sec:preliminaries}), and a tool position has $P \le 3$. The implementation completed
+$P = N = 2$ in tens of milliseconds and had produced no result for $P = N = 3$ after
+\SI{900}{\second}, which left every three-joint arm to a decoupling that applies only when the base
+placement commutes with the base rotation. This paper follows the cost of the three-parameter
+problem through two bottlenecks and removes each.
 
-Two explanations are consistent with that attribution, and they recommend different work. The first
-locates the cost in arithmetic on rational coefficients, whose numerators and denominators grow
-through the subresultant remainder sequence; on this account a modular gcd, computing images over
-several primes and reconstructing by the Chinese remainder theorem, would recover most of the running
-time. The second locates it in the number of terms of the parameter polynomials, a quantity fixed by
-the problem and the monomial order and independent of how coefficients are represented. Deciding
-between the two accounts before committing to an implementation is the purpose of the experiment
-described below.
+\paragraph{Contributions.}
+\begin{enumerate}
+\item A controlled measurement that separates the two usual explanations of a slow gcd over
+  $\QQ(\bp)$ (Sections~\ref{sec:design}--\ref{sec:analysis}). Substituting $\FF_p$ for $\QQ$ does not
+  make the problem finish, and the subresultant gcd costs the same power of the operand size over both
+  fields, so that the coefficient field governs a bounded constant and computing the same remainder
+  sequence modulo several primes cannot help.
+\item An implementation of Brown's dense modular gcd~\cite{brown1971} in which the certifying division
+  is carried out over $\mathbb{Z}$ and its quotients are returned as cofactors, with a correctness
+  argument for the leading-monomial rule it relies on (Section~\ref{sec:method}), and a measurement of
+  its effect in isolation and on the parametric solve, with ablations (Section~\ref{sec:evaluation}).
+\item The observation that, once the gcd is removed, the cost of the parametric solve on arms with
+  offsets lies in intermediate expression swell, and a reconstruction of the action matrices from
+  fixed-pose solves over prime fields~\cite{kaltofen1990,vonmanteuffel2015,peraro2016} that avoids it,
+  checked exactly at rational poses (Section~\ref{sec:reconstruction}). Every three-joint arm tested,
+  including three the decoupling cannot treat, one of them with axes in general position, is solved
+  in under a minute.
+\item A Newton refinement on the equations as posed, emitted into the generated solver, which removes
+  the error the eigenvalue method incurs through ill-conditioned eigenvectors
+  (Section~\ref{sec:refinement}).
+\end{enumerate}
 
-The method is a controlled substitution of the coefficient field, replacing $\QQ$ by a prime field in
-which coefficients cannot grow, together with a control that detects an invalid substitution;
-Section~\ref{sec:design} sets this out. Section~\ref{sec:results} reports that the three-parameter
-problem fails to terminate over the prime field, and localises the failure to a single reduction
-rather than to an accumulating basis. Section~\ref{sec:gcd} measures the subresultant gcd in isolation
-over both fields, across a range of operand sizes that covers the sizes reached by the failing run.
-Section~\ref{sec:analysis} separates the multiplicative effect of the coefficient field from the
-exponent in operand size and states what each class of modular gcd can address.
+Sections~\ref{sec:design} to~\ref{sec:analysis} are the diagnosis, in the order in which it was
+carried out: the design of the field substitution, its results, and what they imply for the choice of
+gcd. Section~\ref{sec:method} states the gcd adopted, Section~\ref{sec:reconstruction} the
+reconstruction, Section~\ref{sec:refinement} the refinement, and Section~\ref{sec:evaluation}
+measures all three. The implementation is part of the varietas library, available under the Apache
+License~2.0 at \url{https://github.com/HanielUlises/varietas}, and the appendix lists the programs that
+produce every figure reported.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -130,7 +151,8 @@ indeterminates $\bp = (p_1,\dots,p_P)$ to $k$. The parametric position ideal is
 
 Coefficients are elements of $k(\bp)$, represented as a quotient of two polynomials in $\bp$ over $k$
 and reduced to lowest terms after every arithmetic operation. Reduction requires a polynomial gcd in
-$k[\bp]$, computed by a subresultant remainder sequence in the sense of Collins~\cite{collins1967}.
+$k[\bp]$, computed at the outset of this work by a subresultant remainder sequence in the sense of
+Collins~\cite{collins1967}, and by the construction of Section~\ref{sec:method} at its end.
 Without it the representations grow without bound under the repeated additions and multiplications of
 the completion algorithm, so the reduction is a requirement of the formulation rather than an
 economy.
@@ -325,7 +347,7 @@ Degree & $m$ & gcd terms & {$t$ over $\FF_p$} & {$t$ over $\QQ$} & {Ratio} \\
 \centering
 \begin{tikzpicture}
 \begin{loglogaxis}[
-  width=0.72\textwidth, height=0.5\textwidth,
+  width=0.78\textwidth, height=0.55\textwidth,
   xlabel={Terms per operand $m$},
   ylabel={Time $t$ (\si{\second})},
   legend pos=north west,
@@ -342,14 +364,20 @@ Degree & $m$ & gcd terms & {$t$ over $\FF_p$} & {$t$ over $\QQ$} & {Ratio} \\
   (35,0.005692) (84,0.099993) (165,1.519231) (286,14.463953) (455,91.276337)
 };
 \addlegendentry{$\QQ$, slope $3.81$}
+\addplot[mark=triangle*, thick, densely dotted] coordinates {
+  (35,0.000252) (84,0.000569) (165,0.001201) (286,0.002504) (455,0.004613) (680,0.009704) (969,0.018164) (1330,0.031478) (1771,0.046988) (2300,0.071854) (2925,0.102573) (3654,0.153842) (4495,0.226325) (5456,0.311915)
+};
+\addlegendentry{$\QQ$, modular gcd, slope 1.47}
 \addplot[dotted, thick, gray, forget plot] coordinates {(498,2e-4) (498,3e2)};
-\node[anchor=west, font=\footnotesize] at (axis cs:510,0.002) {$m \approx 498$};
+\node[anchor=west, font=\footnotesize] at (axis cs:510,0.3) {$m \approx 498$};
 \end{loglogaxis}
 \end{tikzpicture}
-\caption{Cost of one subresultant gcd against operand size, both axes logarithmic. The two series are
+\caption{Cost of one gcd against operand size, both axes logarithmic. The two subresultant series are
 parallel, so the coefficient field contributes a multiplicative constant and leaves the exponent
 unchanged. The vertical line marks the operand size observed during the failing three-parameter run,
-which lies inside the measured range.}
+which lies inside the measured range. The third series is the modular gcd of
+Section~\ref{sec:method} over $\QQ$ on the same operands (Section~\ref{sec:evaluation}), whose slope
+is the one that changed.}
 \label{fig:gcd}
 \end{figure}
 
@@ -400,104 +428,576 @@ measured ratio, approximately \SI{125}{\second} over $\QQ$. Both figures agree w
 between consecutive normalisations reported in Section~\ref{sec:three}. Since $m = 498$ lies inside the
 range covered by Table~\ref{tab:gcd}, the estimate requires no extrapolation.
 
+\section{An interpolating gcd}
+\label{sec:method}
+
+The construction adopted is Brown's dense modular algorithm~\cite{brown1971}, in the form given
+in~\cite[Ch.~7]{geddes1992}, with two departures that the measurements of
+Section~\ref{sec:evaluation} show to matter: the certificate is an exact division over $\mathbb{Z}$
+rather than over $\QQ$, and the quotients of that division are returned to the caller. This section
+states the algorithm and the two facts about images on which its correctness rests.
+
+Throughout, $A, B \in \QQ[\bp]$ are nonzero, $\prec$ is the monomial order under which the result is
+to be monic, and $G = \gcd(A,B)$ is normalised to be monic under $\prec$. Clearing denominators and
+dividing out the integer content writes $A = c_A A'$ with $c_A \in \QQ$ and $A' \in \mathbb{Z}[\bp]$
+primitive, and likewise for $B$. By Gauss's lemma the primitive integer multiple $G'$ of $G$ divides
+$A'$ and $B'$ in $\mathbb{Z}[\bp]$~\cite[Sec.~6.2]{vzgg2013}.
+
+\subsection{Images and their leading monomials}
+
+The algorithm maps the problem into simpler rings twice, first modulo a prime and then by specialising
+a parameter, and computes a gcd there. What makes the approach work is that an image gcd can be too
+large but never too small, and that being too large is visible in its leading monomial.
+
+\begin{proposition}
+\label{prop:prime-image}
+Let $\ell$ be a prime not dividing $\operatorname{lc}_\prec(A')$, and let $H_\ell$ be the gcd of the
+images $\bar A', \bar B'$ in $\FF_\ell[\bp]$. Then $\LM_\prec(H_\ell) \succeq \LM_\prec(G)$, with
+equality if and only if $H_\ell$ is a nonzero scalar multiple of $\bar G'$.
+\end{proposition}
+
+\begin{proof}
+Since $G'$ divides $A'$ in $\mathbb{Z}[\bp]$ and leading coefficients are multiplicative,
+$\operatorname{lc}_\prec(G')$ divides $\operatorname{lc}_\prec(A')$, so $\ell$ does not divide it and
+$\LM_\prec(\bar G') = \LM_\prec(G)$. Reduction is a ring homomorphism, so $\bar G'$ divides $\bar A'$
+and $\bar B'$ and hence $H_\ell = \bar G' Q$ for some $Q \in \FF_\ell[\bp]$. Leading monomials are
+multiplicative over a field, so $\LM_\prec(H_\ell) = \LM_\prec(G)\,\LM_\prec(Q) \succeq \LM_\prec(G)$,
+with equality exactly when $Q$ is a nonzero constant.
+\end{proof}
+
+\begin{proposition}
+\label{prop:point-image}
+Let $A, B \in \FF_\ell[p_1,\dots,p_k]$ be primitive when read as polynomials in $p_1,\dots,p_{k-1}$
+over $\FF_\ell[p_k]$, let $\operatorname{lc}$ denote the leading coefficient in that reading under
+the lexicographic order, and let $\gamma = \gcd(\operatorname{lc} A, \operatorname{lc} B) \in
+\FF_\ell[p_k]$. For $\alpha \in \FF_\ell$ with $\gamma(\alpha) \neq 0$, the gcd of $A|_{p_k=\alpha}$
+and $B|_{p_k=\alpha}$ has leading monomial at least that of $G|_{p_k = \alpha}$, where $G = \gcd(A,B)$,
+with equality if and only if it is a scalar multiple of $G|_{p_k=\alpha}$.
+\end{proposition}
+
+\begin{proof}
+$\operatorname{lc} G$ divides both $\operatorname{lc} A$ and $\operatorname{lc} B$, hence divides
+$\gamma$, so it does not vanish at $\alpha$ and specialisation preserves the leading monomial of $G$.
+The remainder of the argument is that of Proposition~\ref{prop:prime-image} with specialisation in
+place of reduction.
+\end{proof}
+
+A prime or point whose image gcd has a leading monomial strictly larger than the true one is called
+\emph{unlucky}. There are finitely many of each: an unlucky prime divides a nonzero integer determined by
+$A$ and $B$, and an unlucky point is a root of a nonzero polynomial in $p_k$, in both cases a
+subresultant~\cite{brown1971}. Propositions~\ref{prop:prime-image} and~\ref{prop:point-image} turn this
+into an operational rule: among the images computed, those with the smallest leading monomial are
+believed, and any image with a larger one is discarded. An image with a smaller leading monomial than
+the current one proves every image held so far unlucky, and the accumulated work is restarted from it.
+
+\subsection{Recursion over a prime field}
+
+Over $\FF_\ell$ the gcd of $A, B \in \FF_\ell[p_1,\dots,p_k]$ is computed recursively in $k$. The
+contents of $A$ and $B$ as polynomials in $p_1,\dots,p_{k-1}$ over $\FF_\ell[p_k]$ are univariate gcds
+and are removed first, their gcd being restored at the end. The remaining primitive parts are
+specialised at points $\alpha$ with $\gamma(\alpha) \neq 0$, the gcd of the specialisations is computed
+by the same procedure with $k-1$ variables, and each such image, which is monic, is scaled so that its
+leading coefficient is $\gamma(\alpha)$. The scaling makes the images agree on a normalisation, namely
+$\gamma G / \operatorname{lc}(G)$, whose degree in $p_k$ is at most
+$\deg \gamma + \min(\deg_{p_k} A, \deg_{p_k} B)$; that many points plus one determine it, and it is
+recovered coefficient by coefficient by Newton interpolation. At $k = 1$ the problem is univariate and
+is a Euclidean algorithm on machine words.
+
+The degree bound is a worst case, and the interpolant usually stops changing well before it is
+reached. The implementation therefore tests a candidate as soon as a new point leaves the
+interpolant unchanged, as well as once the bound is passed, and accepts the primitive part of the
+interpolant only if it divides both operands in $\FF_\ell[p_1,\dots,p_k]$. A candidate that fails is
+not an error but a signal to take more points. Section~\ref{sec:evaluation} measures the effect of
+this early termination.
+
+Polynomials over $\FF_\ell$ are held as term lists sorted lexicographically with $p_1$ most
+significant. At level $k$ the terms that agree in $p_1,\dots,p_{k-1}$ are then contiguous and ordered
+by their exponent of $p_k$, so that reading a polynomial as one with coefficients in $\FF_\ell[p_k]$,
+and specialising $p_k$, are single passes over the list with no sorting.
+
+\subsection{Lifting to the rationals}
+
+Primes are taken in decreasing order below $2^{31}$, so that a product of two residues fits a machine
+word, and a prime dividing $\operatorname{lc}_\prec(A')$ or $\operatorname{lc}_\prec(B')$ is skipped as
+Proposition~\ref{prop:prime-image} requires. Each image is made monic under $\prec$, which is the
+normalisation of $G$, so that the images of lucky primes are the reductions of $G$ itself coefficient by
+coefficient. Images sharing the smallest leading monomial are combined by the Chinese remainder theorem,
+monomial by monomial over the union of their supports, and each combined coefficient is mapped back to a
+rational number by rational reconstruction~\cite{wang1982,vzgg2013}.
+
+A reconstruction is only a candidate. It is tested once two consecutive reconstructions agree, since the
+test is the costly step and a reconstruction that is still changing is not worth testing, and the test
+is exact: the primitive integer form $G''$ of the candidate must divide $A'$ and $B'$ in
+$\mathbb{Z}[\bp]$. By Gauss's lemma divisibility over $\QQ$ and over $\mathbb{Z}$ coincide for a
+primitive divisor, so a quotient coefficient that fails to be an integer already decides the question.
+The division keeps its remainder in an ordered map and subtracts each multiple of $G''$ in place, so
+that a step costs the number of terms of the divisor rather than of the remainder, and it stops at the
+first term that does not divide.
+
+\begin{proposition}
+\label{prop:correct}
+The procedure returns $\gcd(A,B)$, monic under $\prec$, and terminates.
+\end{proposition}
+
+\begin{proof}
+Every image combined into a candidate $C$ has the same leading monomial $L$ and coefficient one there,
+and none has a term above $L$, so $\LM(C) = L$, and $L \succeq \LM(G)$ by
+Proposition~\ref{prop:prime-image}. If $C$ is returned it divides $A$ and $B$, hence divides $G$, so
+$L \preceq \LM(G)$. Therefore $\LM(C) = \LM(G)$, the quotient $G/C$ is a constant, and it is one because
+both are monic. For termination, all but finitely many primes
+are lucky, the images of lucky primes are the reductions of $G$, and rational reconstruction recovers
+every coefficient of $G$ once the product of the primes exceeds twice the square of the largest
+numerator or denominator among them~\cite[Sec.~5.10]{vzgg2013}. From then on consecutive
+reconstructions agree and equal $G$, and the test succeeds.
+\end{proof}
+
+Two consequences are used by the caller. If the image modulo any single admissible prime is constant,
+Proposition~\ref{prop:prime-image} shows that $G$ is constant, and the procedure returns after one prime
+without a trial division; most calls made by normalisation end this way. And the division that certifies
+$G$ has $A'/G''$ and $B'/G''$ as its quotients, from which the cofactors $A/G$ and $B/G$ follow by a
+rational scaling. Normalisation needs exactly these cofactors, so the procedure returns them with $G$,
+and no second division is performed.
+
+The implementation formerly placed a heuristic in front of the gcd: every parameter but one was
+specialised at fixed values and the resulting univariate gcds were examined for a common factor, the
+exact gcd being skipped when none appeared. That test gave evidence of coprimality rather than proof,
+which was admissible only because a skipped cancellation costs size and never correctness. The first
+consequence above supplies proof at a comparable price, and the heuristic is removed, so that every
+coefficient is now held in lowest terms.
+
+\section{Reconstruction from fixed poses}
+\label{sec:reconstruction}
+
+With the gcd replaced the three-parameter problem finishes on the anthropomorphic arm, and
+Section~\ref{sec:evaluation} shows that on arms with offsets it still does not. The parameter
+polynomials carried through the completion then reach $16\,000$ terms, the gcd accounts for a quarter
+of the time rather than most of it, and the rest is arithmetic on those polynomials. The action
+matrices the computation would produce on that arm have entries of at most fourteen terms. The
+intermediate expressions are the cost, and none of them is needed for the answer.
+
+The action matrices $M_1,\dots,M_N$ and the normal forms of the variables, whose entries are the
+rational functions of the pose that the emitted solver evaluates, are therefore recovered without a
+Gr\"obner basis over $\QQ(\bp)$. The approach is black-box rational function
+reconstruction~\cite{kaltofen1990}, of the kind that has made finite-field methods standard in the
+reduction of Feynman integrals~\cite{vonmanteuffel2015,peraro2016}.
+
+\subsection{The black box}
+
+Fix a prime $\ell$ and a pose $\pi \in \FF_\ell^P$. The kinematic ideal at $\pi$ is generated by
+$\Phi_{c_j}(\bt) - D(\bt)\,\pi_j$ and saturated by $\prod_i(1+t_i^2)$ exactly as in
+Definition~\ref{def:problem}, but its coefficients are elements of $\FF_\ell$ and it has no
+parameters. Its reduced Gr\"obner basis, standard monomials, action matrices and normal forms are
+computed by the same generic code instantiated over $\FF_\ell$, and returned as a vector of
+$N d^2 + N d$ field elements, where $d = \dim A$.
+
+The standard monomials at a general pose are determined once, from three rational poses solved over
+$\QQ$, as the set on which two of them agree. A sample whose standard monomials differ is on a
+special fibre and is discarded. For $\pi$ outside a proper Zariski-closed set, the reduced basis at
+$\pi$ is the specialisation of the reduced basis over $\QQ(\bp)$, and so are the matrices, entry by
+entry; this is the property that makes the samples values of the functions sought.
+
+\subsection{Reconstruction modulo a prime}
+
+Each entry is a rational function $f = n/m$ of the pose, in lowest terms. Its degrees are found first,
+on a random line $\pi(s) = u + s w$: along the line $f$ is a univariate rational function whose
+numerator and denominator degrees are, for a line in general position, the total degrees of $n$ and
+$m$. They are read off by interpolating the samples along the line and running the extended Euclidean
+algorithm against the product of the $(s - s_i)$, choosing the step with the quotient of largest
+degree~\cite{monagan2004}, and the number of samples on the line is increased until every entry is
+reconstructed with at least two samples to spare.
+
+\begin{proposition}
+\label{prop:line}
+Let $f = n/m$ in lowest terms with $\deg n = a$ and $\deg m = b$. The pairs $(n', m')$ of polynomials
+with $\deg n' \le a$, $\deg m' \le b$ and $n' m = n m'$ form a one-dimensional space.
+\end{proposition}
+
+\begin{proof}
+From $n' m = n m'$ and $\gcd(n,m) = 1$, $m$ divides $m'$; by degree $m' = c\,m$ for a constant $c$,
+and then $n' = c\,n$.
+\end{proof}
+
+With the degrees known, each sample $(\pi_r, v_r)$ gives one linear equation
+\[
+  \sum_{|\alpha| \le a} n'_\alpha\, \pi_r^\alpha \;-\; v_r \sum_{|\beta| \le b} m'_\beta\, \pi_r^\beta \;=\; 0
+\]
+in the coefficients of $n'$ and $m'$ over all monomials of total degree at most $a$ and $b$. By
+Proposition~\ref{prop:line} the solution space of the full system is a line, and a system built from
+enough random samples has the same solution space except on a proper algebraic subset of the choices
+of samples. The kernel is found by Gaussian elimination over $\FF_\ell$ and normalised so that the
+coefficient of the leading monomial of $m'$ under the graded reverse lexicographic order is one. That
+is how $f$ is normalised over $\QQ$, so the normalised vector modulo every prime that preserves this
+leading monomial is the reduction of the same rational vector.
+
+The samples on the line are not used in these systems, since points on one line do not determine a
+polynomial in several variables, and a system filled with them has a kernel larger than a line. After
+the first prime the support of each entry is known, and later primes solve only for the monomials the
+first prime found, which on a sparse answer shrinks both the systems and the number of samples they
+need. A term that the first prime missed by vanishing modulo it makes the smaller system inconsistent,
+and the dense systems are then used again.
+
+\subsection{Lifting and checking}
+
+The normalised coefficients modulo successive primes are combined by the Chinese remainder theorem and
+mapped to rationals by rational reconstruction, as in Section~\ref{sec:method}, until two consecutive
+primes leave every reconstruction unchanged. Unlike the modular gcd, the result cannot be certified
+by a division, because the entries exist only as values. It is instead checked exactly: at two of the
+rational poses already solved over $\QQ$, more if the caller asks, the reconstructed entries are
+evaluated and compared with the entries of the matrices computed there, and any disagreement, or a
+pole of the reconstruction where $\QQ$ has a value, is reported as a failure rather than returned.
+
+\begin{remark}
+\label{rem:probability}
+The check poses have coordinates drawn from the $2^{21}+1$ dyadic rationals $k/1024$ with
+$|k| \le 2^{20}$. A wrong entry $\tilde f = \tilde n/\tilde m \neq f = n/m$, reconstructed under the
+same degree bounds $(a, b)$, agrees with $f$ at a pose only if the pose is a zero of
+$\tilde n m - n \tilde m$, a nonzero polynomial of total degree at most $a + b$, which is $16$ on the
+arms of Section~\ref{sec:evaluation}. If the check poses are regarded as drawn uniformly and
+independently of the reconstruction, the Schwartz--Zippel lemma~\cite{schwartz1980,zippel1979} bounds
+the probability of that by $16/(2^{21}+1) < 7.7 \times 10^{-6}$ per pose, and the probability that an
+error survives two poses by $6 \times 10^{-11}$. The implementation fixes the seed, so that a
+generated header does not depend on when it was generated; the bound describes the choice of seed,
+and the check does not replace a proof (Section~\ref{sec:threats}).
+\end{remark}
+
+\section{Refining the emitted solver}
+\label{sec:refinement}
+
+The emitted solver forms a separating combination $\sum_i c_i M_i$ of the action matrices at the
+requested pose, computes the eigenvectors of its transpose, which are the evaluation functionals at the
+solutions, and reads each solution off an eigenvector through the normal forms of the variables. The
+eigenvectors are computed to backward stability only. Near a pose at which two solutions give the
+separating form nearly the same value, the eigenvectors, and the solutions read from them, lose
+accuracy that the matrices themselves did not, and an emitted solver whose matrices are exact to
+rounding returns points with residuals many orders of magnitude above it.
+
+The equations as posed are available to both routes: they are
+$\Phi_{c_k}(\bt) - D(\bt)\,p_k$, polynomials in $\bt$ over $\QQ$ with the pose entering linearly. They
+are emitted into the solver with their Jacobian, differentiated exactly, and each solution returned by
+the eigenvalue method is refined by at most two Newton steps, a step being kept only if it lowers the
+norm of the residual. A solution already at rounding level is returned unchanged, and near a singular
+configuration, where the Jacobian is unreliable, a step that would increase the residual is not taken.
+The refinement changes nothing about the count of solutions, which remains $\dim A$.
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+The environment is that of Section~\ref{sec:design}. The programs are listed in
+Appendix~\ref{app:repro}.
+
+\subsection{The gcd in isolation}
+
+Table~\ref{tab:gcd-mod} repeats the measurement of Table~\ref{tab:gcd} with the modular gcd of
+Section~\ref{sec:method}, on the same operands over $\QQ$, and carries it to operands eleven times as
+large. Figure~\ref{fig:gcd} shows it as a third series.
+
+\begin{table}[htbp]
+\centering
+\caption{One gcd over $\QQ$ on the dense trivariate operands of Table~\ref{tab:gcd}: the subresultant
+sequence (from Table~\ref{tab:gcd}) and the modular gcd. Times in seconds.}
+\label{tab:gcd-mod}
+\small
+\begin{tabular}{rrS[table-format=2.6]S[table-format=1.6]S[table-format=5.0]}
+\toprule
+Degree & $m$ & {Subresultant} & {Modular} & {Ratio} \\
+\midrule
+ 4 &   35 & 0.005692 & 0.000252 & 23 \\
+ 6 &   84 & 0.099993 & 0.000569 & 176 \\
+ 8 &  165 & 1.519231 & 0.001201 & 1265 \\
+10 &  286 & 14.463953 & 0.002504 & 5776 \\
+12 &  455 & 91.276337 & 0.004613 & 19787 \\
+14 &  680 & {--} & 0.009704 & {--} \\
+16 &  969 & {--} & 0.018164 & {--} \\
+18 & 1330 & {--} & 0.031478 & {--} \\
+20 & 1771 & {--} & 0.046988 & {--} \\
+22 & 2300 & {--} & 0.071854 & {--} \\
+24 & 2925 & {--} & 0.102573 & {--} \\
+26 & 3654 & {--} & 0.153842 & {--} \\
+28 & 4495 & {--} & 0.226325 & {--} \\
+30 & 5456 & {--} & 0.311915 & {--} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fitting $\log t = \alpha\log m + \beta$ over all points gives $\alpha = 1.47$ for the modular gcd,
+against $3.81$ for the subresultant sequence over the same field, and the ratio between the two
+reaches about $19800$ at $m = 455$, the largest size at which both were measured. At the operating point
+$m \approx 500$ of Section~\ref{sec:three}, a gcd that was estimated at \SI{125}{\second} takes
+about \SI{5}{\milli\second}.
+
+\subsection{The three-parameter solve}
+
+With the modular gcd in place, Table~\ref{tab:controls-mod} repeats the experiment of
+Table~\ref{tab:controls} over $\QQ$, and adds the three-parameter system, which now completes. Its
+basis has six elements, $\dim A = 4$, and its initial ideal is the one the fixed-pose solve reports,
+so the four branches known for the anthropomorphic arm are all accounted for.
+
+\begin{table}[htbp]
+\centering
+\caption{The systems of Table~\ref{tab:controls} over $\QQ(\bp)$ with the modular gcd, and the
+three-parameter system. Completion time in seconds; the initial ideal of the last row is
+$\langle t_3^2, t_2t_3, t_2^2, t_1t_3, t_1t_2, t_1^2\rangle$.}
+\label{tab:controls-mod}
+\small
+\begin{tabular}{llS[table-format=2.3]rrr}
+\toprule
+System & Field & {Completion} & Basis & $\dim A$ & Max terms \\
+\midrule
+Planar 2R  & $\QQ(x,y)$   & 0.014 & 2 & 2 & 3 \\
+Reduced 2R & $\QQ(r,z)$   & 0.015 & 2 & 2 & 3 \\
+Anthropomorphic 3R & $\QQ(x,y,z)$ & 19.36 & 6 & 4 & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The gcd is still a large part of the three-parameter solve, but no longer nearly all of it: \SI{9.4}{\second}
+of the \SI{19.4}{\second}, over $7\,418$ calls whose operands reach $1\,974$ terms. Of those
+calls $2\,619$ end in a trial division, none of which fails, and the rest are settled by a
+constant image modulo the first prime. The trial division itself takes 0.86 seconds.
+Table~\ref{tab:ablation} measures the choices of Section~\ref{sec:method} by removing them one at a
+time.
+
+\begin{table}[htbp]
+\centering
+\caption{The three-parameter solve of the anthropomorphic arm over $\QQ(x,y,z)$ with parts of
+Section~\ref{sec:method} removed one at a time. \emph{Degree bound only}: no early termination and no
+divisibility test inside the recursion. \emph{Trial division over $\QQ$}: the certifying division
+done by the general division routine over $\QQ$, whose quotients are then the cofactors.
+\emph{Coprimality heuristic}: the specialisation test formerly placed in front of the gcd. Times in
+seconds.}
+\label{tab:ablation}
+\small
+\begin{tabular}{lS[table-format=3.1]S[table-format=2.1]S[table-format=1.2]r}
+\toprule
+Configuration & {Completion} & {In gcd} & {Trial division} & Evaluation points \\
+\midrule
+As described & 19.4 & 9.4 & 0.86 & $344\,499$ \\
+Degree bound only & 22.4 & 12.8 & 0.82 & $859\,985$ \\
+Trial division over $\QQ$ & 29.3 & 18.1 & 8.95 & $344\,499$ \\
+Coprimality heuristic restored & 21.1 & 9.7 & 0.91 & $336\,403$ \\
+Subresultant gcd (Section~\ref{sec:results}) & {$>900$} & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Early termination with a divisibility test halves the number of evaluation points, and the test
+never rejects on this input, which is the point of trying the candidate as soon as the interpolant
+stops moving. The trial division over $\QQ$ through the general division routine, which rewrites the
+whole remainder at every step, is ten times as costly as the same division over $\mathbb{Z}$ with the
+remainder updated in place. The coprimality heuristic, which skipped the exact gcd on evidence of
+coprimality, is slightly slower than no heuristic at all: a constant image modulo one prime answers the
+same question with a proof at about the same cost.
+
+\subsection{Arms}
+
+Table~\ref{tab:arms} extends the measurement to five three-joint arms. All have a base yawing about
+$z$ except the last. The first is the anthropomorphic arm; the second displaces the shoulder from the
+base axis as the demonstration arm of the library does; the third displaces the elbow a quarter of a
+link sideways, out of the plane of the arm; the fourth displaces the base off its own axis, so that
+the placement no longer commutes with the rotation; and the fifth has axes $z$, $(3/5, 4/5, 0)$ and
+$(2/7, 3/7, 6/7)$ with offsets in general position. The decoupling refuses the last three: the
+displaced elbow and the general axes take the tool out of any plane through the base axis, and the
+displaced base carries the axis itself around.
+
+\begin{table}[htbp]
+\centering
+\caption{Three-joint arms, all with $\dim A = 4$. \emph{Decoupled} is the two-parameter solve after the
+base is swept out, where the arm admits it; \emph{symbolic} the solve over $\QQ(x,y,z)$ with the
+modular gcd, stopped after one hour where marked, and, marked $\dagger$, terminated by the system after
+54 minutes with 29\,GB in use; \emph{reconstructed} the method of
+Section~\ref{sec:reconstruction}, with the number of primes, samples and the largest numerator and
+denominator degree. Every reconstruction passed its exact checks at two rational poses and, in
+addition, the eigenvector identity at three rational configurations. Times in seconds.}
+\label{tab:arms}
+\small
+\begin{tabular}{lS[table-format=1.3]lS[table-format=2.2]rrr}
+\toprule
+Arm & {Decoupled} & Symbolic & {Reconstructed} & Primes & Samples & Degrees \\
+\midrule
+Anthropomorphic & 0.015 & 19.67 & 0.24 & 2 & 110 & 4/4 \\
+Shoulder displaced & 0.059 & $>3600$ & 2.47 & 3 & 344 & 6/6 \\
+Elbow displaced & {--} & $>3200^{\dagger}$ & 0.55 & 2 & 114 & 4/4 \\
+Base off its axis & {--} & 34.94 & 0.25 & 2 & 118 & 4/4 \\
+General & {--} & $>3600$ & 47.03 & 6 & 1664 & 8/8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Where both finish, the symbolic and the reconstructed matrices agree in every entry. The symbolic
+solve does not finish on the three arms with offsets, and the diagnostic run on the arm with the
+displaced elbow shows why: after \SI{840}{\second} the gcd had taken \SI{203}{\second}, a quarter of
+the time, and its operands had reached $16\,458$ terms, against a largest entry of the reconstructed
+matrices of 14 terms. The reconstruction spends most of its time in the black box, one
+fixed-pose completion over $\FF_\ell$ per sample; on the general arm, the slowest, that is \SI{28.6}{\second}
+of 47.0 seconds, the linear systems \SI{4.6}{\second}, and the exact checks over $\QQ$ most of the
+remainder.
+
+\subsection{The emitted solvers}
+
+Table~\ref{tab:solvers} measures what a caller pays, on the demonstration arm with the displaced
+shoulder: its decoupled solver, which the library generates during its build, and its full solver over
+$\QQ(x,y,z)$, which only the reconstruction can produce, each with and without the refinement of
+Section~\ref{sec:refinement}. Targets are drawn by mapping random configurations forward, so that all
+are reachable; residuals are the distance from the target of the forward map of each returned
+configuration. A damped least-squares iteration with a finite-difference Jacobian and a tolerance of
+\SI{e-10}{\metre} is the baseline.
+
+\begin{table}[htbp]
+\centering
+\caption{Generated solvers on the demonstration arm, $20\,000$ targets for the full solver and
+$71\,658$ returned configurations for the decoupled one. Times per call.}
+\label{tab:solvers}
+\small
+\begin{tabular}{lrrrl}
+\toprule
+Solver & Median & 99th centile & Worst residual & Configurations \\
+\midrule
+Decoupled, eigenvalues only & \SI{0.9}{\micro\second} & \SI{1.3}{\micro\second} & \SI{6.5e-8}{\metre} & all \\
+Decoupled, refined & \SI{1.5}{\micro\second} & \SI{1.9}{\micro\second} & \SI{1.6e-15}{\metre} & all \\
+Full, eigenvalues only & \SI{4.3}{\micro\second} & \SI{6.5}{\micro\second} & \SI{4.3e-3}{\metre} & all \\
+Full, refined & \SI{6.2}{\micro\second} & \SI{8.3}{\micro\second} & \SI{2.0e-6}{\metre} & all \\
+Damped least squares, one seed & \SI{20}{\micro\second} & \SI{350}{\micro\second} & \SI{e-10}{\metre} & one, 91\% of seeds \\
+Damped least squares, restarted & \SI{420}{\micro\second} & & & 299 of 300 sets \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The refinement removes the residual tail of both solvers at a cost of about \SI{0.6}{\micro\second}
+for the decoupled one and \SI{1.9}{\micro\second} for the full one. The one remaining outlier of the
+full solver, at \SI{2.0e-6}{\metre}, is a target within \SI{2e-4}{\metre} of the base axis, where a
+circle of configurations is about to appear; every other target of the $20\,000$ has all its
+configurations within \SI{e-12}{\metre}, and the two solvers return the same configurations on
+$19\,999$ of them. The full solver is four times as costly per call as the decoupled one and inherits
+the pole of the half-angle substitution discussed in Section~\ref{sec:threats}, so the decoupled
+solver is the one to use where the arm admits it. The damped least-squares iteration is thirteen times
+as costly as the refined decoupled solver for one configuration, and recovering the whole set by
+restarting it from random seeds took about ten seeds a target, missed a branch on one target of three
+hundred within sixty seeds, and cost nearly three hundred times as much.
+
 \section{Threats to validity}
 \label{sec:threats}
 
-The experiment establishes that a faster gcd is necessary for the three-parameter problem without
-establishing that it is sufficient. The number of reductions the completion requires is unknown, the
-run having never terminated, and a gcd with a lower exponent would remove the present obstruction
-without guaranteeing termination in useful time. Settling the question would require either a
-completed run or an independent bound on the size of the reduced basis over $\QQ(\bp)$.
+\paragraph{Non-termination is observed, not proved.} The statements that a computation does not
+finish are bounded observations: \SI{400}{\second} and \SI{900}{\second} for the subresultant runs of
+Section~\ref{sec:results}, and one hour for the symbolic runs on arms with offsets in
+Section~\ref{sec:evaluation}, except the one with the displaced elbow, which the system terminated
+after 54 minutes with 29\,GB of memory in use, a first attempt having been killed earlier. The instrumentation that shows where those runs spend their time, a
+single reduction in the first case and operands growing past $16\,000$ terms in the second, is the
+stronger evidence.
 
-The operands of Table~\ref{tab:gcd} are dense of their total degree, whereas the parameter polynomials
-arising in the pipeline need not be. Density fixes the relation between degree and term count and makes
-$m$ an unambiguous size measure, at the cost of favouring dense interpolation over the sparse method
-of~\cite{zippel1979} in any comparison of the two. The separation of $\alpha$ from $\beta$, which is
-the conclusion drawn, is unaffected.
+\paragraph{One prime for the substitution.} The control of Remark~\ref{rem:control} verifies the prime
+used for the field substitution only on the two-parameter inputs; on the three-parameter input no
+verification is available. An unlucky prime would be expected to alter the initial ideal and the
+course of the computation, not to turn a terminating computation into a non-terminating one.
 
-One prime was used for the substitution. The control of Remark~\ref{rem:control} verifies that it is
-not unlucky on the two-parameter inputs, and no such verification is available on the three-parameter
-input, which does not complete. An unlucky prime would be expected to alter the initial ideal and hence
-the course of the computation, and would not be expected to convert a terminating computation into a
-non-terminating one, the failure being localised to a single reduction whose operands grow for reasons
-independent of the prime.
+\paragraph{Dense operands.} The operands of Table~\ref{tab:gcd} are dense of their total degree,
+whereas the parameter polynomials of the pipeline need not be. Density makes the number of terms an
+unambiguous size measure, at the cost of favouring the dense interpolation adopted over the sparse
+method of~\cite{zippel1979} in any comparison between the two, which was not made.
 
-The statements that the three-parameter runs do not complete are bounded observations at
-\SI{400}{\second} and \SI{900}{\second} rather than proofs of non-termination. The instrumentation of
-Section~\ref{sec:three}, showing one pair processed and none thereafter, is the stronger evidence and
-is what the analysis relies upon.
+\paragraph{The reconstruction is checked, not certified.} The modular gcd ends in an exact division
+and is always correct; the reconstruction of Section~\ref{sec:reconstruction} has no such test, and
+its exact checks at rational poses bound the probability of an undetected error
+(Remark~\ref{rem:probability}) without excluding it. The symbolic solve therefore remains the default
+of the implementation, and the reconstruction an option. On the two three-joint arms and the two
+two-joint problems where both finish, the two agree in every entry. A certificate, such as an a priori degree bound that would turn finitely many
+exact checks into a proof, is not provided.
 
-Finally, all measurements concern one implementation of Buchberger's algorithm with the normal
-selection strategy and the graded reverse lexicographic order. A completion algorithm of the F4
-family~\cite{faugere1999}, which replaces sequential reduction by row reduction of a large matrix,
-would change the number and the shape of the coefficient operations, and has not been measured.
+\paragraph{Scope of the arms.} Five three-joint arms were measured. They cover the shapes that decide
+the cost in this setting, links with and without offsets, a base that does and does not admit the
+decoupling, and axes in general position, but they are not a sample of industrial manipulators, whose
+positioning subsystems are mostly of the first two kinds. Arms with prismatic joints were not
+measured.
+
+\paragraph{One completion algorithm.} All Gr\"obner bases were computed with one implementation of
+Buchberger's algorithm with the normal selection strategy under the graded reverse lexicographic
+order. A completion of the F4 family~\cite{faugere1999} would change the number and shape of the
+coefficient operations in the symbolic solve, and the cost of each sample in the reconstruction,
+where most of its time is spent; neither was measured.
+
+\paragraph{The half-angle chart.} The emitted full solvers inherit a pole of the half-angle
+substitution: a target reachable only with a joint at exactly $\pi$ in one family of solutions has a
+quotient of smaller dimension, and on the arms with a base yawing about $z$ that is the whole plane
+$y = 0$, where the solver reports the pose as outside its chart. The decoupled solvers recover the
+base angle by an arctangent and are not affected.
+
+\paragraph{One machine.} All timings were taken on one machine, with the compiler and flags of
+Section~\ref{sec:design}. The ratios between methods, which are what the conclusions rest on, span
+one to four orders of magnitude and are not sensitive to the machine at that scale.
 
 \section{Conclusions}
 \label{sec:conclusions}
 
-The three-parameter parametric position problem does not complete over $\FF_p(x,y,z)$ within
-\SI{400}{\second}, so its cost is not attributable to arithmetic on rational coefficients, and the
-first of the two accounts of Section~\ref{sec:introduction} is rejected as an explanation of the
-limitation. The subresultant gcd on dense trivariate operands instead costs $\Theta(m^{\alpha})$ with
-$\alpha \approx 3.8$ measured over both fields, the coefficient field contributing a bounded
-multiplicative factor of approximately $13$. The operands reached within one reduction of the
-three-parameter run number $498$ terms, a value interior to the measured range, which places a single
-gcd at approximately \SI{9}{\second} over $\FF_p$.
+The three-parameter parametric position problem did not finish over $\FF_p(x,y,z)$, so its cost was
+not in the arithmetic on rational coefficients. The subresultant gcd costs about the $3.8$th power of
+the operand size over both fields, the field contributing a factor of about $13$, so that a modular
+gcd formed by running the same remainder sequence over several primes could not have helped, and a
+gcd built on evaluation and interpolation could. Brown's dense algorithm, certified by exact division
+over $\mathbb{Z}$ and returning its cofactors, brings the exponent to $1.5$ and the three-parameter
+solve of the anthropomorphic arm from no result in \SI{900}{\second} to about \SI{20}{\second}.
 
-It follows that a modular gcd formed by computing the existing remainder sequence over several primes
-is bounded by that factor of $13$ and would not render the three-parameter problem tractable, whereas
-a gcd based on evaluation and interpolation acts on the exponent and is the construction the
-measurement points to. Whether it also suffices is left open, for the reason given in
-Section~\ref{sec:threats}. For the implementation as it stands, $P = 2$ is the working limit, and
-three-joint arms are better obtained by the decoupling of~\cite{pieper1968}, which reduces such an arm
-to a two-parameter problem completed in \SI{25}{\milli\second}.
+That exposes the next cost rather than ending the problem. On arms with offsets the symbolic solve
+still does not finish in an hour, and the reason is no longer the gcd but the size of the
+intermediate rational functions, which exceed the final ones by three orders of magnitude.
+Reconstructing the final ones from fixed-pose solves over prime fields avoids them entirely: every
+three-joint arm measured is solved in under a minute, most in under a second, including three the
+decoupling cannot treat, one with its axes in general position, and every result agrees exactly
+with an independent computation over $\QQ$ at rational poses and configurations.
+
+The emitted solvers are fast and, with a Newton step on the equations as posed, accurate to
+rounding: a decoupled solve costs \SI{1.5}{\micro\second} with a worst residual of
+\SI{1.6e-15}{\metre} over $71\,658$ configurations, and a full three-joint solve \SI{6}{\micro\second}.
+Where an arm admits the decoupling it remains the better route, exact, fastest to produce and to call,
+and free of the half-angle pole; where it does not, the full solve now exists. Certifying the
+reconstruction, a second chart for the half-angle substitution, and a faster fixed-pose completion
+over prime fields are the work that remains.
 
 \appendix
 
 \section{Reproduction}
 \label{app:repro}
 
-From the repository root:
+From the repository root, with the workspace built by \texttt{colcon build}:
 
 \begin{verbatim}
-g++ -std=c++17 -O2 doc/experiments/field_cost.cpp -o field_cost \
-  -Ivarietas_core/include -Ivarietas_codegen/include \
-  -Ivarietas_kinematics/include -Idoc/experiments \
-  -I/usr/include/eigen3 -lgmpxx -lgmp
+CXX="g++ -std=c++17 -O2"
+INC="-Ivarietas_core/include -Ivarietas_codegen/include \
+     -Ivarietas_kinematics/include -Ivarietas_ik/include \
+     -Idoc/experiments -I/usr/include/eigen3"
 
+$CXX doc/experiments/field_cost.cpp -o field_cost $INC -lgmpxx -lgmp
 ./field_cost planar      # two-parameter control, both fields
 ./field_cost reduced     # two-parameter control, both fields
-./field_cost spatial-fp  # three parameters over F_p; does not terminate
-./field_cost spatial-q   # three parameters over Q;   does not terminate
+./field_cost spatial-fp  # three parameters over F_p(x,y,z); does not terminate
+./field_cost spatial-q   # three parameters over Q(x,y,z); Table 4
 
-g++ -std=c++17 -O2 doc/experiments/gcd_cost.cpp -o gcd_cost \
-  -Ivarietas_core/include -Ivarietas_codegen/include \
-  -Idoc/experiments -I/usr/include/eigen3 -lgmpxx -lgmp
+$CXX doc/experiments/gcd_cost.cpp -o gcd_cost $INC -lgmpxx -lgmp
+./gcd_cost subresultant  # Table 2 and the fitted exponents
+./gcd_cost interpolating # the modular gcd on the same operands
 
-./gcd_cost               # Table 2 and the fitted exponents
+$CXX doc/experiments/spatial_cost.cpp -o spatial_cost $INC -lgmpxx -lgmp
+./spatial_cost           # Table 5, reconstructed, with the exact checks
+./spatial_cost --symbolic anthropomorphic   # and the symbolic solve beside it
 
-g++ -std=c++17 -O2 doc/experiments/solver_cost.cpp -o solver_cost \
-  -Ivarietas_core/include -Ivarietas_codegen/include \
-  -Ivarietas_kinematics/include -Ivarietas_ik/include \
-  -Ibuild/varietas_demo/generated \
-  -I/usr/include/eigen3 -lgmpxx -lgmp
+$CXX doc/experiments/solver_cost.cpp -o solver_cost $INC \
+    -Ibuild/varietas_demo/generated -lgmpxx -lgmp
+./solver_cost            # the decoupled solver at run time, and the baseline
 
-./solver_cost            # run-time cost of the emitted solver, and a
-                         # damped-least-squares baseline to compare it with
+ros2 run varietas_urdf urdf_codegen \
+    varietas_demo/urdf/anthropomorphic_offset_3r.urdf full_offset_3r.hpp \
+    --name full_offset_3r_ik --reconstruct
+$CXX doc/experiments/full_solver_cost.cpp -o full_solver_cost \
+    -I. -Ibuild/varietas_demo/generated -I/usr/include/eigen3
+./full_solver_cost       # the full and decoupled solvers side by side
 \end{verbatim}
 
 \noindent
-The last of these measures the other end of the pipeline. Everything above is
-the cost of \emph{producing} a solver; \texttt{solver\_cost} is the cost of
-\emph{calling} one, which is what a user pays and the only figure in this
-document that a control loop has to budget for. It wants the generated header,
-so \texttt{colcon build} has to have run first.
-
-Adding \verb|-DVARIETAS_EXPERIMENT_TRACE| to the first build reports the largest parameter
-polynomial encountered during normalisation, which is the source of the figure $m = 498$. The
-pair-queue statistics of Section~\ref{sec:three} were obtained with a temporary instrumented copy of
-\verb|varietas_core/include/varietas/core/ideal/buchberger.hpp| printing the basis size, the pending
-pair count and the largest basis polynomial on each pass through the main loop.
+Adding \verb|-DVARIETAS_EXPERIMENT_TRACE| to the first build reports the largest parameter polynomial
+encountered during normalisation over $\FF_p(\bp)$, the source of the figure $m = 498$. The pair-queue
+statistics of Section~\ref{sec:three} were obtained with a temporarily instrumented copy of the
+completion loop, and the ablations of Table~\ref{tab:ablation} with copies of the headers of the
+modular gcd and of the rational function field, modified as the table describes. The
+modular gcd keeps its own count of calls, primes and time, which \texttt{field\_cost} prints.
 
 \begin{thebibliography}{99}
 
@@ -527,6 +1027,11 @@ D.~A. Cox, J.~Little, and D.~O'Shea.
 \newblock \emph{Ideals, Varieties, and Algorithms}.
 \newblock Springer, 4th edition, 2015.
 
+\bibitem{diankov2010}
+R.~Diankov.
+\newblock \emph{Automated Construction of Robotic Manipulation Programs}.
+\newblock PhD thesis, Carnegie Mellon University, 2010.
+
 \bibitem{eisenbud}
 D.~Eisenbud.
 \newblock \emph{Commutative Algebra with a View Toward Algebraic Geometry}.
@@ -536,6 +1041,23 @@ D.~Eisenbud.
 J.-C. Faug\`ere.
 \newblock A new efficient algorithm for computing Gr\"obner bases (F4).
 \newblock \emph{Journal of Pure and Applied Algebra}, 139(1--3):61--88, 1999.
+
+\bibitem{geddes1992}
+K.~O. Geddes, S.~R. Czapor, and G.~Labahn.
+\newblock \emph{Algorithms for Computer Algebra}.
+\newblock Kluwer Academic Publishers, 1992.
+
+\bibitem{husty2007}
+M.~L. Husty, M.~Pfurner, and H.-P. Schr\"ocker.
+\newblock A new and efficient algorithm for the inverse kinematics of a general serial $6R$
+manipulator.
+\newblock \emph{Mechanism and Machine Theory}, 42(1):66--81, 2007.
+
+\bibitem{kaltofen1990}
+E.~Kaltofen and B.~M. Trager.
+\newblock Computing with polynomials given by black boxes for their evaluations: greatest common
+divisors, factorization, separation of numerators and denominators.
+\newblock \emph{Journal of Symbolic Computation}, 9(3):301--320, 1990.
 
 \bibitem{leeliang1988}
 H.-Y. Lee and C.-G. Liang.
@@ -552,10 +1074,21 @@ H.~M. M\"oller and H.~J. Stetter.
 \newblock Multivariate polynomial equations with multiple zeros solved by matrix eigenproblems.
 \newblock \emph{Numerische Mathematik}, 70(3):311--329, 1995.
 
+\bibitem{monagan2004}
+M.~Monagan.
+\newblock Maximal quotient rational reconstruction: an almost optimal algorithm for rational
+reconstruction.
+\newblock In \emph{Proceedings of ISSAC 2004}, pages 243--249. ACM, 2004.
+
 \bibitem{mosesyun1973}
 J.~Moses and D.~Y.~Y. Yun.
 \newblock The EZ GCD algorithm.
 \newblock In \emph{Proceedings of the ACM Annual Conference}, pages 159--166, 1973.
+
+\bibitem{peraro2016}
+T.~Peraro.
+\newblock Scattering amplitudes over finite fields and multivariate functional reconstruction.
+\newblock \emph{Journal of High Energy Physics}, 2016(12):030, 2016.
 
 \bibitem{pieper1968}
 D.~L. Pieper.
@@ -566,6 +1099,26 @@ D.~L. Pieper.
 M.~Raghavan and B.~Roth.
 \newblock Inverse kinematics of the general 6R manipulator and related linkages.
 \newblock \emph{Journal of Mechanical Design}, 115(3):502--508, 1993.
+
+\bibitem{schwartz1980}
+J.~T. Schwartz.
+\newblock Fast probabilistic algorithms for verification of polynomial identities.
+\newblock \emph{Journal of the ACM}, 27(4):701--717, 1980.
+
+\bibitem{vonmanteuffel2015}
+A.~von Manteuffel and R.~M. Schabinger.
+\newblock A novel approach to integration by parts reduction.
+\newblock \emph{Physics Letters B}, 744:101--104, 2015.
+
+\bibitem{vzgg2013}
+J.~von~zur Gathen and J.~Gerhard.
+\newblock \emph{Modern Computer Algebra}.
+\newblock Cambridge University Press, 3rd edition, 2013.
+
+\bibitem{wang1982}
+P.~S. Wang, M.~J.~T. Guy, and J.~H. Davenport.
+\newblock P-adic reconstruction of rational numbers.
+\newblock \emph{ACM SIGSAM Bulletin}, 16(2):2--3, 1982.
 
 \bibitem{zippel1979}
 R.~Zippel.
