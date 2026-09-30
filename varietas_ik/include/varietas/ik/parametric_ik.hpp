@@ -274,6 +274,16 @@ parametric_ik_result<N, P> parametric_position_ik(
   solution.variable_coordinates =
       codegen::parametric_variable_coordinates<N, P, grevlex>(basis, quotient);
 
+  // The equations as posed, over Q, for the Newton steps the generated solver
+  // takes after the eigenvalue method. They are the residuals above with the
+  // pose left out, and the map is recomputed over Q rather than read back out
+  // of the one over Q(p), where every coefficient is a constant function.
+  const auto exact_map = rational_forward_kinematics<N, grevlex>(robot.fold_fixed_joints());
+  for (std::size_t k = 0; k < P; ++k) {
+    solution.residual_numerators.push_back(exact_map.translation(coordinates[k]));
+  }
+  solution.residual_denominator = exact_map.denominator();
+
   // is_well_formed is what emit() asserts on entry. Checking it here as well
   // means a malformed solution is caught where it was built, with the chain
   // still in hand, rather than inside the emitter.

@@ -193,6 +193,24 @@ std::string emit_function(const rational_function<P>& f, const std::string& pose
   return "(" + numerator + ") / (" + emit_polynomial<P>(f.denominator(), pose) + ")";
 }
 
+// The partial derivative of p in variable v, exactly.
+template <std::size_t N>
+polynomial<rational, N, grevlex> derivative(const polynomial<rational, N, grevlex>& p,
+                                            std::size_t v) {
+  using poly = polynomial<rational, N, grevlex>;
+  std::vector<typename poly::term> terms;
+  for (const auto& t : p.terms()) {
+    const unsigned e = static_cast<unsigned>(t.mon[v]);
+    if (e == 0) {
+      continue;
+    }
+    auto exponents = t.mon.exponents();
+    exponents[v] = static_cast<typename monomial<N>::exponent_type>(e - 1);
+    terms.push_back({monomial<N>(exponents), t.coeff * rational(e)});
+  }
+  return poly(std::move(terms));
+}
+
 inline std::string default_guard(const emit_options& options) {
   std::string guard = options.name_space + "_" + options.name + "_GENERATED_HPP";
   for (char& c : guard) {
@@ -249,7 +267,7 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
       << "#include <cstddef>\n#include <cstdint>\n";
   if (options.runtime == runtime_kind::eigen) {
     out << "#include <cmath>\n#include <complex>\n\n"
-        << "#include <Eigen/Core>\n#include <Eigen/Eigenvalues>\n";
+        << "#include <Eigen/Core>\n#include <Eigen/Eigenvalues>\n#include <Eigen/LU>\n";
   }
   out << "\n"
       << "namespace " << options.name_space << " {\n\n"
@@ -402,6 +420,38 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
   }
   out << "      default:\n        return false;\n    }\n  }\n";
 
+  // The equations themselves, when the solution carries them, for the Newton
+  // steps solve() takes. Written in the unknowns t with the pose as a
+  // parameter, exactly as posed: residual k is numerator_k(t) -
+  // denominator(t) pose[k].
+  const bool polish = options.runtime == runtime_kind::eigen && !solution.residual_numerators.empty();
+  if (polish) {
+    out << "\n  // The equations the solutions satisfy, and their Jacobian, row-major:\n"
+        << "  // f[k] = numerator_k(t) - denominator(t) * pose[k], and\n"
+        << "  // jacobian[k * num_unknowns + i] its derivative in t[i]. These are the\n"
+        << "  // equations as posed, before any Grobner basis was taken, which is what\n"
+        << "  // makes them the right thing to polish against.\n"
+        << "  static void residual(const double* t, const double* " << pose
+        << ", double* f, double* jacobian) {\n";
+    const auto& den = solution.residual_denominator;
+    out << "    const double denominator = " << detail::emit_polynomial<N>(den, "t") << ";\n";
+    for (std::size_t i = 0; i < N; ++i) {
+      out << "    const double denominator_" << i << " = "
+          << detail::emit_polynomial<N>(detail::derivative<N>(den, i), "t") << ";\n";
+    }
+    for (std::size_t k = 0; k < N; ++k) {
+      const auto& num = solution.residual_numerators[k];
+      out << "    f[" << k << "] = " << detail::emit_polynomial<N>(num, "t") << " - denominator * "
+          << pose << "[" << k << "];\n";
+      for (std::size_t i = 0; i < N; ++i) {
+        out << "    jacobian[" << (k * N + i)
+            << "] = " << detail::emit_polynomial<N>(detail::derivative<N>(num, i), "t")
+            << " - denominator_" << i << " * " << pose << "[" << k << "];\n";
+      }
+    }
+    out << "  }\n";
+  }
+
   if (options.runtime == runtime_kind::eigen) {
     out << R"CODE(
   // Solve, by the eigenvalue method of Stetter and Moller.
@@ -486,9 +536,11 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
       }
       if (!real) { continue; }
       if (written >= capacity) { break; }
+      double* row = out + static_cast<std::size_t>(written) * num_unknowns;
       for (std::size_t i = 0; i < num_unknowns; ++i) {
-        out[static_cast<std::size_t>(written) * num_unknowns + i] = point[i].real();
+        row[i] = point[i].real();
       }
+      polish(pose, row);
       ++written;
     }
 
@@ -496,6 +548,46 @@ std::string emit(const parametric_solution<N, P>& solution, const emit_options& 
     return written;
   }
 )CODE";
+    if (polish) {
+      out << R"CODE(
+  // Newton on the equations as posed, from the point the eigenvalue method
+  // gave. A step is kept only if it lowers the residual, so a point that was
+  // already as good as double precision allows is returned unchanged, and near
+  // a singular configuration, where the Jacobian cannot be trusted, a step
+  // that would make things worse is not taken.
+  static void polish(const double* pose, double* t) {
+    using square = Eigen::Matrix<double, num_unknowns, num_unknowns, Eigen::RowMajor>;
+    using vector = Eigen::Matrix<double, num_unknowns, 1>;
+    double f[num_unknowns];
+    double jacobian[num_unknowns * num_unknowns];
+    residual(t, pose, f, jacobian);
+    double size = Eigen::Map<const vector>(f).norm();
+    for (int step = 0; step < 2 && size > 0.0; ++step) {
+      const vector delta = Eigen::Map<const square>(jacobian).partialPivLu().solve(
+          -Eigen::Map<const vector>(f));
+      double candidate[num_unknowns];
+      for (std::size_t i = 0; i < num_unknowns; ++i) {
+        candidate[i] = t[i] + delta[static_cast<Eigen::Index>(i)];
+      }
+      double g[num_unknowns];
+      double next_jacobian[num_unknowns * num_unknowns];
+      residual(candidate, pose, g, next_jacobian);
+      const double next = Eigen::Map<const vector>(g).norm();
+      if (!(next < size)) { break; }
+      for (std::size_t i = 0; i < num_unknowns; ++i) {
+        t[i] = candidate[i];
+        f[i] = g[i];
+      }
+      for (std::size_t i = 0; i < num_unknowns * num_unknowns; ++i) {
+        jacobian[i] = next_jacobian[i];
+      }
+      size = next;
+    }
+  }
+)CODE";
+    } else {
+      out << "\n  static void polish(const double*, double*) {}\n";
+    }
   }
 
   out << "};\n";

@@ -11,6 +11,7 @@
 #include "varietas/core/order/order_id.hpp"
 #include "varietas/core/polynomial.hpp"
 #include "varietas/core/monomial.hpp"
+#include "varietas/core/order/grevlex.hpp"
 #include "varietas/core/quotient/quotient_basis.hpp"
 
 namespace varietas {
@@ -144,6 +145,21 @@ struct parametric_solution {
   // N rows of dimension() coordinates each: row i is the normal form of x_i.
   std::vector<std::vector<rational_function<P>>> variable_coordinates;
 
+  // The equations the solutions satisfy, when the problem that produced them
+  // is a position problem: residual k is residual_numerators[k] -
+  // residual_denominator * pose[k], a polynomial in the unknowns over Q.
+  //
+  // Optional. When present the emitter writes them out with their Jacobian,
+  // and the generated solve() takes a Newton step or two from each point the
+  // eigenvalue method returns. The eigenvalue method is exact in exact
+  // arithmetic and only backward stable in floating point, and near a pose
+  // where two solutions give the separating form nearly the same value the
+  // eigenvectors, and the points read off them, lose digits that the matrices
+  // never lost. Newton on the original equations recovers them, at the cost of
+  // a few polynomial evaluations per point.
+  std::vector<polynomial<rational, N, grevlex>> residual_numerators;
+  polynomial<rational, N, grevlex> residual_denominator;
+
   static constexpr std::size_t num_unknowns = N;
   static constexpr std::size_t num_parameters = P;
 
@@ -181,6 +197,10 @@ struct parametric_solution {
       if (row.size() != quotient.dimension()) {
         return false;
       }
+    }
+    if (!residual_numerators.empty() &&
+        (residual_numerators.size() != P || residual_denominator.is_zero() || P != N)) {
+      return false;  // one equation per parameter, a square system, or none
     }
     return true;
   }

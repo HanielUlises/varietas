@@ -279,18 +279,18 @@ int main() {
         const double radius = std::sqrt(target[0] * target[0] + target[1] * target[1] +
                                         target[2] * target[2]);
         worst_at_margin = (outer_reach - radius) / outer_reach;
-        // The elbow, because the obvious suspect is a double root: the two
+        // The elbow, because the obvious suspect was a double root: the two
         // solutions of the reduced problem are elbow-up and elbow-down, they
         // coincide when the elbow is straight or folded back, and a repeated
-        // eigenvalue costs the eigenvector basis its conditioning. Recorded so
-        // the suspicion can be checked rather than asserted -- and on the runs
-        // to date it does not hold up. The worst case sits over half the reach
-        // inside the boundary with an elbow nowhere near either degeneracy, so
-        // neither leaving the workspace nor the elbow singularity accounts for
-        // it. The likeliest remaining candidate is the emitted denominator
-        // guard admitting a pose where cancellation has already cost most of
-        // the significance, which would be a tolerance to revisit rather than
-        // a defect in the algebra; it has not been run down here.
+        // eigenvalue costs the eigenvector basis its conditioning. Before the
+        // generated solver took Newton steps against the equations as posed,
+        // the worst residual here was 6.5e-8 m, over half the reach inside the
+        // boundary with the elbow nowhere near either degeneracy. The cause
+        // was the eigenvectors, which the eigenvalue method computes only to
+        // backward stability, and not the denominator guard that was then the
+        // leading suspect: with the Newton steps the same targets come back at
+        // rounding level. Recorded still, so that a tail that reappears can be
+        // located.
         worst_elbow = q[2];
       }
     }
@@ -442,8 +442,6 @@ int main() {
                   static_cast<double>(residuals.size()));
   std::printf("  worst case: %.1f%% of the reach inside the boundary, elbow %.3f rad\n",
               100.0 * worst_at_margin, worst_elbow);
-  std::printf("  so neither the workspace boundary nor the elbow singularity"
-              " explains it\n");
   std::printf("counts returned  ");
   for (std::size_t k = 0; k <= solver::max_configurations; ++k) {
     if (counts[k] != 0) { std::printf("%zux%ld  ", k, counts[k]); }

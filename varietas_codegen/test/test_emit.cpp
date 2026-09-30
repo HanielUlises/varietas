@@ -266,6 +266,46 @@ TEST(Emit, AnIllFormedSolutionIsRejectedRatherThanEmitted) {
   auto good = build_solution();
   good.action.pop_back();
   EXPECT_FALSE(good.is_well_formed()) << "one matrix per unknown is required";
+
+  auto half = build_solution();
+  half.residual_numerators.push_back(varietas::polynomial<rational, 2, grevlex>::variable(0));
+  half.residual_denominator = varietas::polynomial<rational, 2, grevlex>::constant(rational(1));
+  EXPECT_FALSE(half.is_well_formed()) << "one equation per parameter, or none";
+}
+
+// The Newton steps are only as good as the equations they are taken against,
+// so they are emitted only when the solution carries those equations, and a
+// header without them keeps the eigenvalue method's points as they are.
+TEST(Emit, EquationsAsPosedBringNewtonStepsWithThem) {
+  using tpoly = varietas::polynomial<rational, 2, grevlex>;
+  emit_options options;
+  options.runtime = varietas::codegen::runtime_kind::eigen;
+
+  const std::string bare = emit(build_solution(), options);
+  EXPECT_EQ(bare.find("static void residual"), std::string::npos);
+  EXPECT_NE(bare.find("static void polish(const double*, double*) {}"), std::string::npos);
+
+  auto solution = build_solution();
+  const tpoly t0 = tpoly::variable(0);
+  const tpoly t1 = tpoly::variable(1);
+  solution.residual_numerators = {t0 * t0 + t1, t0 * t1};
+  solution.residual_denominator = tpoly::constant(rational(1)) + t1 * t1;
+  ASSERT_TRUE(solution.is_well_formed());
+
+  const std::string header = emit(solution, options);
+  EXPECT_NE(header.find("static void residual(const double* t, const double* pose"),
+            std::string::npos);
+  EXPECT_NE(header.find("static void polish(const double* pose, double* t)"), std::string::npos);
+  EXPECT_NE(header.find("#include <Eigen/LU>"), std::string::npos);
+  // d/dt0 of t0^2 + t1 is 2 t0, written as an exact coefficient.
+  EXPECT_NE(header.find("jacobian[0] = (2.0) * t[0]"), std::string::npos);
+
+  // The matrices-only runtime has no solve() to polish in, and stays free of
+  // Eigen whatever the solution carries.
+  options.runtime = varietas::codegen::runtime_kind::matrices_only;
+  const std::string plain = emit(solution, options);
+  EXPECT_EQ(plain.find("residual"), std::string::npos);
+  EXPECT_EQ(plain.find("Eigen"), std::string::npos);
 }
 
 }  // namespace
