@@ -31,7 +31,7 @@ namespace reconstruction {
 // The parametric solve computes rational functions of the pose by carrying
 // them symbolically through Buchberger's algorithm, and on arms with offsets
 // the functions it carries on the way swell to thousands of terms although the
-// ones it finally produces have a dozen. Reconstruction never forms the
+// ones it finally produces have tens. Reconstruction never forms the
 // intermediate ones. What it needs is a black box that, given a pose with
 // coordinates in Z/p, returns the value of every wanted function there; for
 // the inverse kinematics that is one Grobner basis at a fixed pose, over a

@@ -14,7 +14,6 @@
 
 #include "varietas/codegen/rational.hpp"
 #include "varietas/core/config.hpp"
-#include "varietas/core/ideal/division.hpp"
 #include "varietas/core/monomial.hpp"
 #include "varietas/core/polynomial.hpp"
 
@@ -40,8 +39,9 @@ namespace varietas {
 // rational coefficients read back by rational reconstruction.
 //
 // Nothing in that chain is a proof by itself, so the answer is checked at the
-// end by exact division of both operands, over Q. A candidate that fails the
-// check is thrown away and the computation continues with more primes. The
+// end by exact division of both operands, over Z, which by Gauss's lemma
+// decides divisibility over Q. A candidate that fails the check is thrown away
+// and the computation continues with more primes. The
 // algorithm is therefore allowed to be wrong in the middle, where it is fast,
 // and is never wrong at the end.
 //

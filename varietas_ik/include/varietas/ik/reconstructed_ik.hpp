@@ -30,7 +30,7 @@
 // functions of the pose. With the modular gcd that is feasible for three
 // parameters, but on arms with offsets the rational functions it carries on
 // the way swell to thousands of terms, while the action matrices it finally
-// produces have entries of a dozen. This computes the same matrices without
+// produces have entries of tens of terms. This computes the same matrices without
 // ever forming the intermediate functions: it solves the arm at many poses,
 // each one an ordinary Grobner basis over a prime field with no parameters,
 // and recovers every matrix entry as a rational function of the pose from its
@@ -158,12 +158,20 @@ parametric_ik_result<N, P> reconstructed_position_ik(const chain<rational>& robo
   // drawn at random: the standard monomials two of them agree on. A pose on a
   // special fibre gives a different shape, and two such poses agreeing with
   // each other is not a case worth planning for.
+  //
+  // The same poses serve for the exact check at the end, and there the way they
+  // are drawn matters: each coordinate is uniform over the 2^21 + 1 dyadic
+  // rationals k / 1024 with |k| <= 2^20, so that a wrong entry, a rational
+  // function whose difference from the right one has a numerator of total
+  // degree d, agrees with it at a check pose with probability at most
+  // d / (2^21 + 1) by the Schwartz-Zippel lemma. Dyadic, because a denominator
+  // that is a power of two keeps the fixed-pose basis over Q cheap.
   std::mt19937_64 rng(0x1dea1);
-  std::uniform_int_distribution<long> small(-40, 40);
+  std::uniform_int_distribution<long> dyadic(-(1L << 20), 1L << 20);
   const auto random_rational_pose = [&] {
     std::array<rational, P> pose;
     for (auto& c : pose) {
-      c = make_rational(small(rng), 7 + (small(rng) + 40) % 11);
+      c = make_rational(dyadic(rng), 1024);
     }
     return pose;
   };
