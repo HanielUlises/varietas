@@ -1,10 +1,10 @@
 // A solver for the anthropomorphic arm, written at build time.
 //
-// The arm this comes from does not solve over Q(x, y, z) in any time worth
-// waiting for. What is emitted here is the two-joint problem left after its
-// base joint is swept out, which solves in a fraction of a second, together
-// with the arctangent that puts the base joint back, so the header is a
-// solver for the whole arm and not for most of it.
+// The arm this comes from solves over Q(x, y, z) in about twenty seconds, too
+// long to pay on every build. What is emitted here is the two-joint problem
+// left after its base joint is swept out, which solves in tens of
+// milliseconds, together with the arctangent that puts the base joint back, so
+// the header is a solver for the whole arm and not for most of it.
 
 #include <cstdio>
 #include <fstream>

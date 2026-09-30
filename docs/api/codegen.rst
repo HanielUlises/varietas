@@ -39,30 +39,81 @@ The function field
    It also specialises ``coefficient_traits``, which is why the same Buchberger
    implementation runs over it unmodified.
 
-   .. rubric:: The cost, and the fast path
+   .. rubric:: The cost
 
-   Normalisation needs a polynomial gcd, and that is where the run goes:
-   sampled over three minutes, about **86%** of the time is inside
-   :cpp:func:`varietas::polynomial_gcd`, with the cost per call growing sharply
-   as the parameter polynomials do.
+   Normalisation needs a polynomial gcd after every operation, and with the
+   subresultant :cpp:func:`varietas::polynomial_gcd` that was where the run
+   went: about **86%** of the time, at a cost growing as the fourth power of the
+   operand size. Normalisation now calls
+   :cpp:func:`varietas::modular_gcd_with_cofactors`, and every fraction is held
+   in lowest terms, not merely usually.
 
-   Most of those calls return 1, so normalisation asks a cheap question first.
-   Specialising every parameter but one at fixed values in a small prime field
-   leaves two univariate polynomials whose gcd is a Euclidean algorithm on
-   machine integers; a constant answer there is strong evidence of coprimality,
-   and the exact gcd is computed only when it is not. Every variable is kept in
-   turn, since a factor involving only the specialised variables would collapse
-   to a constant and be missed.
+Modular gcd
+===========
 
-   The test is **evidence rather than proof**, and that is admissible precisely
-   because it only ever decides whether to *skip* a cancellation: a skipped one
-   leaves the fraction in higher terms, which costs size and never correctness.
+``varietas/codegen/modular_gcd.hpp``
 
-   .. rubric:: What it buys
+.. cpp:function:: template<std::size_t N, class Order> \
+                  gcd_and_cofactors<polynomial<rational, N, Order>> \
+                  modular_gcd_with_cofactors(const polynomial<rational, N, Order>& a, \
+                                             const polynomial<rational, N, Order>& b)
 
-   Not much: about 29 ms down to about 25 ms on the reduced two-joint problem,
-   and the three-parameter system still produces no answer. See
-   :doc:`../roadmap`.
+   The gcd of two polynomials over :math:`\Q`, monic under ``Order``, together
+   with ``a / gcd`` and ``b / gcd``. Brown's dense algorithm: the primitive
+   integer operands are reduced modulo word-sized primes, specialised one
+   variable at a time down to a Euclidean algorithm on machine words, and
+   rebuilt by Newton interpolation; images modulo several primes are joined by
+   the Chinese remainder theorem and read back by rational reconstruction.
+
+   An image gcd can be too large but never too small, and too large shows in its
+   leading monomial, which is how unlucky primes and evaluation points are
+   recognised and discarded. The answer is **certified** by exact division of
+   both operands over :math:`\mathbb{Z}`, and the quotients of that division are
+   the cofactors returned. A constant image modulo a single prime proves the
+   operands coprime, which is how most calls from normalisation end.
+
+   On dense trivariate operands the cost grows as about the 1.5th power of the
+   number of terms, against 3.8 for the subresultant sequence; at 455 terms one
+   gcd takes under 5 ms rather than 91 s.
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  polynomial<rational, N, Order> \
+                  modular_gcd(const polynomial<rational, N, Order>& a, \
+                              const polynomial<rational, N, Order>& b)
+
+   The gcd alone.
+
+Reconstruction
+==============
+
+``varietas/codegen/prime_field.hpp``, ``varietas/codegen/reconstruct.hpp``
+
+.. cpp:class:: residue
+
+   :math:`\mathbb{Z}/p` for a word-sized prime selected per thread, with the
+   ``coefficient_traits`` specialisation that lets Buchberger and the kinematics
+   run over it. A rational whose denominator the prime divides has no image,
+   and constructing one sets a flag the caller checks.
+
+.. cpp:function:: template<std::size_t P> \
+                  bool reconstruction::reconstruct(const black_box<P>& box, \
+                                                   const prime_hook& prepare, \
+                                                   std::size_t count, \
+                                                   std::vector<rational_function<P>>& out, \
+                                                   statistics* stats = nullptr, \
+                                                   const options& opts = options())
+
+   Recovers ``count`` rational functions of ``P`` parameters from a black box
+   that evaluates them at points of :math:`\mathbb{Z}/p`. Per prime: degrees from
+   a random line by univariate rational reconstruction under the maximal
+   quotient rule, then coefficients from one linear system per function,
+   normalised so the leading coefficient of the denominator is one; after the
+   first prime only the monomials it found are solved for. Primes are joined as
+   in the modular gcd, until two consecutive ones change nothing.
+
+   The result is right with high probability rather than certainly, since there
+   is no final exact test on a black box. :doc:`ik` checks it exactly at
+   rational poses before using it.
 
 The solved system
 =================

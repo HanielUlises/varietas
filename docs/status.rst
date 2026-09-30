@@ -2,7 +2,7 @@
 Status
 ======
 
-Version 0.1.0. What follows is what the library does, what it costs, and what it
+Version 0.2.0. What follows is what the library does, what it costs, and what it
 refuses, the last being the largest part, and deliberately.
 
 .. list-table::
@@ -40,11 +40,15 @@ refuses, the last being the largest part, and deliberately.
    * - Pose inverse kinematics at a given target
      - complete, to five joints
    * - Modular gcd over :math:`\Q(\p)`
-     - coprimality test only
+     - complete, certified
+   * - Parametric solve reconstructed from fixed poses
+     - complete, checked at rational poses
+   * - Newton refinement in generated solvers
+     - complete
    * - Factorisation over :math:`\Q`
      - not begun
 
-The two unfinished rows are :doc:`roadmap`.
+The unfinished row is :doc:`roadmap`.
 
 What refusal looks like
 =======================
@@ -97,69 +101,95 @@ is the half that matters.
 The third thing is scale
 ========================
 
-It is the one that decides what this pipeline is for. **The cost is not in the
-arm but in the number of parameters adjoined.**
+It is the one that decided what this pipeline is for. **The cost is not in the
+arm but in the number of parameters adjoined**, and in what the solve carries on
+the way.
 
 .. list-table::
    :header-rows: 1
-   :widths: 45 25 30
+   :widths: 40 20 20 20
 
    * - System
      - Field
-     - Time
+     - Symbolic
+     - Reconstructed
    * - Planar 2R
      - :math:`\Q(x,y)`
-     - ~30 ms
+     - ~10 ms
+     - ~5 ms
    * - Anthropomorphic 3R, fixed pose
      - :math:`\Q`
      - 4 ms
-   * - Anthropomorphic 3R
-     - :math:`\Q(x,y,z)`
-     - nothing after 15 min
+     - —
    * - Anthropomorphic 3R, decoupled
      - :math:`\Q(r,z)`
-     - ~45 ms
+     - ~20 ms
+     - —
+   * - Anthropomorphic 3R
+     - :math:`\Q(x,y,z)`
+     - ~20 s
+     - 0.25 s
+   * - Base off its own axis (no sweep)
+     - :math:`\Q(x,y,z)`
+     - ~35 s
+     - 0.25 s
+   * - Elbow displaced sideways (no sweep)
+     - :math:`\Q(x,y,z)`
+     - not in 54 min, 29 GB
+     - 0.55 s
+   * - Shoulder displaced (the demonstration arm)
+     - :math:`\Q(x,y,z)`
+     - not after 60 min
+     - 2.5 s
+   * - Axes in general position (no sweep)
+     - :math:`\Q(x,y,z)`
+     - not after 60 min
+     - 47 s
 
 The 3R arm at a fixed pose returns a basis of six elements and
 :math:`\dim_k A = 4`, exactly the four branches such an arm is known to have.
 The arm is not the difficulty.
 
-The difficulty is cancellation
-==============================
+The first difficulty was cancellation
+=====================================
 
-``rational_function`` normalises after every coefficient operation, and the
-polynomial gcd that cancellation needs is what the run is made of. Sampled over
-three minutes:
+``rational_function`` normalises after every coefficient operation, and with the
+subresultant gcd the cancellation was what the run was made of: about **86%**
+of the time, at a cost per call growing as about the **fourth power** of the
+number of terms in the operands. ``doc/parametric_cost.pdf`` reports the
+experiment that settled what to do about it: repeating the three-parameter
+solve over :math:`\F_p(x,y,z)`, where coefficient arithmetic is a machine
+multiplication, did not complete either, and the choice of field was worth a
+bounded factor of thirteen. Computing the same remainder sequence over several
+primes could not have been enough.
 
-* about **86%** of the time is spent inside ``polynomial_gcd``;
-* the cost per call grows sharply as the parameter polynomials do: the first
-  twenty-seven thousand calls take five seconds between them, while a later
-  sixteen hundred take sixty-eight.
+The gcd is now Brown's dense modular algorithm, certified by exact division
+over :math:`\mathbb{Z}` (:doc:`api/codegen`). On the same operands its cost
+grows as about the 1.5th power of the size, and at 455 terms it takes
+**under 5 ms against 91 s**. The anthropomorphic arm over :math:`\Q(x,y,z)`, which
+produced nothing in fifteen minutes, finishes in about twenty seconds, with the
+gcd half of it.
 
-Cancellation cannot simply be dropped, since without it the entries grow past
-any use.
+The second was swell
+====================
 
-Most of those calls return 1, so normalisation now asks a cheap question first
-(the coprimality test described in :doc:`api/codegen`). It is worth being plain
-about what that buys, which is not much: on the reduced two-joint problem it
-takes about twenty-nine milliseconds down to about twenty-five, and the
-three-parameter system still produces no answer. **The bottleneck is real but
-the fast path only avoids the cheap half of it.**
+On arms with offsets the symbolic solve still does not finish, and the gcd is
+no longer why. With the elbow displaced a quarter of a link sideways the
+parameter polynomials Buchberger carries reach **sixteen thousand terms**, the
+gcd is a quarter of the time, and the rest is arithmetic on those polynomials.
+The action matrices the solve would produce have entries of fourteen terms at most.
 
-``doc/parametric_cost.pdf`` in the repository reports an experiment that narrows
-what a proper construction would have to be: repeating the three-parameter solve
-over :math:`\F_p(x,y,z)`, where coefficient arithmetic is a machine
-multiplication, does not complete either, and an isolated measurement puts the
-subresultant gcd at about the **fourth power** of the number of terms in its
-operands, with the choice of field worth a bounded factor of thirteen.
+The reconstruction (:cpp:func:`varietas::ik::reconstructed_position_ik`) never
+forms the intermediate functions. It solves the arm at many poses over prime
+fields and recovers each matrix entry from its values; the table above is the
+result. It has no final exact test, so it is **checked exactly** at rational
+poses instead, and where both finish the two agree entry for entry. The
+symbolic solve stays the default of ``urdf_codegen`` because it is certified;
+``--reconstruct`` is the route for the arms it cannot reach.
 
-Computing the same remainder sequence over several primes is therefore not
-enough; only a gcd built on evaluation and interpolation addresses the cost that
-was measured.
-
-Until it is, **two adjoined parameters remains the working limit**, and since
-:math:`P=N`, that is to say two joints. The way to solve a three-joint arm today
-is to sweep one of them out rather than adjoin it (:doc:`guide/decoupling`).
+The way to solve a three-joint arm that admits it is still to sweep the base
+joint out (:doc:`guide/decoupling`): it is exact, it takes tens of
+milliseconds, and its header is several times cheaper to call.
 
 Against a real robot
 ====================
@@ -180,8 +210,9 @@ check catches it in about half a second. **There is no link boundary on this arm
 where a well-posed three-joint positioning problem appears.**
 
 That is a fair summary of the present reach of the parametric path: it is a tool
-for small subsystems, not for a seven-axis manipulator, and the thing it does
-well is refuse promptly and say which of the three reasons applies.
+for positioning subsystems of up to three joints, not for a seven-axis
+manipulator, and the thing it does well is refuse promptly and say which of the
+three reasons applies.
 
 The fixed-pose path
 ===================

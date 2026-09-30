@@ -86,6 +86,34 @@ Decoupled inverse kinematics
    Sweeps the first joint out instead of solving for it, leaving a two-joint
    problem in two parameters. See :doc:`../guide/decoupling`.
 
+Reconstructed inverse kinematics
+================================
+
+``varietas/ik/reconstructed_ik.hpp``
+
+.. cpp:function:: template<std::size_t N, std::size_t P> \
+                  parametric_ik_result<N, P> \
+                  reconstructed_position_ik(const chain<rational>& robot, \
+                                            const std::array<std::size_t, P>& coordinates, \
+                                            reconstruction_report* report = nullptr, \
+                                            std::size_t exact_checks = 2)
+
+   The same result as :cpp:func:`parametric_position_ik`, computed without a
+   Gröbner basis over :math:`\Q(\p)`. The arm is solved at many poses over prime
+   fields, each an ordinary fixed-pose basis, and every entry of the action
+   matrices is recovered from its values as a rational function of the pose.
+   It refuses by the same counts, in the same order.
+
+   The result is checked exactly at ``exact_checks`` rational poses, against
+   the fixed-pose basis over :math:`\Q` there, and a disagreement is reported as
+   a refusal rather than returned. On the arms where the symbolic solve
+   finishes, the two agree entry for entry.
+
+   Use it for three-joint arms with offsets, where the symbolic solve drowns in
+   intermediate expressions: the demonstration's arm reconstructs in about three
+   seconds, where the symbolic solve had not finished after twenty-seven
+   minutes.
+
 .. cpp:struct:: sweep_frame
 
    Which coordinate plays which part once the first axis is known: ``axis``

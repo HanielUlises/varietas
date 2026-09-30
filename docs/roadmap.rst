@@ -2,39 +2,54 @@
 Roadmap
 =======
 
-Two constructions are missing, and both are named rather than hedged. Neither is
-a matter of tuning; each is a piece of computer algebra that has to be built.
+What is missing is named rather than hedged. None of it is a matter of tuning;
+each is a piece of computer algebra that has to be built.
 
-A modular gcd over :math:`\Q(\p)`
-=================================
+The modular gcd over :math:`\Q(\p)` that used to head this page is done
+(:doc:`api/codegen`), and so is the reconstruction that took over where it
+stopped being enough (:doc:`status`).
 
-**Why.** About 86% of a parametric solve is spent in
-:cpp:func:`varietas::polynomial_gcd`, and the cost per call grows as roughly the
-fourth power of the number of terms in its operands (:ref:`the-cost`). This is
-what holds the parametric path to two adjoined parameters.
+A certificate for the reconstruction
+====================================
 
-**What is there now.** A subresultant remainder sequence, with a cheap
-coprimality test bolted to the front: specialise every parameter but one in a
-small prime field, take a univariate gcd on machine integers, and skip the exact
-computation when the answer is constant. It is evidence rather than proof, which
-is admissible because it only decides whether to *skip* a cancellation: a
-skipped one costs size, never correctness.
+**Why.** :cpp:func:`varietas::ik::reconstructed_position_ik` is checked exactly
+at rational poses, and a wrong answer that survives those checks would need the
+error to vanish at every one of them; but a check at points is evidence, not a
+proof, and the symbolic solve it replaces was a proof.
 
-It buys about 29 ms down to 25 ms on the reduced two-joint problem, and the
-three-parameter system still produces no answer.
+**What is needed.** An exact test of the reconstructed matrices as rational
+functions. The candidates are a degree bound on the entries, from which a
+finite number of exact point checks becomes a proof by the usual count of the
+zeros of a polynomial, or a direct verification that the reconstructed action
+matrices commute and annihilate the generators over :math:`\Q(\p)`, which is
+arithmetic on functions of tens of terms rather than of thousands.
 
-**What is needed.** A modular gcd proper: **evaluation, interpolation and
-rational reconstruction**, rather than a remainder sequence with a filter in
-front of it. The measurement in ``doc/parametric_cost.pdf`` is specifically
-designed to rule out the cheaper alternative: repeating the three-parameter
-solve over :math:`\F_p(x,y,z)`, where coefficient arithmetic is a single machine
-multiplication, does not complete either, and the choice of field is worth only
-a bounded factor of thirteen. **Computing the same remainder sequence over
-several primes is therefore not enough.**
+A second chart for the half-angle substitution
+==============================================
 
-**What it would change.** Three adjoined parameters, which is to say a
-three-joint positioning solver without decoupling, and therefore arms that do
-not admit the sweep.
+**Why.** :math:`t = \tan(q/2)` sends :math:`q = \pi` to infinity, and a full
+three-joint solver therefore refuses every target that can only be reached, in
+one of its families, with a joint at exactly :math:`\pi`; for a base that yaws
+about :math:`z` that is the whole plane :math:`y = 0`
+(:doc:`guide/generated_headers`).
+
+**What is needed.** A second solve under the substitution
+:math:`t = \tan((q - q_0)/2)` for a fixed rational :math:`q_0`, emitted
+alongside the first, with the runtime choosing whichever chart is further from
+its poles.
+
+A faster fixed-pose basis over a prime field
+============================================
+
+**Why.** Reconstruction spends most of its time in the black box, one
+Gröbner basis per sample: about 17 ms each on the arm with its axes in general
+position, which is 60% of the 47 s that arm takes.
+
+**What is needed.** A completion algorithm of the F4 family, which reduces
+many pairs at once by row reduction over :math:`\F_p`, where a row operation is
+a vector of machine words. Since the samples share their shape, the sequence of
+reductions from one sample could also be replayed on the next without the
+pair selection that found it.
 
 Factorisation over :math:`\Q`
 =============================
@@ -54,9 +69,8 @@ Not on the roadmap
 
 **A parametric solver for a full pose.** A general pose is six parameters:
 twelve matrix entries are not independent, and a general point of :math:`\A^{12}`
-is not a rigid motion at all. Two adjoined parameters is the working limit, so
-there is no parametric solver for a full pose and there is not going to be one
-at this size. The fixed-pose path (:doc:`guide/pose_ik`) is what buys orientation
+is not a rigid motion at all. The parametric path reaches a position, three
+parameters, and a full pose is a different problem rather than a larger one. The fixed-pose path (:doc:`guide/pose_ik`) is what buys orientation
 back, and it stops at five joints.
 
 **Radicals.** varietas cannot take one, and would not want to where it can: the

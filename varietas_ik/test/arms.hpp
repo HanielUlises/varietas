@@ -84,8 +84,8 @@ inline chain<rational> coincident_two_link() {
 
 // The anthropomorphic arm: a base that yaws about z, then a shoulder and an
 // elbow that both pitch about y. The textbook three-joint positioning arm, and
-// the one that does not solve over Q(x, y, z) in any reasonable time. Its
-// whole point here is that it decouples.
+// the one whose solve over Q(x, y, z) first finished once the gcd was
+// replaced. Its point here is that it decouples.
 inline chain<rational> anthropomorphic_three_link() {
   chain<rational> robot("anthropomorphic_3r");
   robot.add_joint(revolute_joint<rational>("q1", vector3<rational>::unit(2),

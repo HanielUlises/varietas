@@ -189,7 +189,9 @@ class rational_function {
   // This is where a parametric solve spends much of its time, and the gcd is
   // the modular one for that reason: the subresultant remainder sequence
   // costs about the fourth power of the operand size and held the pipeline to
-  // two parameters (doc/parametric_cost.pdf).
+  // two parameters (doc/parametric_cost.pdf). With it replaced, three
+  // parameters finish on the anthropomorphic arm, and the gcd is about half of
+  // that solve rather than nearly all of it.
   //
   // Most of these calls find nothing to cancel, and there was once a cheap
   // specialisation test in front of the gcd to skip them. It is gone because

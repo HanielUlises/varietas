@@ -85,9 +85,11 @@ radians** rather than half-angle variables. See :doc:`guide/generated_headers`.
 .. note::
 
    The parametric path is bounded by the number of parameters adjoined, not by
-   the arm. Two parameters, and therefore two joints since the counts force
-   :math:`P = N`, is the working limit. Decoupling buys a third.
-   See :doc:`guide/decoupling` and :doc:`status`.
+   the arm. A position is three parameters, and therefore three joints since
+   the counts force :math:`P = N`. Two solve symbolically in milliseconds;
+   three solve symbolically on the simplest arms and by reconstruction on the
+   rest (``urdf_codegen --reconstruct``), and an arm that admits it is best
+   decoupled. See :doc:`guide/decoupling` and :doc:`status`.
 
 Solve one pose exactly
 ======================

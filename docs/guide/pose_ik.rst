@@ -4,9 +4,9 @@ One pose at a time
 
 Orientation cannot be adjoined. A general pose is six parameters, since twelve
 matrix entries are not independent and a general point of :math:`\A^{12}` is not
-a rigid motion at all, and two adjoined parameters is the working limit. So there
-is no parametric solver for a full pose, and there is not going to be one at this
-size.
+a rigid motion at all, and the parametric path reaches a position, three
+parameters. So there is no parametric solver for a full pose, and none is
+claimed.
 
 **Giving up the parameters is what buys orientation back.** With the target a
 constant of :math:`\Q` rather than a parameter of :math:`\Q(\p)`, the twelve

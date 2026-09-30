@@ -15,11 +15,18 @@
 //
 // The parametric pipeline costs what it costs because of the number of
 // parameters adjoined, not because of the arm: the planar two-link arm solves
-// over Q(x, y) in about thirty milliseconds, while the anthropomorphic three-
-// link arm over Q(x, y, z) produced nothing in fifteen minutes. Since a
-// parametric solve needs one coordinate per joint, three joints means three
-// parameters, and three parameters is past what the cancellation in
-// rational_function can carry.
+// over Q(x, y) in about ten milliseconds, while the anthropomorphic three-link
+// arm over Q(x, y, z) takes about twenty seconds, and produced nothing in
+// fifteen minutes before the gcd was replaced (doc/parametric_cost.pdf). On
+// arms with offsets the symbolic solve over Q(x, y, z) still does not finish,
+// and a three-joint arm is then solved in full by reconstruction instead
+// (reconstructed_ik.hpp), in seconds.
+//
+// The decoupling remains the better route wherever it applies, for three
+// reasons that have nothing to do with feasibility: it is exact, where the
+// reconstruction is checked rather than certified; it is faster to produce,
+// tens of milliseconds; and the header it produces is faster to call, a two by
+// two eigenproblem and an arctangent against a four by four.
 //
 // A base joint that yaws about a fixed axis does not need to be adjoined. If
 // the rest of the arm holds the tool in a plane containing that axis, then
@@ -27,7 +34,7 @@
 // determined by where it sits in the plane, a radius and a height, together
 // with the angle the plane has been turned through. The angle is recovered by
 // an arctangent, not by an eigenvalue, and what is left is a two-joint problem
-// in two parameters: the size the pipeline is comfortable with.
+// in two parameters, which the symbolic solve handles in milliseconds.
 //
 // This is the decomposition every closed-form treatment of such an arm begins
 // with, and the reason it belongs here rather than in the emitter is that

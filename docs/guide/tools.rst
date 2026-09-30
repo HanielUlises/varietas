@@ -30,7 +30,8 @@ than approximated silently. See :doc:`../theory/exactness`.
 
    ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> \
        [--tip L] [--root L] [--coords xy|xz|yz|xyz] \
-       [--name N] [--namespace NS] [--decouple] [--matrices-only]
+       [--name N] [--namespace NS] [--decouple] [--matrices-only] \
+       [--reconstruct]
 
 .. list-table::
    :header-rows: 1
@@ -58,6 +59,12 @@ than approximated silently. See :doc:`../theory/exactness`.
      - Emit the action matrices and variable coordinates but not ``solve``, so
        the header needs only ``<cstddef>`` and ``<cstdint>``. The default
        runtime is ``eigen``.
+   * - ``--reconstruct``
+     - Recover the matrices from fixed-pose solves over prime fields instead of
+       computing them over :math:`\Q(\p)`. Far cheaper on three-joint arms with
+       offsets; the result is checked exactly at rational poses, and refused if
+       a check fails. Not combined with ``--decouple``. See
+       :cpp:func:`varietas::ik::reconstructed_position_ik`.
 
 The counts settle most of it before any Gröbner basis is attempted; see
 :doc:`../status` for why :math:`P=N` is the only arrangement that can produce a

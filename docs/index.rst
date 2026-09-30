@@ -67,8 +67,8 @@ violated.
 
 .. warning::
 
-   varietas is at version 0.1.0 and its reach is deliberately narrow. The
-   parametric path is limited to **two adjoined pose parameters**, and the
+   varietas is at version 0.2.0 and its reach is deliberately narrow. The
+   parametric path solves **tool positions of up to three joints**, and the
    fixed-pose path stops being interactive at **five joints**. A seven-axis
    manipulator is not a target this library can serve today; see
    :doc:`status` for exactly why and :doc:`roadmap` for what would change it.

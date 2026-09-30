@@ -138,6 +138,25 @@ writing anything, because a header generated from an inconsistent solution
 compiles perfectly and answers wrongly, which is the worst failure this code can
 have.
 
+Newton steps against the equations as posed
+===========================================
+
+A solution can carry the equations it came from, the residuals
+:math:`\mathrm{numerator}_k(t) - \mathrm{denominator}(t)\,\mathrm{pose}_k`, and
+both solve paths attach them. The header then carries them too, with their
+Jacobian differentiated exactly, and ``solve()`` takes up to **two Newton
+steps** from each point the eigenvalue method returns, keeping a step only when
+it lowers the residual.
+
+The reason is the eigenvectors. The eigenvalue method recovers a point from an
+eigenvector of the separating form, and an eigenvector is computed only to
+backward stability: near a pose where two solutions give that form nearly the
+same value, the eigenvectors lose digits that the matrices never lost, and so do
+the points read off them. Newton on the original equations recovers those digits
+at the cost of a few polynomial evaluations. A point already at rounding level
+comes back unchanged, and near a singular configuration, where the Jacobian
+cannot be trusted, a step that would make things worse is not taken.
+
 What it costs
 =============
 
@@ -153,37 +172,36 @@ three-joint arm of :doc:`decoupling` with the header emitted for it:
      - 99th
      - ratio
    * - ``branch_ik::solve``, target reachable
-     - 0.9 µs
-     - 1.3 µs
+     - 1.5 µs
+     - 1.9 µs
      - 1
    * - ``branch_ik::solve``, target out of reach
      - 0.8 µs
-     - 1.2 µs
-     - 0.85
+     - 1.4 µs
+     - 0.5
    * - :cpp:func:`varietas::forward_kinematics`, same arm
-     - 0.36 µs
-     - 0.6 µs
-     - 0.4
+     - 0.37 µs
+     - 0.8 µs
+     - 0.25
    * - damped least squares, one seed
-     - 19 µs
-     - 330 µs
-     - 21
+     - 20 µs
+     - 350 µs
+     - 13
 
-A solve costs about **two and a half forward-kinematics evaluations**, which is
-the useful way to hold it: the eigenvalue work on a 2×2 action matrix is
-cheaper than the trigonometry around it. That is a little over a million solves
-a second on one core, so the generated solver is not the expensive part of any
-control loop it is likely to sit in.
+A solve costs about **four forward-kinematics evaluations**, which is the useful
+way to hold it, and about two thirds of a million solves a second on one core.
+The Newton steps are about 0.6 µs of that; without them a solve cost 0.9 µs,
+and was less accurate in the tail. The generated solver is not the expensive
+part of any control loop it is likely to sit in.
 
-Generating the header costs about **0.35 s, once, offline** — the equivalent of
-some four hundred thousand solves, or six minutes of a 1 kHz loop. It is paid
-by the build, not by the caller.
+Generating the header costs **under a tenth of a second, once, offline**. It is
+paid by the build, not by the caller.
 
 Against a numerical solver
 --------------------------
 
 The comparison is not really about speed, though the speed is not close. A
-damped least squares iteration from a random seed takes about twenty times as
+damped least squares iteration from a random seed takes about thirteen times as
 long as one generated solve, converges from only about **91%** of seeds, and
 when it does converge returns **one** configuration: whichever one the seed fell
 into, with no way to say how many others exist.
@@ -192,9 +210,10 @@ Recovering the whole solution set numerically means restarting it. Over three
 hundred targets, taking the generated solver's answer as the roll of postures
 that exist — certified by :math:`\dim_k A`, which is the point — it took about
 **ten seeds per target** to find them all, missed a branch entirely on one
-target inside a budget of sixty seeds, and cost some **370 µs per target against 0.9** for the single generated call.
+target inside a budget of sixty seeds, and cost some **420 µs per target against
+1.5** for the single generated call.
 
-So the generated solver is roughly four hundred times cheaper than the
+So the generated solver is nearly three hundred times cheaper than the
 numerical route for the answer the library actually promises, and unlike it,
 returns a count that is a theorem rather than a hope.
 
@@ -204,21 +223,57 @@ Accuracy
 Over 71,658 returned configurations, each put back through the forward map and
 compared against the target it was asked for:
 
-* median :math:`3\times10^{-16}` m, which is the arithmetic's own floor;
-* 99th centile :math:`6\times10^{-14}` m;
-* worst :math:`6\times10^{-8}` m, with 0.25% of configurations above
-  :math:`10^{-12}` m and 0.02% above :math:`10^{-10}` m.
+* median :math:`2.3\times10^{-16}` m, which is the arithmetic's own floor;
+* 99th centile :math:`7.5\times10^{-16}` m;
+* worst :math:`1.6\times10^{-15}` m, and none above :math:`10^{-12}` m.
 
-The tail is real and is not yet explained. The two obvious candidates were
-checked and neither holds: the worst case sits over half the reach inside the
-workspace boundary, and its elbow is nowhere near straight or folded, so it is
-neither a target leaving the reachable set nor the double root where the
-elbow-up and elbow-down solutions coincide. The remaining suspect is the
-`denominator guard`_ admitting a pose at which cancellation has already cost
-most of the significance, which would be a tolerance worth revisiting. It has
-not been run down.
+Before the Newton steps the worst was :math:`6.5\times10^{-8}` m, with about one
+configuration in five thousand above :math:`10^{-12}` m, and the
+`denominator guard`_ was the leading suspect. It was not the guard; it was the
+eigenvectors, as above.
 
 .. _denominator guard: #the-denominator-guard
+
+The full three-joint header
+---------------------------
+
+The same arm has a full solver over :math:`\Q(x,y,z)` as well, written by
+``urdf_codegen --reconstruct`` in about two and a half seconds, and
+``doc/experiments/full_solver_cost.cpp`` sets the two side by side over twenty
+thousand targets:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * -
+     - full, :math:`\Q(x,y,z)`
+     - decoupled
+   * - solve, median
+     - 6.2 µs
+     - 1.4 µs
+   * - residual, 99th centile
+     - :math:`8.0\times10^{-16}` m
+     - :math:`7.8\times10^{-16}` m
+   * - residual, worst
+     - :math:`2.0\times10^{-6}` m
+     - :math:`1.5\times10^{-15}` m
+
+They return the same configurations on 19,999 targets of 20,000. The one
+exception lies within :math:`2\times10^{-4}` of the base axis, where a whole
+circle of configurations is about to appear and the Jacobian cannot be trusted.
+
+The full header also refuses a whole plane of targets, and the reason is the
+half-angle substitution rather than the solve. A target with :math:`y = 0` is
+reached, if at all, with the base at :math:`q_1 = 0` or :math:`q_1 = \pi`, and
+:math:`t_1 = \tan(q_1/2)` sends the second to infinity: over :math:`\Q` the
+quotient at such a pose has dimension two rather than four, so the parametric
+basis has a pole along the plane, and ``solve()`` reports ``bad_pose`` there.
+Just off the plane it answers correctly, the configurations with the base near
+:math:`\pi` having :math:`t_1` of the order of :math:`1/y`. The decoupled
+header recovers the base angle by an arctangent and has no such plane. **Where
+an arm decouples, the decoupled header is the one to use**; the full one is for
+the arms that do not.
 
 The epilogue hook
 =================

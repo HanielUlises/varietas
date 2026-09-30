@@ -2,10 +2,10 @@
 <!-- The anthropomorphic three-joint positioning arm: a base that yaws about z,
      then a shoulder and an elbow that pitch about y, with unit links.
 
-     This is the arm that does not solve over Q(x, y, z) in any time worth
-     waiting for, and that reduces in a fraction of a second once its base joint
-     is swept out. It is here so that urdf_codegen --decouple has something real
-     to be run on. -->
+     Over Q(x, y, z) it solves in about twenty seconds, or in a fraction of one
+     when urdf_codegen is asked to reconstruct, and it reduces in tens of
+     milliseconds once its base joint is swept out. It is here so that the
+     decoupling in urdf_codegen has something real to be run on. -->
 <robot name="anthropomorphic_3r">
   <link name="base_link"/>
   <link name="shoulder"/>

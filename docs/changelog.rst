@@ -2,6 +2,39 @@
 Changelog
 =========
 
+0.2.0
+=====
+
+Three parameters. The parametric path now solves a tool position for three
+joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
+
+.. rubric:: Exactness
+
+* ``modular_gcd``: Brown's dense modular gcd over :math:`\Q`, certified by
+  exact division over :math:`\mathbb{Z}`, returning the cofactors that division
+  computes. ``rational_function`` normalises with it, and the prime-field
+  coprimality heuristic in front of the old gcd is removed: a constant image
+  modulo one prime is a proof. The anthropomorphic arm over
+  :math:`\Q(x,y,z)`, which produced nothing in fifteen minutes, solves in about
+  twenty seconds.
+* ``residue``: a word-sized prime field the whole library can compute over.
+* ``reconstruction::reconstruct``: rational functions recovered from their
+  values modulo primes.
+
+.. rubric:: Inverse kinematics
+
+* ``reconstructed_position_ik``: the parametric solve recovered from fixed-pose
+  solves over prime fields, checked exactly at rational poses. Arms with
+  offsets, on which the symbolic solve does not finish, take seconds.
+* ``urdf_codegen --reconstruct``.
+
+.. rubric:: Code generation
+
+* A solution can carry the equations as posed; the generated ``solve()`` then
+  takes up to two Newton steps from each point, keeping a step only when it
+  lowers the residual. The worst residual of the decoupled demonstration
+  solver goes from :math:`6.5\times10^{-8}` m to :math:`1.6\times10^{-15}` m.
+
 0.1.0
 =====
 

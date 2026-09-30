@@ -1,8 +1,9 @@
 // Solving an arm by not adjoining its first joint.
 //
 // The claim being tested is a cost claim as much as a correctness one: the
-// three-joint arm that produced nothing over Q(x, y, z) in fifteen minutes
-// reduces to a two-joint problem that solves in well under a second, and the
+// three-joint arm that takes about twenty seconds over Q(x, y, z), and once
+// produced nothing there in fifteen minutes, reduces to a two-joint problem
+// that solves in tens of milliseconds, and the
 // branch count of the reduced problem, doubled, is the branch count of the arm.
 // The geometry is checked here; that the reduced solution generates code which
 // actually reaches the requested point is checked in test_generated_decoupled.

@@ -319,9 +319,11 @@ The subresultant remainder sequence, plus the pieces it needs:
                   polynomial_gcd(const polynomial<Coeff, N, Order>& a, \
                                  const polynomial<Coeff, N, Order>& b)
 
-   This is where the parametric solve spends about **86% of its time**. See
-   :doc:`../status` for the measurement and :doc:`../roadmap` for what would
-   change it.
+   The remainder sequence costs about the fourth power of the operand size,
+   which held the parametric solve to two parameters while it did the
+   cancellation there. It remains the generic gcd, over any exact field; over
+   :math:`\Q` the parametric path uses the modular gcd of :doc:`codegen`
+   instead. See :doc:`../status`.
 
 Minors
 ======

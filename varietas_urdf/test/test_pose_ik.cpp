@@ -2,9 +2,9 @@
 //
 // This is the capability the emitter cannot have. A generated solver adjoins
 // the target to the coefficient field, and orientation cannot be adjoined at
-// any workable size: a general pose needs six parameters and two is the
-// working limit. Solving one pose at a time gives up the generated code and
-// gets the other nine equations in return.
+// any workable size: a general pose needs six parameters and a position, three,
+// is what the parametric path reaches. Solving one pose at a time gives up the
+// generated code and gets the other nine equations in return.
 //
 // The targets here are built by evaluating the exact forward map at rational
 // half-angle values, rather than by rounding sines and cosines. That is not

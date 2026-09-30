@@ -2,10 +2,10 @@
 Decoupling the first joint
 ==========================
 
-Two adjoined parameters is the working limit of the parametric path
-(:doc:`../status`), and since the counts force :math:`P=N`, that is to say two
-joints. Two joints is less of a restriction than it sounds, because **the joint
-that costs the most is often the one that need not be adjoined at all**.
+A three-joint arm can be solved over :math:`\Q(x,y,z)` in full, symbolically on
+the simplest arms and by reconstruction on the rest (:doc:`../status`). Where it
+applies, there is a cheaper and exact route, because **the joint that costs the
+most is often the one that need not be adjoined at all**.
 
 The construction
 ================
@@ -21,8 +21,10 @@ the target** rather than an eigenvalue. What is left is a two-joint problem in
 two parameters.
 
 The anthropomorphic arm, base yawing about :math:`z` with shoulder and elbow
-pitching about :math:`y`, reduces this way in about **45 ms**, against the
-fifteen minutes that produced nothing when all three coordinates were adjoined.
+pitching about :math:`y`, reduces this way in about **20 ms**, against about
+twenty seconds for the symbolic solve with all three coordinates adjoined and a
+quarter of a second for the reconstruction. Before the gcd was replaced, the
+symbolic solve produced nothing in fifteen minutes and this was the only way.
 
 .. code-block:: sh
 

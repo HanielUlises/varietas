@@ -6,7 +6,8 @@
 // This is the other half of what the library can do, and the half the emitter
 // cannot reach. urdf_codegen adjoins the target to the coefficient field so
 // that one basis answers every pose, which is what makes generated code
-// possible and which also caps the problem at two adjoined parameters. Solving
+// possible and which also caps the problem at three adjoined parameters, a
+// position and no more. Solving
 // one pose at a time gives that up and gets orientation in return: the target
 // is a constant, the field is Q, and the twelve equations of a full pose are
 // no harder for Buchberger than the three of a position.
