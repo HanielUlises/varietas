@@ -44,6 +44,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_rational_function test/test_rational_function.cpp)
   target_link_libraries(test_rational_function ${PROJECT_NAME})
 
+  ament_add_gtest(test_modular_gcd test/test_modular_gcd.cpp)
+  target_link_libraries(test_modular_gcd ${PROJECT_NAME})
+
   ament_add_gtest(test_emit test/test_emit.cpp)
   target_link_libraries(test_emit ${PROJECT_NAME})
   target_include_directories(test_emit PRIVATE test)
