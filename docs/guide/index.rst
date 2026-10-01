@@ -11,4 +11,5 @@ User guide
    generated_headers
    decoupling
    spherical_wrist
+   moveit
    pose_ik

@@ -15,8 +15,10 @@ Dependencies
    sudo apt install ros-humble-urdf ros-humble-kdl-parser \
                     ros-humble-robot-state-publisher ros-humble-rviz2
 
-The ROS packages are required only by :doc:`guide/tools` (``varietas_urdf``)
-and by the RViz demonstration (``varietas_demo``).
+The ROS packages are required only by :doc:`guide/tools` (``varietas_urdf``),
+by the RViz demonstrations (``varietas_demo``), and by the MoveIt plugin
+(``varietas_moveit``), which also needs MoveIt. ``rosdep install --from-paths .
+--ignore-src -y`` installs all of them.
 
 Building
 ========
@@ -70,7 +72,7 @@ solver.
 
    g++ -std=c++17 -O2 consumer.cpp -I. -I/usr/include/eigen3
 
-``varietas_urdf`` and ``varietas_demo`` require ROS.
+``varietas_urdf``, ``varietas_demo`` and ``varietas_moveit`` require ROS.
 
 Building this documentation
 ===========================

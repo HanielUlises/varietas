@@ -43,7 +43,8 @@ colcon test --packages-select varietas_codegen
 | `varietas_kinematics` | Chains, rationalisation, workspace, singularities | `varietas_core` |
 | `varietas_ik` | Inverse kinematics over Q(pose), ready to emit | `varietas_kinematics`, `varietas_codegen` |
 | `varietas_urdf` | URDF to exact chain, the audit, and `urdf_codegen` | `varietas_ik`, `urdf` |
-| `varietas_demo` | RViz demonstrations, sweep and branches | `varietas_urdf`, `rclcpp` |
+| `varietas_demo` | RViz demonstrations, sweep, branches and solve-all | `varietas_urdf`, `rclcpp` |
+| `varietas_moveit` | MoveIt kinematics plugin for six-joint arms with a spherical wrist | `varietas_urdf`, `moveit_core` |
 
 `varietas_core`, `varietas_codegen`, `varietas_kinematics` and `varietas_ik` are header-only interface targets.
 
@@ -65,7 +66,9 @@ A header `urdf_codegen` produced needs neither: it includes `<cstddef>` and
 g++ -std=c++17 -O2 consumer.cpp -I. -I/usr/include/eigen3
 ```
 
-`varietas_urdf` and `varietas_demo` require ROS.
+`varietas_urdf`, `varietas_demo` and `varietas_moveit` require ROS. The plugin needs MoveIt
+(`sudo apt install ros-humble-moveit-core`), and `rosdep install --from-paths . --ignore-src -y`
+installs everything at once.
 
 ## Running
 

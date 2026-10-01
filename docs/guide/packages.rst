@@ -25,12 +25,17 @@ The packages
      - URDF → exact chain over :math:`\Q`, with an audit; the command line tools
      - ``varietas_ik``, ``urdf``
    * - ``varietas_demo``
-     - RViz demonstration of the recovered chain
+     - RViz demonstrations of the recovered chain, the branches, and every
+       configuration beside one iteration
      - ``varietas_urdf``, ``rclcpp``
+   * - ``varietas_moveit``
+     - MoveIt kinematics plugin for six-joint arms with a spherical wrist
+       (:doc:`moveit`)
+     - ``varietas_urdf``, ``moveit_core``
 
 ``varietas_core``, ``varietas_codegen``, ``varietas_kinematics`` and
-``varietas_ik`` are **header-only interface targets**. Only ``varietas_urdf``
-and ``varietas_demo`` require ROS.
+``varietas_ik`` are **header-only interface targets**. Only ``varietas_urdf``,
+``varietas_demo`` and ``varietas_moveit`` require ROS.
 
 Templated on the field
 ======================

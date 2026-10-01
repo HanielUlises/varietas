@@ -1,0 +1,11 @@
+<library path="varietas_moveit_plugin">
+  <class name="varietas_moveit/VarietasKinematicsPlugin"
+         type="varietas_moveit::VarietasKinematicsPlugin"
+         base_class_type="kinematics::KinematicsBase">
+    <description>
+      Exact, complete inverse kinematics for six-joint arms with a spherical
+      wrist, by varietas: every configuration that reaches the pose, within the
+      joint ranges, nearest the seed first.
+    </description>
+  </class>
+</library>

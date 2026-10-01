@@ -39,6 +39,10 @@ refuses, the last being the largest part, and deliberately.
      - complete
    * - Six joints with a spherical wrist, full pose
      - complete
+   * - Joint ranges in generated and runtime solvers
+     - complete
+   * - MoveIt kinematics plugin
+     - complete, six joints with a spherical wrist
    * - Pose inverse kinematics at a given target
      - complete, to five joints
    * - Modular gcd over :math:`\Q(\p)`

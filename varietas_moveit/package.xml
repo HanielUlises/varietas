@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>varietas_moveit</name>
+  <version>0.2.0</version>
+  <description>
+    A MoveIt kinematics plugin built on varietas. For a six-joint arm whose last
+    three axes meet, it splits the arm at its wrist centre when it is loaded,
+    solves the arm that places the centre exactly, and answers every IK query
+    with all the configurations that reach the pose, fitted into the joint
+    ranges MoveIt knows, the one nearest the seed first. No code is generated
+    for the robot; set kinematics_solver to
+    varietas_moveit/VarietasKinematicsPlugin in kinematics.yaml.
+  </description>
+  <maintainer email="hanielulises@gmail.com">Haniel Ulises</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>moveit_core</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>urdf</depend>
+  <depend>varietas_ik</depend>
+  <depend>varietas_urdf</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
+  <test_depend>moveit_kinematics</test_depend>
+  <test_depend>srdfdom</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

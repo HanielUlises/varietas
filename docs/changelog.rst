@@ -44,6 +44,19 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
   Kahan, so the generated header solves the full pose and returns up to eight
   configurations. ``urdf_codegen --wrist``.
 
+.. rubric:: Joint ranges and MoveIt
+
+* The decoupled and six-joint headers carry the joints' ranges and a
+  ``solve_within_limits`` that keeps the configurations every joint can reach,
+  each angle moved by whole turns into its range.
+* ``runtime.hpp`` evaluates a solution in process, with the same arithmetic
+  the generated headers carry, for an arm known only at run time.
+* ``varietas_moveit``, a MoveIt kinematics plugin. For a six-joint arm whose
+  last three axes meet it returns every configuration reaching the pose, inside
+  the ranges MoveIt knows and nearest the seed first. On the industrial test
+  arm it solves every reachable pose in a median of 11.5 µs, where the default
+  KDL solver solves 97.8% in a median of 1.5 ms.
+
 .. rubric:: Continuous integration
 
 * Every push builds all six packages and runs every test in a ROS 2 Humble
