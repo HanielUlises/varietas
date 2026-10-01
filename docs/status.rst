@@ -37,6 +37,8 @@ refuses, the last being the largest part, and deliberately.
      - complete
    * - First-joint decoupling
      - complete
+   * - Six joints with a spherical wrist, full pose
+     - complete
    * - Pose inverse kinematics at a given target
      - complete, to five joints
    * - Modular gcd over :math:`\Q(\p)`

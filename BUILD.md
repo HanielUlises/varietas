@@ -75,6 +75,9 @@ ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> [--tip L] [--root L
 ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --decouple   # sweep the base joint out (three joints, no --coords)
 ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --reconstruct # three joints with offsets: from fixed poses, checked over Q
 
+# Six joints whose last three axes meet: a header for the full pose.
+ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> --wrist
+
 # One pose, solved exactly, orientation included. Up to five joints in practice.
 ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z [--rpy R P Y | --quat X Y Z W]
 ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z --position-only

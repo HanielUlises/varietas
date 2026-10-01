@@ -79,6 +79,28 @@ if(BUILD_TESTING)
   target_link_libraries(test_generated_decoupled ${PROJECT_NAME})
   target_include_directories(test_generated_decoupled PRIVATE ${generated_dir} test)
   add_dependencies(test_generated_decoupled reduced_header_target)
+
+  # Six joints with a spherical wrist: one arm whose position problem
+  # decouples and one whose does not, so both arm solvers the wrist emitter can
+  # sit on are compiled and run.
+  add_executable(generate_wrist_6r test/generate_wrist_6r.cpp)
+  target_link_libraries(generate_wrist_6r ${PROJECT_NAME})
+  target_include_directories(generate_wrist_6r PRIVATE test)
+
+  set(industrial_header ${generated_dir}/industrial_ik.hpp)
+  set(skewed_header ${generated_dir}/skewed_ik.hpp)
+  add_custom_command(
+    OUTPUT ${industrial_header} ${skewed_header}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${generated_dir}
+    COMMAND generate_wrist_6r ${industrial_header} ${skewed_header}
+    DEPENDS generate_wrist_6r
+    COMMENT "Splitting two six-joint arms at the wrist and emitting their solvers")
+  add_custom_target(wrist_header_target DEPENDS ${industrial_header} ${skewed_header})
+
+  ament_add_gtest(test_spherical_wrist test/test_spherical_wrist.cpp TIMEOUT 300)
+  target_link_libraries(test_spherical_wrist ${PROJECT_NAME})
+  target_include_directories(test_spherical_wrist PRIVATE ${generated_dir} test)
+  add_dependencies(test_spherical_wrist wrist_header_target)
 endif()
 
 ament_package()

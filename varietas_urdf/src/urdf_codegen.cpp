@@ -2,7 +2,7 @@
 //
 // Usage: urdf_codegen <file.urdf> <output.hpp> [--tip L] [--root L]
 //                     [--coords xy|xz|yz|xyz] [--name N] [--namespace NS]
-//                     [--matrices-only] [--reconstruct]
+//                     [--matrices-only] [--reconstruct] [--wrist]
 //
 // This is the whole pipeline as a command. The URDF is read and made exact,
 // the chain is posed with the target adjoined to the coefficient field, one
@@ -22,6 +22,12 @@
 // keep, but it is right with high probability rather than by construction, so
 // its result is checked exactly against Q at rational poses before it is
 // written, and refused if any check fails.
+//
+// --wrist is for six-joint arms whose last three axes meet, which is most
+// industrial arms. The header solves the full pose, position and orientation:
+// the arm's three joints place the wrist centre, solved by the decoupling
+// where it applies and by reconstruction where it does not, and the wrist's
+// three supply the rotation in closed form.
 
 #include <array>
 #include <cstddef>
@@ -37,6 +43,7 @@
 #include "varietas/ik/emit_decoupled.hpp"
 #include "varietas/ik/parametric_ik.hpp"
 #include "varietas/ik/reconstructed_ik.hpp"
+#include "varietas/ik/spherical_wrist.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
 namespace {
@@ -52,6 +59,7 @@ struct options {
   varietas::codegen::runtime_kind runtime = varietas::codegen::runtime_kind::eigen;
   bool decouple = false;
   bool reconstruct = false;
+  bool wrist = false;
 };
 
 bool parse(int argc, char** argv, options& out) {
@@ -79,6 +87,8 @@ bool parse(int argc, char** argv, options& out) {
       out.decouple = true;
     } else if (arg == "--reconstruct") {
       out.reconstruct = true;
+    } else if (arg == "--wrist") {
+      out.wrist = true;
     } else if (arg == "--matrices-only") {
       out.runtime = varietas::codegen::runtime_kind::matrices_only;
     } else if (!arg.empty() && arg[0] == '-') {
@@ -236,6 +246,63 @@ int run_decoupled(const varietas::chain<varietas::rational>& robot, const option
   return 0;
 }
 
+// Six joints and a full pose, split at the wrist centre.
+int run_wrist(const varietas::chain<varietas::rational>& robot, const options& opts) {
+  if (opts.runtime != varietas::codegen::runtime_kind::eigen) {
+    std::fprintf(stderr, "refused: --wrist emits a solver that calls the arm's solver, so it "
+                         "cannot be combined with --matrices-only\n");
+    return 1;
+  }
+  const auto wrist = varietas::ik::decompose_spherical_wrist(robot);
+  if (!wrist.ok()) {
+    std::fprintf(stderr, "refused: %s\n", varietas::ik::to_string(wrist.status));
+    return 1;
+  }
+  std::printf("wrist centre     (%.6g, %.6g, %.6g) with every joint at zero\n",
+              wrist.centre[0].get_d(), wrist.centre[1].get_d(), wrist.centre[2].get_d());
+
+  varietas::codegen::emit_options emit_options;
+  emit_options.name = opts.name;
+  emit_options.name_space = opts.name_space;
+  emit_options.runtime = opts.runtime;
+  std::string text;
+  std::string route;
+  const auto decoupled = opts.reconstruct ? varietas::ik::decoupled_solution<3>{}
+                                          : varietas::ik::decoupled_position_ik<3>(wrist.arm);
+  if (!opts.reconstruct && decoupled.ok()) {
+    route = "decoupled";
+    std::printf("arm              decoupled, %zu branches\n", decoupled.branches);
+    emit_options.source_note = "Inverse kinematics of " + robot.name() + " for a full pose, from " +
+                               opts.urdf + ". The arm's three joints place the wrist centre, "
+                               "solved by sweeping the base joint out; the wrist's three supply "
+                               "the rotation in closed form. Returns joint angles in radians.";
+    text = varietas::ik::emit_spherical_wrist(wrist, decoupled, emit_options);
+  } else {
+    varietas::ik::reconstruction_report report;
+    const auto arm = varietas::ik::reconstructed_position_ik<3, 3>(wrist.arm, {0, 1, 2}, &report);
+    if (!arm.ok()) {
+      std::fprintf(stderr, "refused: the arm that places the wrist centre was not solved: %s\n",
+                   varietas::ik::to_string(arm.status));
+      return 1;
+    }
+    route = "reconstructed";
+    std::printf("arm              reconstructed, %zu branches; exact checks %zu, passed\n",
+                arm.branches, report.exact_checks);
+    emit_options.source_note = "Inverse kinematics of " + robot.name() + " for a full pose, from " +
+                               opts.urdf + ". The arm's three joints place the wrist centre, "
+                               "reconstructed over Q(x, y, z) from fixed-pose solves and checked "
+                               "exactly at rational poses; the wrist's three supply the rotation "
+                               "in closed form. Returns joint angles in radians.";
+    text = varietas::ik::emit_spherical_wrist(wrist, arm.solution, emit_options);
+  }
+  if (!write(opts.output, text)) {
+    return 1;
+  }
+  std::printf("wrote            %s (%s solves position and orientation, arm %s)\n",
+              opts.output.c_str(), opts.name.c_str(), route.c_str());
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -244,7 +311,7 @@ int main(int argc, char** argv) {
     std::fprintf(stderr,
                  "usage: %s <file.urdf> <output.hpp> [--tip L] [--root L]\n"
                  "          [--coords xy|xz|yz|xyz] [--name N] [--namespace NS]\n"
-                 "          [--decouple] [--matrices-only] [--reconstruct]\n",
+                 "          [--decouple] [--matrices-only] [--reconstruct] [--wrist]\n",
                  argv[0]);
     return 2;
   }
@@ -275,6 +342,15 @@ int main(int argc, char** argv) {
   std::printf("model            %s\n", model.getName().c_str());
   std::printf("chain            %s -> %s\n", root.c_str(), tip.c_str());
   std::printf("degrees of freedom %zu\n", dof);
+
+  if (opts.wrist) {
+    if (opts.decouple || !opts.coords.empty()) {
+      std::fprintf(stderr, "refused: --wrist solves the full pose and chooses the arm's route "
+                           "itself, so it takes neither --decouple nor --coords\n");
+      return 1;
+    }
+    return run_wrist(robot, opts);
+  }
 
   // Decoupling first, because it does not take a choice of coordinates at all.
   //

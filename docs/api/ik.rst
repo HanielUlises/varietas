@@ -86,6 +86,30 @@ Decoupled inverse kinematics
    Sweeps the first joint out instead of solving for it, leaving a two-joint
    problem in two parameters. See :doc:`../guide/decoupling`.
 
+Six joints with a spherical wrist
+=================================
+
+``varietas/ik/spherical_wrist.hpp``
+
+.. cpp:function:: wrist_decomposition decompose_spherical_wrist(const chain<rational>& robot)
+
+   Splits a six-joint arm at its wrist centre, exactly. Decides over
+   :math:`\Q` whether the last three axes meet, and returns the three-joint arm
+   that places the centre, the centre itself in the base and tool frames, and
+   the placements and axes the wrist's rotation needs. Refuses an arm that is
+   not six revolute joints, one with parallel consecutive wrist axes, and one
+   whose wrist axes do not meet. See :doc:`../guide/spherical_wrist`.
+
+.. cpp:function:: std::string emit_spherical_wrist(const wrist_decomposition& w, \
+                                                   const decoupled_solution<3>& arm, \
+                                                   codegen::emit_options options)
+
+   A header for the full pose: the arm's solver, decoupled here or
+   reconstructed in the overload taking a ``parametric_solution<3, 3>``, and a
+   struct whose ``solve(position, rotation, out, capacity)`` returns up to
+   eight configurations as joint angles, the wrist split by the subproblems of
+   Paden and Kahan.
+
 Reconstructed inverse kinematics
 ================================
 

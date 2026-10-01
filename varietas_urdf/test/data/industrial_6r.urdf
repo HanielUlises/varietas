@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<!-- A six-joint arm of the usual industrial shape, for the wrist decomposition.
+
+     A base turning about z; a shoulder 25 mm off the base axis and 400 mm up;
+     an upper arm of 455 mm and a forearm of 420 mm with a 35 mm offset, both
+     pitching about y; and a wrist that rolls about x, pitches about y and rolls
+     about x again, its three axes meeting 80 mm short of the flange. The
+     dimensions are those of a common six-kilogram arm. Its last three axes
+     meet, so urdf_codegen with its wrist option writes a solver for the full
+     pose, position and orientation. -->
+<robot name="industrial_6r">
+  <link name="base_link"/>
+  <link name="link_1"/>
+  <link name="link_2"/>
+  <link name="link_3"/>
+  <link name="link_4"/>
+  <link name="link_5"/>
+  <link name="link_6"/>
+  <link name="flange"/>
+
+  <joint name="a1" type="revolute">
+    <parent link="base_link"/><child link="link_1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-2.97" upper="2.97" effort="100" velocity="6"/>
+  </joint>
+  <joint name="a2" type="revolute">
+    <parent link="link_1"/><child link="link_2"/>
+    <origin xyz="0.025 0 0.4" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-3.32" upper="0.79" effort="100" velocity="6"/>
+  </joint>
+  <joint name="a3" type="revolute">
+    <parent link="link_2"/><child link="link_3"/>
+    <origin xyz="0 0 0.455" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-2.09" upper="2.72" effort="100" velocity="6"/>
+  </joint>
+  <joint name="a4" type="revolute">
+    <parent link="link_3"/><child link="link_4"/>
+    <origin xyz="0.42 0 0.035" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-3.23" upper="3.23" effort="100" velocity="6"/>
+  </joint>
+  <joint name="a5" type="revolute">
+    <parent link="link_4"/><child link="link_5"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-2.09" upper="2.09" effort="100" velocity="6"/>
+  </joint>
+  <joint name="a6" type="revolute">
+    <parent link="link_5"/><child link="link_6"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-6.11" upper="6.11" effort="100" velocity="6"/>
+  </joint>
+  <joint name="flange_mount" type="fixed">
+    <parent link="link_6"/><child link="flange"/>
+    <origin xyz="0.08 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

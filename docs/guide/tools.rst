@@ -31,7 +31,7 @@ than approximated silently. See :doc:`../theory/exactness`.
    ros2 run varietas_urdf urdf_codegen <file.urdf> <output.hpp> \
        [--tip L] [--root L] [--coords xy|xz|yz|xyz] \
        [--name N] [--namespace NS] [--decouple] [--matrices-only] \
-       [--reconstruct]
+       [--reconstruct] [--wrist]
 
 .. list-table::
    :header-rows: 1
@@ -65,6 +65,11 @@ than approximated silently. See :doc:`../theory/exactness`.
        offsets; the result is checked exactly at rational poses, and refused if
        a check fails. Not combined with ``--decouple``. See
        :cpp:func:`varietas::ik::reconstructed_position_ik`.
+   * - ``--wrist``
+     - Six revolute joints whose last three axes meet. Writes a solver for the
+       full pose, position and orientation, returning up to eight
+       configurations as joint angles. Takes neither ``--decouple`` nor
+       ``--coords``. See :doc:`spherical_wrist`.
 
 The counts settle most of it before any Gröbner basis is attempted; see
 :doc:`../status` for why :math:`P=N` is the only arrangement that can produce a

@@ -35,6 +35,22 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
   lowers the residual. The worst residual of the decoupled demonstration
   solver goes from :math:`6.5\times10^{-8}` m to :math:`1.6\times10^{-15}` m.
 
+.. rubric:: Six joints
+
+* ``decompose_spherical_wrist`` and ``emit_spherical_wrist``. A six-joint arm
+  whose last three axes meet is split at its wrist centre, decided exactly
+  over :math:`\Q`. The arm that places the centre is decoupled or
+  reconstructed, and the wrist is split by the subproblems of Paden and
+  Kahan, so the generated header solves the full pose and returns up to eight
+  configurations. ``urdf_codegen --wrist``.
+
+.. rubric:: Continuous integration
+
+* Every push builds all six packages and runs every test in a ROS 2 Humble
+  container, with the assertions left on in an optimised build.
+* Two dependencies that rosdep could not resolve, ``libgmp-dev`` and
+  ``orocos_kdl``, are declared by their rosdep keys.
+
 .. rubric:: Demonstrations
 
 * ``solve_all.launch.py``, a third demonstration. An arm with three pairwise

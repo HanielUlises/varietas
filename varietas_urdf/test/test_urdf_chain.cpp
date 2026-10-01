@@ -15,6 +15,7 @@
 #include "varietas/core/order/grevlex.hpp"
 #include "varietas/kinematics/evaluate.hpp"
 #include "varietas/kinematics/rationalize.hpp"
+#include "varietas/ik/spherical_wrist.hpp"
 #include "varietas/urdf/urdf_chain.hpp"
 
 namespace {
@@ -318,6 +319,34 @@ TEST(urdf_chain, the_rational_map_agrees_with_kdl_on_seven_joints) {
 
   EXPECT_LT(worst_position, 1e-9);
   EXPECT_LT(worst_orientation, 1e-9);
+}
+
+// The wrist centre of an arm read from decimals, recovered exactly. 0.025 and
+// 0.42 have to arrive as 1/40 and 21/50 rather than as the binary doubles
+// nearest them, or the three wrist axes would miss one another by rounding and
+// the decomposition would refuse an arm whose wrist plainly has a centre.
+TEST(UrdfChain, TheIndustrialArmsWristCentreIsRecoveredExactly) {
+  urdf::Model model;
+  ASSERT_TRUE(model.initFile(std::string(VARIETAS_URDF_TEST_DATA) + "/industrial_6r.urdf"));
+  chain<rational> robot;
+  const auto report = chain_from_model(model, "base_link", "flange", robot);
+  ASSERT_TRUE(report.ok());
+  const auto wrist = varietas::ik::decompose_spherical_wrist(robot);
+  ASSERT_TRUE(wrist.ok()) << varietas::ik::to_string(wrist.status);
+  EXPECT_EQ(wrist.centre[0], rational(89, 200));
+  EXPECT_EQ(wrist.centre[1], rational(0));
+  EXPECT_EQ(wrist.centre[2], rational(89, 100));
+}
+
+// Seven joints are not six, and the iiwa is refused on that count before
+// anything is asked of its wrist.
+TEST(UrdfChain, TheIiwaIsNotDecomposedAtTheWrist) {
+  urdf::Model model;
+  ASSERT_TRUE(model.initFile(fixture_path()));
+  chain<rational> robot;
+  ASSERT_TRUE(chain_from_model(model, model.getRoot()->name, "lbr_iiwa_link_7", robot).ok());
+  EXPECT_EQ(varietas::ik::decompose_spherical_wrist(robot).status,
+            varietas::ik::wrist_status::wrong_joints);
 }
 
 }  // namespace

@@ -145,6 +145,72 @@ inline chain<rational> anthropomorphic_off_axis() {
   return robot;
 }
 
+inline rigid_transform<rational> at(rational x, rational y, rational z) {
+  return rigid_transform<rational>::translation_only(vector3<rational>(x, y, z));
+}
+
+// A six-joint arm of the usual industrial shape: a base turning about z, a
+// shoulder displaced 25 mm from the base axis and 400 mm up, an upper arm of
+// 455 mm and a forearm of 420 mm with a 35 mm offset, all pitching about y,
+// and a wrist rolling about x, pitching about y and rolling about x again,
+// its three axes meeting in one point 80 mm short of the flange. The
+// dimensions are those of a common six-kilogram arm; nothing depends on them
+// beyond their being rationals.
+inline chain<rational> industrial_six() {
+  const auto I = rigid_transform<rational>::identity();
+  chain<rational> robot("industrial_6r");
+  robot.add_joint(revolute_joint<rational>("a1", vector3<rational>::unit(2), I));
+  robot.add_joint(revolute_joint<rational>("a2", vector3<rational>::unit(1),
+                                           at(rational(1, 40), nil(), rational(2, 5))));
+  robot.add_joint(revolute_joint<rational>("a3", vector3<rational>::unit(1),
+                                           at(nil(), nil(), rational(91, 200))));
+  robot.add_joint(revolute_joint<rational>("a4", vector3<rational>::unit(0),
+                                           at(rational(21, 50), nil(), rational(7, 200))));
+  robot.add_joint(revolute_joint<rational>("a5", vector3<rational>::unit(1), I));
+  robot.add_joint(revolute_joint<rational>("a6", vector3<rational>::unit(0), I));
+  robot.set_tool(at(rational(2, 25), nil(), nil()));
+  return robot;
+}
+
+// A wrist whose axes meet but are not orthogonal, on an arm whose base is
+// displaced off its own axis, so that nothing about it is the textbook case:
+// the decoupling refuses the arm, and the wrist's rotation has to be split
+// along three skew directions through one point.
+inline chain<rational> skewed_wrist_six() {
+  const auto I = rigid_transform<rational>::identity();
+  chain<rational> robot("skewed_wrist_6r");
+  robot.add_joint(revolute_joint<rational>("j1", vector3<rational>::unit(2),
+                                           at(rational(1, 10), nil(), nil())));
+  robot.add_joint(revolute_joint<rational>("j2", vector3<rational>::unit(1),
+                                           at(nil(), nil(), rational(1, 2))));
+  robot.add_joint(revolute_joint<rational>("j3", vector3<rational>::unit(1),
+                                           at(nil(), nil(), rational(3, 5))));
+  robot.add_joint(revolute_joint<rational>("j4", vector3<rational>::unit(0),
+                                           at(rational(1, 2), nil(), rational(1, 10))));
+  robot.add_joint(revolute_joint<rational>(
+      "j5", vector3<rational>(nil(), rational(3, 5), rational(4, 5)), I));
+  robot.add_joint(revolute_joint<rational>(
+      "j6", vector3<rational>(rational(2, 3), rational(1, 3), rational(2, 3)), I));
+  robot.set_tool(at(rational(1, 10), rational(1, 20), nil()));
+  return robot;
+}
+
+// The same arm with its last axis moved a centimetre off the wrist centre, so
+// that the three wrist axes no longer meet: the decomposition must refuse it.
+inline chain<rational> broken_wrist_six() {
+  chain<rational> robot = industrial_six();
+  chain<rational> moved("broken_wrist_6r");
+  for (std::size_t i = 0; i < robot.joints().size(); ++i) {
+    auto j = robot.joints()[i];
+    if (i == 5) {
+      j.origin = at(nil(), rational(1, 100), nil());
+    }
+    moved.add_joint(j);
+  }
+  moved.set_tool(robot.tool());
+  return moved;
+}
+
 }  // namespace varietas_test
 
 #endif

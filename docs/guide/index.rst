@@ -10,4 +10,5 @@ User guide
    chains
    generated_headers
    decoupling
+   spherical_wrist
    pose_ik
