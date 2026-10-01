@@ -172,6 +172,25 @@ inline chain<rational> industrial_six() {
   return robot;
 }
 
+// The same arm with the joint ranges of its description, so that the solvers'
+// limit handling has ranges to respect, two of them narrower than a turn on
+// one side and one wider than a turn.
+inline chain<rational> industrial_six_limited() {
+  const chain<rational> free = industrial_six();
+  const double lower[6] = {-2.97, -3.32, -2.09, -3.23, -2.09, -6.11};
+  const double upper[6] = {2.97, 0.79, 2.72, 3.23, 2.09, 6.11};
+  chain<rational> robot("industrial_6r_limited");
+  for (std::size_t i = 0; i < free.joints().size(); ++i) {
+    auto j = free.joints()[i];
+    j.has_limits = true;
+    j.lower = lower[i];
+    j.upper = upper[i];
+    robot.add_joint(j);
+  }
+  robot.set_tool(free.tool());
+  return robot;
+}
+
 // A wrist whose axes meet but are not orthogonal, on an arm whose base is
 // displaced off its own axis, so that nothing about it is the textbook case:
 // the decoupling refuses the arm, and the wrist's rotation has to be split

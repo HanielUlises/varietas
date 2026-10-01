@@ -238,7 +238,8 @@ int run_decoupled(const varietas::chain<varietas::rational>& robot, const option
       "it puts the base joint back with an arctangent. Call the wrapper; it returns joint "
       "angles in radians.";
 
-  if (!write(opts.output, varietas::ik::emit_decoupled(result, emit_options))) {
+  const auto limits = varietas::ik::detail::limits_of(robot.fold_fixed_joints());
+  if (!write(opts.output, varietas::ik::emit_decoupled(result, emit_options, &limits))) {
     return 1;
   }
   std::printf("wrote            %s (%s solves the whole arm)\n", opts.output.c_str(),

@@ -1,9 +1,11 @@
 #ifndef VARIETAS_IK_EMIT_DECOUPLED_HPP
 #define VARIETAS_IK_EMIT_DECOUPLED_HPP
 
+#include <cmath>
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "varietas/codegen/emit.hpp"
 #include "varietas/core/config.hpp"
@@ -31,6 +33,102 @@ namespace ik {
 // joint and is defined everywhere.
 namespace detail {
 
+// A joint's range as the generated code needs it: whether it has one, and
+// where it starts and ends. Infinite or absent bounds mean a joint that turns
+// without limit.
+struct emitted_limits {
+  std::vector<bool> limited;
+  std::vector<double> lower;
+  std::vector<double> upper;
+};
+
+template <class Coeff>
+emitted_limits limits_of(const chain<Coeff>& robot) {
+  emitted_limits out;
+  for (const auto& j : robot.joints()) {
+    if (!j.is_actuated()) {
+      continue;
+    }
+    out.limited.push_back(j.has_limits && std::isfinite(j.lower) && std::isfinite(j.upper));
+    out.lower.push_back(j.lower);
+    out.upper.push_back(j.upper);
+  }
+  return out;
+}
+
+inline std::string double_literal(double v) {
+  std::ostringstream out;
+  out.precision(17);
+  out << v;
+  std::string s = out.str();
+  if (s.find_first_of(".eE") == std::string::npos) {
+    s += ".0";
+  }
+  return s;
+}
+
+// Members for a struct whose solve() returns joint angles: the joints' ranges,
+// fit(), which moves an angle by whole turns into its range or reports that no
+// turn does, and solve_within_limits(), which keeps only the configurations
+// every joint can reach. `call` is the solve() call with its target arguments,
+// as the struct spells them.
+inline std::string limits_members(const emitted_limits& limits, const std::string& parameters,
+                                  const std::string& call) {
+  std::ostringstream out;
+  const std::size_t n = limits.limited.size();
+  out << "\n  // The joints' ranges, from the robot description. A joint without one\n"
+      << "  // turns freely and is never refused.\n"
+      << "  static constexpr bool limited[" << n << "] = {";
+  for (std::size_t i = 0; i < n; ++i) {
+    out << (limits.limited[i] ? "true" : "false") << (i + 1 < n ? ", " : "");
+  }
+  out << "};\n  static constexpr double lower[" << n << "] = {";
+  for (std::size_t i = 0; i < n; ++i) {
+    out << (limits.limited[i] ? double_literal(limits.lower[i]) : "0.0") << (i + 1 < n ? ", " : "");
+  }
+  out << "};\n  static constexpr double upper[" << n << "] = {";
+  for (std::size_t i = 0; i < n; ++i) {
+    out << (limits.limited[i] ? double_literal(limits.upper[i]) : "0.0") << (i + 1 < n ? ", " : "");
+  }
+  out << "};\n"
+      << "\n  // Moves each angle by whole turns into its joint's range. A solver returns\n"
+      << "  // angles in (-pi, pi], and a range need not be that interval, so an angle\n"
+      << "  // outside it may still be reachable a turn away. False if some joint\n"
+      << "  // cannot be fitted by any number of turns.\n"
+      << "  static bool fit(double* q) {\n"
+      << "    constexpr double turn = 6.28318530717958647692;\n"
+      << "    constexpr double slack = 1e-9;\n"
+      << "    for (std::size_t i = 0; i < " << n << "; ++i) {\n"
+      << "      if (!limited[i]) { continue; }\n"
+      << "      double v = q[i];\n"
+      << "      if (v < lower[i]) { v += turn * std::ceil((lower[i] - v - slack) / turn); }\n"
+      << "      else if (v > upper[i]) { v -= turn * std::ceil((v - upper[i] - slack) / turn); }\n"
+      << "      if (v < lower[i] - slack || v > upper[i] + slack) { return false; }\n"
+      << "      q[i] = v;\n"
+      << "    }\n"
+      << "    return true;\n"
+      << "  }\n"
+      << "\n  // solve(), keeping only the configurations every joint can reach, fitted\n"
+      << "  // into the joints' ranges.\n"
+      << "  static int solve_within_limits(" << parameters << ", double* out, int capacity,\n"
+      << "                                 status* state = nullptr) {\n"
+      << "    double all[max_configurations * num_joints];\n"
+      << "    const int found = " << call << ", all, static_cast<int>(max_configurations), state);\n"
+      << "    if (found < 0) { return found; }\n"
+      << "    int kept = 0;\n"
+      << "    for (int k = 0; k < found && kept < capacity; ++k) {\n"
+      << "      double* row = all + static_cast<std::size_t>(k) * num_joints;\n"
+      << "      if (!fit(row)) { continue; }\n"
+      << "      for (std::size_t i = 0; i < num_joints; ++i) {\n"
+      << "        out[static_cast<std::size_t>(kept) * num_joints + i] = row[i];\n"
+      << "      }\n"
+      << "      ++kept;\n"
+      << "    }\n"
+      << "    return kept;\n"
+      << "  }\n";
+  return out.str();
+}
+
 inline std::string coordinate_field(std::size_t coordinate) {
   static const char* const names[3] = {"0", "1", "2"};
   return coordinate < 3 ? names[coordinate] : "0";
@@ -42,7 +140,8 @@ inline std::string coordinate_field(std::size_t coordinate) {
 template <std::size_t N>
 std::string decoupled_epilogue(const decoupled_solution<N>& solution,
                                const std::string& reduced_name,
-                               const std::string& wrapper_name) {
+                               const std::string& wrapper_name,
+                               const detail::emitted_limits* limits = nullptr) {
   VARIETAS_ASSERT(solution.ok());
 
   const std::size_t reduced_unknowns = N - 1;
@@ -118,15 +217,19 @@ std::string decoupled_epilogue(const decoupled_solution<N>& solution,
       << "    }\n"
       << "    if (state != nullptr) { *state = status::ok; }\n"
       << "    return written;\n"
-      << "  }\n"
-      << "};\n";
+      << "  }\n";
+  if (limits != nullptr && limits->limited.size() == N) {
+    out << detail::limits_members(*limits, "const double* target", "solve(target");
+  }
+  out << "};\n";
   return out.str();
 }
 
 // The complete header: the reduced solver and the wrapper that completes it.
 template <std::size_t N>
 std::string emit_decoupled(const decoupled_solution<N>& solution,
-                           codegen::emit_options options = {}) {
+                           codegen::emit_options options = {},
+                           const detail::emitted_limits* limits = nullptr) {
   VARIETAS_ASSERT(solution.ok());
   // The wrapper calls the reduced solver, so the reduced solver has to exist.
   VARIETAS_ASSERT(options.runtime == codegen::runtime_kind::eigen);
@@ -134,7 +237,7 @@ std::string emit_decoupled(const decoupled_solution<N>& solution,
   const std::string wrapper_name = options.name;
   const std::string reduced_name = options.name + "_reduced";
 
-  options.epilogue = decoupled_epilogue(solution, reduced_name, wrapper_name);
+  options.epilogue = decoupled_epilogue(solution, reduced_name, wrapper_name, limits);
   options.name = reduced_name;
   // The guard is defaulted from the struct's name, which has just changed; let
   // it be derived from the name the caller actually asked for instead.

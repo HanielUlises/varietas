@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "usage: %s <industrial header> <skewed header>\n", argv[0]);
     return 2;
   }
-  return write(varietas_test::industrial_six(), "industrial_ik", argv[1]) &&
+  return write(varietas_test::industrial_six_limited(), "industrial_ik", argv[1]) &&
                  write(varietas_test::skewed_wrist_six(), "skewed_ik", argv[2])
              ? 0
              : 1;

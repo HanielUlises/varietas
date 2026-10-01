@@ -88,6 +88,9 @@ struct wrist_decomposition {
 
   std::vector<std::string> joint_names;
 
+  // The six joints' ranges, from the robot description.
+  detail::emitted_limits limits;
+
   bool ok() const noexcept { return status == wrist_status::ok; }
 };
 
@@ -139,6 +142,7 @@ inline wrist_decomposition decompose_spherical_wrist(const chain<rational>& robo
     result.joint_names.push_back(j.name);
   }
   result.tool_rotation = folded.tool().rotation();
+  result.limits = detail::limits_of(folded);
 
   std::array<vector3<rational>, 3> through;
   std::array<vector3<rational>, 3> along;
@@ -403,8 +407,10 @@ inline std::string wrist_epilogue(const wrist_decomposition& w, const std::strin
     if (state != nullptr) { *state = arm_state; }
     return written;
   }
-};
 )CODE";
+  out << detail::limits_members(w.limits, "const double* position, const double* rotation_matrix",
+                                "solve(position, rotation_matrix");
+  out << "};\n";
   return out.str();
 }
 

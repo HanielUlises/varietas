@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "varietas/ik/runtime.hpp"
 #include "varietas/ik/spherical_wrist.hpp"
 #include "varietas/kinematics/evaluate.hpp"
 
@@ -119,6 +120,107 @@ TEST(SphericalWrist, TheIndustrialArmSolvesEveryPoseItCanStrike) {
 // varies; what may not vary is that the pose's own configuration is found.
 TEST(SphericalWrist, ASkewedWristOnAnArmThatDoesNotDecoupleSolvesEveryPose) {
   every_pose_is_solved<varietas_generated::skewed_ik>(varietas_test::skewed_wrist_six());
+}
+
+// The ranges of the description are respected: every configuration
+// solve_within_limits returns lies inside them, and the configuration a pose
+// came from is among those returned whenever it was inside them itself.
+TEST(SphericalWrist, SolutionsAreFittedIntoTheJointRanges) {
+  using solver = varietas_generated::industrial_ik;
+  const auto exact = varietas_test::industrial_six_limited();
+  const auto arm = varietas::chain_cast<double>(exact);
+  const auto limits = varietas::ik::joint_limits::of(exact);
+  std::mt19937 rng(11u);
+  std::uniform_real_distribution<double> angle(-M_PI, M_PI);
+  int fewer = 0;
+  for (int trial = 0; trial < 2000; ++trial) {
+    std::vector<double> q(6);
+    for (double& v : q) {
+      v = angle(rng);
+    }
+    const bool inside = limits.fit(q.data());
+    const auto target = varietas::forward_kinematics(arm, q);
+    double position[3];
+    double rotation[9];
+    for (int i = 0; i < 3; ++i) {
+      position[i] = target.translation()[i];
+      for (int j = 0; j < 3; ++j) {
+        rotation[3 * i + j] = target.rotation()(i, j);
+      }
+    }
+    double all[solver::max_configurations * 6];
+    double kept[solver::max_configurations * 6];
+    const int found = solver::solve(position, rotation, all, 16);
+    const int within = solver::solve_within_limits(position, rotation, kept, 16);
+    ASSERT_GE(within, 0);
+    ASSERT_LE(within, found);
+    fewer += within < found;
+    bool original = false;
+    for (int k = 0; k < within; ++k) {
+      for (int i = 0; i < 6; ++i) {
+        EXPECT_GE(kept[6 * k + i], limits.lower[i] - 1e-9);
+        EXPECT_LE(kept[6 * k + i], limits.upper[i] + 1e-9);
+      }
+      double distance = 0.0;
+      for (int i = 0; i < 6; ++i) {
+        distance = std::max(distance, std::abs(kept[6 * k + i] - q[i]));
+      }
+      original = original || distance < 1e-6;
+    }
+    if (inside) {
+      EXPECT_TRUE(original) << "trial " << trial;
+    }
+  }
+  // The ranges are narrower than a turn, so some configurations must go.
+  EXPECT_GT(fewer, 0);
+}
+
+// The solver evaluated in process returns what the generated header returns,
+// configuration for configuration, on both routes the arm can take.
+template <class Solver>
+void runtime_agrees(const varietas::chain<rational>& exact) {
+  std::string why;
+  const auto runtime = varietas::ik::build_wrist_solver(exact, &why);
+  ASSERT_TRUE(runtime.has_value()) << why;
+  const auto arm = varietas::chain_cast<double>(exact);
+  std::mt19937 rng(5u);
+  std::uniform_real_distribution<double> angle(-M_PI, M_PI);
+  for (int trial = 0; trial < 500; ++trial) {
+    std::vector<double> q(6);
+    for (double& v : q) {
+      v = angle(rng);
+    }
+    const auto target = varietas::forward_kinematics(arm, q);
+    double position[3];
+    double rotation[9];
+    for (int i = 0; i < 3; ++i) {
+      position[i] = target.translation()[i];
+      for (int j = 0; j < 3; ++j) {
+        rotation[3 * i + j] = target.rotation()(i, j);
+      }
+    }
+    double a[16 * 6];
+    double b[16 * 6];
+    const int na = runtime->solve(position, rotation, a, 16);
+    const int nb = Solver::solve(position, rotation, b, 16);
+    ASSERT_EQ(na, nb) << "trial " << trial;
+    for (int k = 0; k < na; ++k) {
+      double best = 1e9;
+      for (int l = 0; l < nb; ++l) {
+        double d = 0.0;
+        for (int i = 0; i < 6; ++i) {
+          d = std::max(d, std::abs(std::remainder(a[6 * k + i] - b[6 * l + i], 2.0 * M_PI)));
+        }
+        best = std::min(best, d);
+      }
+      EXPECT_LT(best, 1e-8) << "trial " << trial;
+    }
+  }
+}
+
+TEST(SphericalWrist, TheRuntimeSolverMatchesTheGeneratedHeaders) {
+  runtime_agrees<varietas_generated::industrial_ik>(varietas_test::industrial_six());
+  runtime_agrees<varietas_generated::skewed_ik>(varietas_test::skewed_wrist_six());
 }
 
 }  // namespace
