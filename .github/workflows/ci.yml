@@ -1,0 +1,67 @@
+name: ci
+
+# Build every package and run every test, on every push and pull request.
+#
+# The build is Release with the assertions left on. Release because the
+# Grobner computations the tests run are too slow unoptimised to fit a timeout,
+# and assertions because they are where the library states what it assumes:
+# an exponent that would wrap, a division that should have been exact, a
+# solution that is not well formed. A Release build defines NDEBUG and turns
+# all of them into nothing, so the flags are set by hand to keep -O2 and drop
+# it.
+#
+# varietas_demo builds too, which runs the reconstruction of its solver from
+# fixed poses as part of the build. That takes most of a minute and is the
+# point: the demonstration compiles against varietas's own output, so an
+# emitter or a reconstruction that regresses fails here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    container: ros:humble-ros-base
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      # rviz2 and robot_state_publisher are needed to run the demonstrations,
+      # not to build them, and nothing here runs them.
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install --from-paths . --ignore-src -y \
+            --skip-keys "rviz2 robot_state_publisher"
+
+      - name: Build
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --event-handlers console_cohesion+ \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_FLAGS_RELEASE=-O2"
+
+      - name: Test
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon test --return-code-on-test-failure --event-handlers console_cohesion+
+          colcon test-result --verbose
+
+      - name: Keep the test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/*/test_results
+          if-no-files-found: ignore

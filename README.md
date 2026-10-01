@@ -1,5 +1,7 @@
 # varietas
 
+[![ci](https://github.com/HanielUlises/varietas/actions/workflows/ci.yml/badge.svg)](https://github.com/HanielUlises/varietas/actions/workflows/ci.yml) [![docs](https://github.com/HanielUlises/varietas/actions/workflows/docs.yml/badge.svg)](https://hanielulises.github.io/varietas/)
+
 **Algebraic kinematics for ROS 2.** Exact inverse kinematics, workspace implicitization, and singularity variety decomposition via Gröbner bases and elimination theory.
 
 <p align="center">

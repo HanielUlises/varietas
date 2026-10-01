@@ -15,7 +15,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>varietas_core</depend>
-  <depend>libgmp-dev</depend>
+  <depend>libgmp</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
 

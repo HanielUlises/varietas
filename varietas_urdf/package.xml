@@ -23,7 +23,7 @@
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>kdl_parser</test_depend>
-  <test_depend>orocos_kdl</test_depend>
+  <test_depend>orocos_kdl_vendor</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
