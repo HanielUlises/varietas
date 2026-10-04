@@ -62,7 +62,17 @@ suggests; it does not *find* the branches.
 turn ``split_along`` into a **decomposition proper**, a singular locus reported
 as its irreducible components rather than as one ideal the caller has to probe.
 
-**Status.** Not begun. It is a project of its own.
+**Status.** Begun, from the bottom. :cpp:func:`varietas::squarefree_decomposition`
+works in any number of variables, and :cpp:func:`varietas::factor_univariate`
+factors completely in one, by Zassenhaus's algorithm with an exact
+recombination (:doc:`api/codegen`). What remains is the lifting that turns the
+second into a multivariate factorisation: specialise all variables but one at
+integers that keep the degree and the squarefreeness, factor the univariate
+image, distribute the leading coefficient among the factors, and lift them
+back one variable at a time by multivariate Hensel lifting, in the manner of
+Wang. The exponential recombination of the univariate step, visible on the
+polynomials of Swinnerton-Dyer, is the other half of what is missing; van
+Hoeij's lattice reduction is the cure.
 
 Not on the roadmap
 ==================

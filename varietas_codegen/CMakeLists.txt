@@ -47,6 +47,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_modular_gcd test/test_modular_gcd.cpp)
   target_link_libraries(test_modular_gcd ${PROJECT_NAME})
 
+  ament_add_gtest(test_factor test/test_factor.cpp)
+  target_link_libraries(test_factor ${PROJECT_NAME})
+
   ament_add_gtest(test_reconstruct test/test_reconstruct.cpp)
   target_link_libraries(test_reconstruct ${PROJECT_NAME})
 

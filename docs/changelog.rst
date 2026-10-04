@@ -21,6 +21,16 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
 * ``reconstruction::reconstruct``, which recovers rational functions from their
   values modulo primes.
 
+.. rubric:: Factorisation
+
+* ``squarefree_decomposition``, Yun's algorithm over :math:`\Q` in any number
+  of variables, on the modular gcd and its cofactors.
+* ``factor_univariate``, Zassenhaus's algorithm: Cantor–Zassenhaus modulo the
+  best of five primes, quadratic Hensel lifting down a factor tree, and a
+  recombination whose acceptance test is exact rather than a trial. It agrees
+  with SymPy on three hundred random products, and finds the polynomials of
+  Swinnerton-Dyer irreducible.
+
 .. rubric:: Inverse kinematics
 
 * ``reconstructed_position_ik``, the parametric solve recovered from fixed-pose

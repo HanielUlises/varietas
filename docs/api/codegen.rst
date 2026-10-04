@@ -83,6 +83,52 @@ Modular gcd
 
    The gcd alone.
 
+Factorisation
+=============
+
+``varietas/codegen/factor.hpp``
+
+.. cpp:struct:: template<class Poly> factorisation
+
+   :math:`f = u\,g_1^{e_1}\cdots g_k^{e_k}`: the ``unit`` :math:`u`, the
+   leading coefficient of :math:`f`, and the ``factors`` as
+   ``factor_power{base, multiplicity}``, each base monic under the order.
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  factorisation<polynomial<rational, N, Order>> \
+                  squarefree_decomposition(const polynomial<rational, N, Order>& f)
+
+   :math:`f = u\,g_1 g_2^2\cdots g_k^k` with the :math:`g_i` squarefree and
+   pairwise coprime, one for each multiplicity that occurs, in **any number of
+   variables**. The content with respect to the first variable is decomposed
+   recursively, and the primitive part by Yun's algorithm, whose gcds are
+   :cpp:func:`varietas::modular_gcd_with_cofactors` and whose divisions are the
+   cofactors those return.
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  factorisation<polynomial<rational, N, Order>> \
+                  factor_univariate(const polynomial<rational, N, Order>& f)
+
+   The factorisation into irreducibles over :math:`\Q` of an :math:`f`
+   involving **at most one** of the variables, by Zassenhaus's algorithm. Each
+   squarefree part is made a primitive integer polynomial and reduced modulo the
+   prime, of the first five that keep it squarefree, at which it has the fewest
+   factors; it is factored there by distinct-degree and Cantor–Zassenhaus
+   splitting, the factors are lifted by quadratic Hensel steps down a factor tree
+   to :math:`p^l > 2B`, :math:`B` being Mignotte's bound scaled by the leading
+   coefficient, and recombined.
+
+   The recombination is **exact**: a subset is accepted only when the 1-norms of
+   it and its cofactor, read symmetrically modulo :math:`p^l`, multiply to at most
+   :math:`B`, which forces their product to equal the polynomial over
+   :math:`\mathbb{Z}`. Its cost is exponential in the number of modular factors
+   when the polynomial is irreducible but splits finely modulo every prime, as the
+   polynomials of Swinnerton-Dyer do; a constant-term divisibility test discards
+   most candidates before any product is formed, and van Hoeij's lattice
+   reduction, which removes the exponential, is not implemented.
+
+   A polynomial in more than one variable is a precondition violation.
+
 Reconstruction
 ==============
 

@@ -147,8 +147,9 @@ std::vector<polynomial<Coeff, N, Order>> saturate_by_product(
 // It is not a primary decomposition. The pieces are not irreducible, they are
 // not primary, and nothing here chooses h; a real decomposition algorithm
 // finds its own splittings, and finding them needs factorisation of
-// multivariate polynomials over Q, which varietas does not have and which is a
-// project of its own. What the caller gets is the ability to say "separate the
+// multivariate polynomials over Q, which varietas does not yet have: the
+// squarefree decomposition and the univariate factorisation it will be lifted
+// from are in varietas/codegen/factor.hpp. What the caller gets is the ability to say "separate the
 // configurations where this vanishes from the ones where it does not" and have
 // the two answers be exact and exhaustive.
 //

@@ -335,7 +335,7 @@ Two negative results are worth as much as the positive one.
 
 **A non-radical image.** The pinched torus, where the offset equals the tool length, is singular on the circle $c_2=-1$, all of which maps to the origin, and the elimination returns $x$, $y$ and $z^2$, not $z$. The variety is the single point the Closure Theorem promises, but the ideal is not radical, and the square is not noise: the arm reaches the pinch tangentially in $z$, and the elimination ideal has kept the order of contact that the set alone forgot. Taking a radical would discard it, and varietas cannot take one anyway.
 
-What is deliberately not claimed is a primary decomposition. `split_along` is exact and exhaustive but the caller chooses $h$, and an algorithm that finds its own splittings needs multivariate factorisation over $\mathbb{Q}$, which is a project of its own and not yet begun. What the library offers is the ideal, its dimension, its image in the workspace, and the ability to separate a branch on a divisor the geometry suggests.
+What is deliberately not claimed is a primary decomposition. `split_along` is exact and exhaustive but the caller chooses $h$, and an algorithm that finds its own splittings needs multivariate factorisation over $\mathbb{Q}$, a project of its own that has begun with the univariate case and the squarefree decomposition but does not yet reach several variables. What the library offers is the ideal, its dimension, its image in the workspace, and the ability to separate a branch on a divisor the geometry suggests.
 
 ---
 
@@ -363,7 +363,7 @@ What is deliberately not claimed is a primary decomposition. `split_along` is ex
 | Modular gcd over $\mathbb{Q}(\boldsymbol{p})$ | complete, by Brown's dense algorithm certified by exact division |
 | Parametric solve reconstructed from fixed poses | complete, checked exactly at rational poses |
 | Newton refinement in the generated solver | complete |
-| Factorisation over $\mathbb{Q}$ | not begun |
+| Factorisation over $\mathbb{Q}$ | begun: squarefree decomposition in any number of variables, factorisation into irreducibles in one |
 
 `emit` takes a system solved over $\mathbb{Q}(\boldsymbol{p})$, with the pose adjoined to the coefficient field rather than to the polynomial ring so that one basis answers every pose instead of one basis per pose, and writes a header. It holds the action matrices as expressions in the pose, the coordinates of each variable's normal form (a variable is usually not a standard monomial, having been reduced away), the `order_id` the basis was computed under, and a guard on every denominator, so a pose on the locus the parametric basis fails to describe is refused rather than answered with infinities.
 
