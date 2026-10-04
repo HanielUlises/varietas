@@ -3,104 +3,109 @@
      the KUKA LBR iiwa model shipped with pybullet_data in bulletphysics/bullet3
      (zlib licence). Mesh visuals have been replaced by primitives so that the
      fixture is self-contained and renders without any mesh files; the geometry
-     the library consumes -- the joint origins -- is unchanged. -->
+     the library consumes, the joint origins, is unchanged.
+
+     Each link carries one material. RViz on Humble draws every visual of a
+     link in the material of its first one, so a link given a grey segment and
+     an orange joint sphere renders both grey; the materials here alternate
+     between links instead, which is what the renderer actually shows. -->
 <robot name="lbr_iiwa14">
   <link name="lbr_iiwa_link_0">
     <visual>
-      <origin xyz="0 0 0.07875" rpy="0.000000000 0.000000000 0.000000000"/>
-      <geometry><cylinder radius="0.045" length="0.157500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.04"/></geometry>
+      <material name="iiwa_dark"><color rgba="0.27 0.29 0.33 1"/></material>
     </visual>
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <origin xyz="0 0 0.07875" rpy="0.000000000 0.000000000 0.000000000"/>
+      <geometry><cylinder radius="0.062" length="0.157500"/></geometry>
+      <material name="iiwa_dark"><color rgba="0.27 0.29 0.33 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_1">
     <visual>
       <origin xyz="0 0 0.10125" rpy="0.000000000 0.000000000 0.000000000"/>
-      <geometry><cylinder radius="0.045" length="0.202500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.202500"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_2">
     <visual>
       <origin xyz="0 0.10225 0" rpy="0.000000000 1.570796327 1.570796327"/>
-      <geometry><cylinder radius="0.045" length="0.204500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.204500"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_3">
     <visual>
       <origin xyz="0 0 0.10775" rpy="0.000000000 0.000000000 0.000000000"/>
-      <geometry><cylinder radius="0.045" length="0.215500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.215500"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_4">
     <visual>
       <origin xyz="0 0.09225 0" rpy="0.000000000 1.570796327 1.570796327"/>
-      <geometry><cylinder radius="0.045" length="0.184500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.184500"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_5">
     <visual>
       <origin xyz="0 0 0.10775" rpy="0.000000000 0.000000000 0.000000000"/>
-      <geometry><cylinder radius="0.045" length="0.215500"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.215500"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_light"><color rgba="0.86 0.87 0.89 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_6">
     <visual>
       <origin xyz="0 0.0405 0" rpy="0.000000000 1.570796327 1.570796327"/>
-      <geometry><cylinder radius="0.045" length="0.081000"/></geometry>
-      <material name="steel"><color rgba="0.72 0.73 0.75 1"/></material>
+      <geometry><cylinder radius="0.062" length="0.081000"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><sphere radius="0.078"/></geometry>
+      <material name="iiwa_mid"><color rgba="0.62 0.65 0.70 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>
   <link name="lbr_iiwa_link_7">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.06"/></geometry>
-      <material name="joint"><color rgba="0.90 0.49 0.13 1"/></material>
+      <geometry><cylinder radius="0.05" length="0.03"/></geometry>
+      <material name="iiwa_dark"><color rgba="0.27 0.29 0.33 1"/></material>
     </visual>
     <inertial><mass value="1"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
   </link>

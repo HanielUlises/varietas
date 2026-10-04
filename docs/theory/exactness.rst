@@ -98,16 +98,17 @@ stores.
    :alt: A KUKA LBR iiwa driven from the chain varietas recovered from its URDF
 
    The iiwa posed by ``robot_state_publisher`` from the decimals in the URDF,
-   and the closed curve its tool traces over one full period of the sweep, held
-   whole rather than trailing behind the tool, so that the arm is seen moving
-   through a fixed object. The green marker is the tool pose computed by
-   varietas from the exactly recovered chain, and what the recording shows is
-   that it stays on the arm the file poses and on the curve it drew, at every
-   configuration of the sweep. How closely the two agree it does not show, and
-   no image could: the figure is drawn at under three millimetres to the pixel
-   and the disagreement is :math:`10^{-12}` metres. The orange spheres are the
-   URDF's own, drawn at every joint origin, so the one beside the marker is
-   the wrist, not a second estimate of the tool pose.
+   its seven links in alternating tones with a housing at every joint, and the
+   closed loop its tool traces over one full period of the sweep, held whole
+   rather than trailing behind the tool, so that the arm is seen moving through
+   a fixed object: the base turns it through about sixty degrees either way
+   while the shoulder, elbow and wrist reach out and fold back. The green
+   marker is the tool pose computed by varietas from the exactly recovered
+   chain, and what the recording shows is that it stays on the arm the file
+   poses and on the curve it drew, at every configuration of the sweep. How
+   closely the two agree it does not show, and no image could: the figure is
+   drawn at under three millimetres to the pixel and the disagreement is
+   :math:`10^{-12}` metres.
 
 That the two coincide is measured rather than seen. The demonstration looks up
 the transform ``robot_state_publisher`` derives from the file and compares it

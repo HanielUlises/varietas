@@ -188,15 +188,15 @@ The search is therefore projective: divide by the largest entry, then approximat
 </p>
 
 <p align="center">
-  <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF, and
-  the closed curve its tool traces over one full period of the sweep, held whole rather than trailing
-  behind the tool, so that the arm is seen moving through a fixed object. The green marker is the tool
-  pose computed by varietas from the exactly recovered chain, and what the recording shows is that it
-  stays on the arm the file poses and on the curve it drew, at every configuration of the sweep. How
-  closely the two agree it does not show, and no image could: the figure is drawn at under three
-  millimetres to the pixel and the disagreement is $10^{-12}$ metres. That number is measured rather
-  than seen, below. The orange spheres are the URDF's own, drawn at every joint origin, so the
-  one beside the marker is the wrist, not a second estimate of the tool pose.</em>
+  <em><strong>Figure 3.</strong> The iiwa posed by <code>robot_state_publisher</code> from the decimals in the URDF, its
+  seven links in alternating tones with a housing at every joint, and the closed loop its tool traces
+  over one full period of the sweep, held whole rather than trailing behind the tool, so that the arm
+  is seen moving through a fixed object: the base turns it through about sixty degrees either way
+  while the shoulder, elbow and wrist reach out and fold back. The green marker is the tool pose
+  computed by varietas from the exactly recovered chain, and what the recording shows is that it stays
+  on the arm the file poses and on the curve it drew, at every configuration of the sweep. How closely
+  the two agree it does not show, and no image could: the figure is drawn at under three millimetres
+  to the pixel and the disagreement is $10^{-12}$ metres. That number is measured rather than seen, below.</em>
 </p>
 
 That the two coincide is measured rather than seen. The demonstration looks up the transform `robot_state_publisher` derives from the file and compares it against the pose computed from the exact chain at the same instant, and the agreement is $10^{-12}$ metres, which is the file's truncated $\pi$ propagated through seven joints and a metre of reach. The unit suite makes the same comparison against KDL over two hundred random configurations, off-line and with no timing to confound it.

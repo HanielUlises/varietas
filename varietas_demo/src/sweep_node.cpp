@@ -15,6 +15,7 @@
 // out where the marker is built. verify() measures it instead and prints the
 // number, which is the honest place for a quantity of that size.
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <memory>
@@ -137,20 +138,35 @@ class sweep_node : public rclcpp::Node {
   // verification below needs that: it has to compare our pose against the
   // reference at the same instant, not merely at about the same time.
   //
-  // Each joint runs on its own frequency, scaled into its limits, so the arm
-  // covers a large part of its configuration space rather than one plane. The
-  // frequencies are whole multiples of the fundamental, which makes the whole
-  // trajectory periodic with exactly `period`: a recording one period long then
-  // closes on itself.
+  // Every joint runs at the fundamental frequency, so the trajectory is
+  // periodic with exactly `period` and the tool traces the image of a circle:
+  // one closed loop, which a recording one period long shows whole. The base
+  // turns the arm through about sixty degrees either way, and the shoulder,
+  // elbow and wrist nod a quarter period behind it, so that the arm reaches
+  // out on one side and folds back on the other and the loop is a tilted rim
+  // around the base rather than a flat arc.
+  //
+  // It used to run the joints on the first three harmonics, scaled to most of
+  // each joint's range. That covers more of the configuration space and makes
+  // a worse picture: the tool path crossed itself a dozen times, the curve
+  // filled the frame, and the arm was lost inside it.
+  //
+  // The angles are those of a seven-joint arm like the iiwa, centred on a
+  // ready pose with the elbow bent, and they are clamped into each joint's
+  // limits so that any other model is still driven inside its range.
   std::vector<double> configuration_at(double t) const {
-    static constexpr int kHarmonic[] = {1, 2, 3, 1, 2, 3, 1};
+    static constexpr double kQuarter = M_PI / 2.0;
+    static constexpr double kCentre[] = {0.0, 0.55, 0.0, -1.30, 0.0, 0.90, 0.0};
+    static constexpr double kAmplitude[] = {1.05, 0.35, 0.25, 0.35, 0.30, 0.30, 1.20};
+    static constexpr double kPhase[] = {0.0,      kQuarter,       0.0, kQuarter + 0.5,
+                                        kQuarter, kQuarter + 1.0, 0.0};
+    static constexpr std::size_t kTable = sizeof(kCentre) / sizeof(double);
     std::vector<double> values(names_.size());
     for (std::size_t i = 0; i < values.size(); ++i) {
-      const int harmonic = kHarmonic[i % (sizeof(kHarmonic) / sizeof(int))];
-      const double phase = 2.0 * M_PI * harmonic * t / period_;
-      const double centre = 0.5 * (lower_[i] + upper_[i]);
-      const double amplitude = 0.38 * (upper_[i] - lower_[i]);
-      values[i] = centre + amplitude * std::sin(phase + 0.7 * static_cast<double>(i));
+      const std::size_t k = i % kTable;
+      const double angle = 2.0 * M_PI * t / period_ + kPhase[k];
+      const double value = kCentre[k] + kAmplitude[k] * std::sin(angle);
+      values[i] = std::clamp(value, lower_[i], upper_[i]);
     }
     return values;
   }
