@@ -116,14 +116,31 @@ tangentially in :math:`z`, and the elimination ideal has kept the order of
 contact that the set alone forgot. Taking a radical would discard it, and
 varietas cannot take one anyway.
 
+Pieces found rather than suggested
+==================================
+
+:cpp:func:`varietas::split_along` separates the locus along a divisor the caller
+names. :cpp:func:`varietas::decompose` names its own: it factors the elements of
+the reduced basis over :math:`\Q`, splits along the factors, and repeats on each
+piece until no basis element factors. The branch for the :math:`i`-th factor
+carries the earlier factors as polynomials that do not vanish on what it is
+responsible for, so that the pieces do not repeat one another, and the union of
+the pieces is the singular locus exactly.
+
+On the anthropomorphic arm, a base about :math:`z` with a shoulder and an elbow
+about :math:`y`, the determinant of the position Jacobian is
+:math:`s_3\,(c_2 + c_{23})`. The decomposition returns three pieces of dimension
+two: the elbow straight, the elbow folded, and the tool on the base axis with
+the elbow free. With equal links the folded elbow also puts the tool on the
+axis, and the branch that reaches it a second time is recognised as covered.
+
 What is not claimed
 ===================
 
-A primary decomposition. :cpp:func:`varietas::split_along` is exact and
-exhaustive, but the caller chooses :math:`h`, and an algorithm that finds its own
-splittings needs multivariate factorisation over :math:`\Q`, which
-:cpp:func:`varietas::factor` now provides, and an algorithm that splits along
-the factors it finds, which is not yet written (:doc:`../roadmap`).
-
-What the library offers is the ideal, its dimension, its image in the workspace,
-and the ability to separate a branch on a divisor the geometry suggests.
+A prime decomposition. A piece is a variety none of whose basis elements
+factors over :math:`\Q`, which is weaker than irreducible: a component that
+only separates over an extension of :math:`\Q`, or that no single basis element
+shows, stays inside its piece (:doc:`../roadmap`). The decomposition is also of
+the variety, not of the ideal, so the pinched torus's :math:`z^2` becomes
+:math:`z` in it, and the order of contact is left to the image ideal, which
+keeps it.

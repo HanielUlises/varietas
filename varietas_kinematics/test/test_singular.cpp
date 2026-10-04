@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include "varietas/codegen/decompose.hpp"
 #include "varietas/codegen/rational.hpp"
 #include "varietas/core/ideal/dimension.hpp"
 #include "varietas/core/ideal/ideal.hpp"
@@ -89,6 +90,25 @@ chain<rational> torus_arm(std::int64_t major) {
   robot.add_joint(revolute_joint<rational>(
       "q2", vector3<rational>::unit(1),
       rigid_transform<rational>::translation_only(point(major, 0, 0))));
+  robot.set_tool(rigid_transform<rational>::translation_only(point(1, 0, 0)));
+  return robot;
+}
+
+// A base about z, then a shoulder and an elbow about y, with unit links: the
+// anthropomorphic arm. Its position singularities are known in closed form.
+// The elbow is singular straight or folded, and the shoulder is singular
+// wherever the tool is on the base axis, since the base then turns the tool
+// about itself and moves it nowhere. With equal links the folded elbow puts
+// the tool on the axis too, so it is a singularity of both kinds.
+chain<rational> anthropomorphic() {
+  chain<rational> robot("anthropomorphic_3r");
+  robot.add_joint(revolute_joint<rational>("q1", vector3<rational>::unit(2),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>("q2", vector3<rational>::unit(1),
+                                           rigid_transform<rational>::identity()));
+  robot.add_joint(revolute_joint<rational>(
+      "q3", vector3<rational>::unit(1),
+      rigid_transform<rational>::translation_only(point(1, 0, 0))));
   robot.set_tool(rigid_transform<rational>::translation_only(point(1, 0, 0)));
   return robot;
 }
@@ -258,6 +278,87 @@ TEST(singular, splitting_separates_the_straight_elbow_from_the_folded_one) {
     EXPECT_TRUE(straight.contains(g));
     EXPECT_TRUE(folded.contains(g));
   }
+}
+
+// --- decomposition ----------------------------------------------------------
+
+TEST(singular, the_decomposition_finds_the_straight_and_the_folded_elbow_unprompted) {
+  // The same two branches the splitting above separated along c2 - 1, which
+  // the caller had to know to name. The reduced basis contains c2^2 - 1,
+  // whose factors are the straight elbow and the folded one, and the
+  // decomposition splits along them without being told.
+  const auto basis = varietas::singular_ideal<6>(planar_three_link(),
+                                                 varietas::planar_pose_rows());
+  const auto pieces = varietas::decompose(basis);
+  ASSERT_EQ(pieces.size(), 2u);
+
+  const joint_polynomial<6> one = joint_polynomial<6>::constant(q(1));
+  std::vector<joint_polynomial<6>> straight = circles<6>(3);
+  straight.push_back(cosine<6>(1) - one);
+  straight.push_back(sine<6>(1));
+  std::vector<joint_polynomial<6>> folded = circles<6>(3);
+  folded.push_back(cosine<6>(1) + one);
+  folded.push_back(sine<6>(1));
+  const auto straight_basis = varietas::ideal<rational, 6, grevlex>(straight).basis();
+  const auto folded_basis = varietas::ideal<rational, 6, grevlex>(folded).basis();
+  EXPECT_TRUE((pieces[0].basis == straight_basis && pieces[1].basis == folded_basis) ||
+              (pieces[0].basis == folded_basis && pieces[1].basis == straight_basis));
+  for (const auto& piece : pieces) {
+    EXPECT_EQ(piece.dimension.dimension, 2u);
+  }
+}
+
+TEST(singular, the_anthropomorphic_arm_is_singular_on_three_pieces) {
+  // det J = s3 (c2 + c23), with c23 = c2 c3 - s2 s3. The first factor is the
+  // elbow, which s3 = 0 splits into straight and folded; the second is the
+  // tool on the base axis. The second contains the folded elbow as well,
+  // since equal links folded put the tool on the axis, and what is left of it
+  // is the curve q2 + q3 / 2 = +-pi / 2 with the elbow not folded. Three
+  // pieces, each a torus's worth of base angle times a curve, so each of
+  // dimension two.
+  const auto basis = varietas::singular_ideal<6>(anthropomorphic(), varietas::position_rows());
+  varietas::decomposition_statistics statistics;
+  const auto pieces = varietas::decompose(basis, &statistics);
+  ASSERT_EQ(pieces.size(), 3u);
+
+  const joint_polynomial<6> one = joint_polynomial<6>::constant(q(1));
+  const joint_polynomial<6> on_axis =
+      cosine<6>(1) + cosine<6>(1) * cosine<6>(2) - sine<6>(1) * sine<6>(2);
+  int straight = 0;
+  int folded = 0;
+  int shoulder = 0;
+  for (const auto& piece : pieces) {
+    EXPECT_EQ(piece.dimension.dimension, 2u);
+    const varietas::ideal<rational, 6, grevlex> branch(piece.basis);
+    if (branch.contains(cosine<6>(2) - one)) {
+      ++straight;
+      EXPECT_TRUE(branch.contains(sine<6>(2)));
+    } else if (branch.contains(cosine<6>(2) + one)) {
+      ++folded;
+      EXPECT_TRUE(branch.contains(sine<6>(2)));
+    } else {
+      ++shoulder;
+      EXPECT_TRUE(branch.contains(on_axis)) << "the tool is on the base axis";
+      EXPECT_FALSE(branch.contains(sine<6>(2))) << "and the elbow is free to bend";
+    }
+  }
+  EXPECT_EQ(straight, 1);
+  EXPECT_EQ(folded, 1);
+  EXPECT_EQ(shoulder, 1);
+  // The folded elbow is reached twice, from the elbow and from the shoulder,
+  // and the second time is recognised as already held.
+  EXPECT_GE(statistics.covered + statistics.redundant, 1u);
+}
+
+TEST(singular, decomposing_the_pinched_image_forgets_the_order_of_contact) {
+  // The decomposition is of the variety, so the z^2 the elimination kept at the
+  // pinch becomes z: the same point, without the tangency.
+  const auto relations =
+      varietas::singular_workspace_relations<4>(torus_arm(1), varietas::position_rows());
+  const auto pieces = varietas::decompose(relations);
+  ASSERT_EQ(pieces.size(), 1u);
+  EXPECT_EQ(pieces[0].basis, (varietas::ideal<rational, 3, grevlex>({x(), y(), z()}).basis()));
+  EXPECT_TRUE(pieces[0].dimension.is_zero_dimensional());
 }
 
 // --- the image in the workspace --------------------------------------------

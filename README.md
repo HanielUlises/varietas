@@ -335,7 +335,7 @@ Two negative results are worth as much as the positive one.
 
 **A non-radical image.** The pinched torus, where the offset equals the tool length, is singular on the circle $c_2=-1$, all of which maps to the origin, and the elimination returns $x$, $y$ and $z^2$, not $z$. The variety is the single point the Closure Theorem promises, but the ideal is not radical, and the square is not noise: the arm reaches the pinch tangentially in $z$, and the elimination ideal has kept the order of contact that the set alone forgot. Taking a radical would discard it, and varietas cannot take one anyway.
 
-What is deliberately not claimed is a primary decomposition. `split_along` is exact and exhaustive but the caller chooses $h$, and an algorithm that finds its own splittings needs multivariate factorisation over $\mathbb{Q}$, which varietas now has in `factor`, and an algorithm that splits along the factors it finds, which it does not have yet. What the library offers is the ideal, its dimension, its image in the workspace, and the ability to separate a branch on a divisor the geometry suggests.
+`decompose` finds the branches itself. It factors the basis elements of the ideal over $\mathbb{Q}$, splits along the factors, and repeats on every piece until nothing factors, keeping each branch off the ones before it so that the pieces do not repeat one another; their union is the variety exactly. On the anthropomorphic arm it returns the straight elbow, the folded elbow and the tool on the base axis, each of dimension two, and it sees that the folded elbow is a shoulder singularity as well and reports it once. What is deliberately not claimed is a prime decomposition. A piece is a variety none of whose basis elements factors over $\mathbb{Q}$, which a component that only splits over an extension, or only in combination, can still hide inside.
 
 ---
 
@@ -364,7 +364,8 @@ What is deliberately not claimed is a primary decomposition. `split_along` is ex
 | Parametric solve reconstructed from fixed poses | complete, checked exactly at rational poses |
 | Newton refinement in the generated solver | complete |
 | Factorisation over $\mathbb{Q}$ | complete, in any number of variables, by Zassenhaus's algorithm and Hensel lifting |
-| Decomposition along the factors | not begun |
+| Decomposition along the factors | complete: an exact union of pieces none of whose basis elements factors over $\mathbb{Q}$ |
+| Irreducible components | not begun |
 
 `emit` takes a system solved over $\mathbb{Q}(\boldsymbol{p})$, with the pose adjoined to the coefficient field rather than to the polynomial ring so that one basis answers every pose instead of one basis per pose, and writes a header. It holds the action matrices as expressions in the pose, the coordinates of each variable's normal form (a variable is usually not a standard monomial, having been reduced away), the `order_id` the basis was computed under, and a guard on every denominator, so a pose on the locus the parametric basis fails to describe is refused rather than answered with infinities.
 
@@ -435,4 +436,4 @@ The pose has to be exact, and that is not a formality either. A target assembled
 
 The last thing worth knowing is that asking for a full pose from an arm with too few joints is not a harmless over-specification. The poses a three-joint arm can strike form a three-dimensional subvariety of a six-dimensional space, so a target moved even slightly off it is unreachable in the strict sense: the ideal becomes the unit ideal and the answer is no configuration at all, rather than a configuration that nearly works. `urdf_solve` says so in those words. Asking such an arm for a position instead returns the four postures it genuinely has: the same four the decoupled generated solver returns, by an entirely different computation, which is the cross-check the two paths give each other.
 
-Factorisation over $\mathbb{Q}$ is done, and splitting along the factors it finds is what would turn `split_along` into a decomposition proper.
+Factorisation over $\mathbb{Q}$ is done and the decomposition along its factors is done; the irreducible components, which need a prime decomposition and factorisation over extensions of $\mathbb{Q}$, are what is left.

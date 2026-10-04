@@ -54,6 +54,8 @@ refuses, the last being the largest part, and deliberately.
    * - Factorisation over :math:`\Q`
      - complete, any number of variables
    * - Decomposition along the factors
+     - complete, exact union; pieces not yet irreducible
+   * - Irreducible components
      - not begun
 
 The unfinished row is :doc:`roadmap`.

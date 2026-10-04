@@ -157,6 +157,34 @@ Factorisation
    algorithm, which costs lifting to the degree of :math:`l f` rather than of
    :math:`f`. Counters are in ``factor_counters()``.
 
+Decomposition
+=============
+
+``varietas/codegen/decompose.hpp``
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<variety_piece<N, Order>> \
+                  decompose(const std::vector<polynomial<rational, N, Order>>& generators, \
+                            decomposition_statistics* statistics = nullptr)
+
+   :math:`\V(I)` as a union of pieces, each a reduced Gröbner basis under
+   ``Order`` none of whose elements factors over :math:`\Q`, together with its
+   :cpp:struct:`affine_dimension`, largest first. An empty variety gives no
+   pieces.
+
+   It is the factorising Gröbner basis algorithm. When a basis element factors as
+   :math:`p_1 \cdots p_k`, the branch for :math:`p_i` is the ideal with
+   :math:`p_i` adjoined and carries :math:`p_1, \dots, p_{i-1}` as polynomials
+   that do not vanish on what it is responsible for. A branch is dropped when its
+   ideal is the unit ideal or contains one of those, and saturated by their
+   product before it is reported. A piece whose ideal contains another's is
+   dropped at the end.
+
+   The union of the pieces is :math:`\V(I)` **exactly**. The pieces are **not**
+   the irreducible components: factors over extensions of :math:`\Q` are not
+   found, and reducibility no single basis element shows is not seen. The
+   decomposition is of the variety, so repeated factors are taken once.
+
 Reconstruction
 ==============
 

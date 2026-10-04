@@ -50,6 +50,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_factor test/test_factor.cpp)
   target_link_libraries(test_factor ${PROJECT_NAME})
 
+  ament_add_gtest(test_decompose test/test_decompose.cpp)
+  target_link_libraries(test_decompose ${PROJECT_NAME})
+
   ament_add_gtest(test_reconstruct test/test_reconstruct.cpp)
   target_link_libraries(test_reconstruct ${PROJECT_NAME})
 

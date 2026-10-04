@@ -37,6 +37,11 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
   falls back to power series and recombination. It agrees with SymPy on six
   hundred random products in two and three variables, and factors products of
   about 1800 terms in six variables in a second or two.
+* ``decompose``, the factorising Gröbner basis algorithm: a variety split along
+  the factors of its basis elements until none factors, each branch kept off
+  the ones before it, and the union exact. The singular locus of the
+  anthropomorphic arm comes back as the straight elbow, the folded elbow and the
+  tool on the base axis, found rather than named.
 
 .. rubric:: Inverse kinematics
 

@@ -51,22 +51,23 @@ a vector of machine words. Since the samples share their shape, the sequence of
 reductions from one sample could also be replayed on the next without the
 pair selection that found it.
 
-A decomposition that finds its own splittings
-=============================================
+Irreducible components
+======================
 
-**Why.** :cpp:func:`varietas::split_along` is exact and exhaustive, but the
-caller chooses the divisor :math:`h`. It separates a branch the geometry
-suggests; it does not *find* the branches.
+**Why.** :cpp:func:`varietas::decompose` finds its own splittings now, and a
+singular locus comes back as pieces rather than as one ideal the caller has to
+probe: on the anthropomorphic arm, the straight elbow, the folded elbow, and the
+tool on the base axis. But a piece is only a variety none of whose basis
+elements factors over :math:`\Q`, and that is weaker than irreducible in two
+ways. A factorisation over an extension of :math:`\Q` is not seen, so
+:math:`y^2 - 2x^2` is one piece though it is two planes; and reducibility that
+no single basis element shows is not seen either.
 
-**What is needed.** The factorisation it needed is done:
-:cpp:func:`varietas::factor` factors over :math:`\Q` in any number of variables
-(:doc:`api/codegen`). What is not done is using it. A generator of the ideal
-that factors as :math:`gh` gives :math:`\V(I) = \V(I + \langle g\rangle) \cup
-\V(I + \langle h\rangle)`, and repeating that on the reduced basis of each piece
-until no basis element factors is the factorising Gröbner basis algorithm. It
-would report a singular locus as pieces none of whose basis elements factor,
-found rather than suggested. Those pieces are not yet irreducible components,
-which take a prime decomposition, and that is a further step.
+**What is needed.** A prime decomposition: the minimal primes of the ideal,
+by the method of Gianni, Trager and Zacharias or of Eisenbud, Huneke and
+Vasconcelos, each reducing to a zero-dimensional problem in general position
+and to factorisation over an algebraic extension of :math:`\Q`. The
+factorisation over :math:`\Q` that both need is in place.
 
 **What the factorisation still lacks.** The leading coefficient in the main
 variable is imposed whole on both halves of each division rather than shared

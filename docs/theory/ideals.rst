@@ -83,5 +83,5 @@ The same machinery gives an exact and exhaustive splitting for *any* :math:`h`:
 returned by :cpp:func:`varietas::split_along` as
 :cpp:struct:`varietas::ideal_splitting`. It separates the branch where
 :math:`h` does not vanish from the branch where it does; it is not a primary
-decomposition, and choosing the :math:`h` among the factors of the generators
-is what :doc:`../roadmap` calls a decomposition that finds its own splittings.
+decomposition. :cpp:func:`varietas::decompose` chooses the :math:`h` itself,
+among the factors of the basis elements, and repeats until none factors.

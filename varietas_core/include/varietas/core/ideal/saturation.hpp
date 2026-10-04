@@ -145,12 +145,11 @@ std::vector<polynomial<Coeff, N, Order>> saturate_by_product(
 // what it has, and it is worth being precise about what it is not.
 //
 // It is not a primary decomposition. The pieces are not irreducible, they are
-// not primary, and nothing here chooses h. A real decomposition algorithm
-// finds its own splittings, and the candidates are the irreducible factors of
-// the generators, which varietas/codegen/factor.hpp computes over Q but which
-// nothing here uses yet. What the caller gets is the ability to say "separate
-// the configurations where this vanishes from the ones where it does not" and
-// have the two answers be exact and exhaustive.
+// not primary, and nothing here chooses h. varietas/codegen/decompose.hpp
+// does choose it, among the irreducible factors of the basis elements, and
+// splits until none factors. What the caller gets here is the ability to say
+// "separate the configurations where this vanishes from the ones where it does
+// not" and have the two answers be exact and exhaustive.
 //
 // It is nonetheless what a decomposition is made of. Applied to the singular
 // locus of an arm with a generator the geometry suggests, the sine of an elbow
