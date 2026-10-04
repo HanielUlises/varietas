@@ -51,28 +51,29 @@ a vector of machine words. Since the samples share their shape, the sequence of
 reductions from one sample could also be replayed on the next without the
 pair selection that found it.
 
-Factorisation over :math:`\Q`
-=============================
+A decomposition that finds its own splittings
+=============================================
 
 **Why.** :cpp:func:`varietas::split_along` is exact and exhaustive, but the
 caller chooses the divisor :math:`h`. It separates a branch the geometry
 suggests; it does not *find* the branches.
 
-**What is needed.** Multivariate factorisation over :math:`\Q`. It is what would
-turn ``split_along`` into a **decomposition proper**, a singular locus reported
-as its irreducible components rather than as one ideal the caller has to probe.
+**What is needed.** The factorisation it needed is done:
+:cpp:func:`varietas::factor` factors over :math:`\Q` in any number of variables
+(:doc:`api/codegen`). What is not done is using it. A generator of the ideal
+that factors as :math:`gh` gives :math:`\V(I) = \V(I + \langle g\rangle) \cup
+\V(I + \langle h\rangle)`, and repeating that on the reduced basis of each piece
+until no basis element factors is the factorising Gröbner basis algorithm. It
+would report a singular locus as pieces none of whose basis elements factor,
+found rather than suggested. Those pieces are not yet irreducible components,
+which take a prime decomposition, and that is a further step.
 
-**Status.** Begun, from the bottom. :cpp:func:`varietas::squarefree_decomposition`
-works in any number of variables, and :cpp:func:`varietas::factor_univariate`
-factors completely in one, by Zassenhaus's algorithm with an exact
-recombination (:doc:`api/codegen`). What remains is the lifting that turns the
-second into a multivariate factorisation: specialise all variables but one at
-integers that keep the degree and the squarefreeness, factor the univariate
-image, distribute the leading coefficient among the factors, and lift them
-back one variable at a time by multivariate Hensel lifting, in the manner of
-Wang. The exponential recombination of the univariate step, visible on the
-polynomials of Swinnerton-Dyer, is the other half of what is missing; van
-Hoeij's lattice reduction is the cure.
+**What the factorisation still lacks.** The leading coefficient in the main
+variable is imposed whole on both halves of each division rather than shared
+out by Wang's method, so the lifting runs to the degree of :math:`l f` rather
+than of :math:`f`. The univariate recombination is exponential in the worst
+case, which the polynomials of Swinnerton-Dyer reach; van Hoeij's lattice
+reduction is the cure.
 
 Not on the roadmap
 ==================

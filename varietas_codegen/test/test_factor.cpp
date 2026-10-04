@@ -1,4 +1,4 @@
-// Factorisation over Q, squarefree and univariate.
+// Factorisation over Q, squarefree, univariate and multivariate.
 //
 // A factorisation has two properties and the tests check both separately. The
 // product has to give back the polynomial, which is easy to test and catches
@@ -9,7 +9,9 @@
 // nothing to do with how this code works; and the polynomials of
 // Swinnerton-Dyer, which are irreducible over Q and split into linear and
 // quadratic factors modulo every prime, so that every subset of the modular
-// factors has to be tried and rejected.
+// factors has to be tried and rejected. In several variables the same roles
+// are played by x^n - y^m, irreducible exactly when n and m are coprime, and by
+// polynomials of degree one in some variable with coprime coefficients.
 
 #include <algorithm>
 #include <array>
@@ -337,6 +339,183 @@ TEST(SquarefreeDecomposition, AFactorFreeOfTheFirstVariableIsFound) {
   EXPECT_EQ(decomposition.factors[1].base, ((x1 * x1 + one) * (x2 - x1)).monic());
   EXPECT_EQ(decomposition.factors[2].multiplicity, 3u);
   EXPECT_EQ(decomposition.factors[2].base, x0);
+}
+
+// Multivariate.
+
+template <class Poly>
+bool same_factors_multivariate(const varietas::factorisation<Poly>& actual,
+                               std::vector<std::pair<Poly, unsigned>> expected) {
+  if (actual.factors.size() != expected.size()) {
+    return false;
+  }
+  for (const auto& [base, multiplicity] : actual.factors) {
+    const auto it = std::find_if(expected.begin(), expected.end(), [&](const auto& e) {
+      return e.first.monic() == base && e.second == multiplicity;
+    });
+    if (it == expected.end()) {
+      return false;
+    }
+    expected.erase(it);
+  }
+  return true;
+}
+
+using bpoly = varietas::polynomial<rational, 2, grevlex>;
+
+TEST(Factor, XToTheNMinusYToTheM) {
+  const bpoly x = bpoly::variable(0);
+  const bpoly y = bpoly::variable(1);
+  const auto pow = [](const bpoly& p, unsigned e) {
+    bpoly r = bpoly::constant(rational(1));
+    for (unsigned i = 0; i < e; ++i) {
+      r = r * p;
+    }
+    return r;
+  };
+  // Coprime exponents: irreducible.
+  for (const auto& [n, m] : std::vector<std::pair<unsigned, unsigned>>{{3, 2}, {5, 3}, {7, 4}}) {
+    const bpoly f = pow(x, n) - pow(y, m);
+    EXPECT_TRUE(same_factors_multivariate(varietas::factor(f), {{f, 1}})) << n << ", " << m;
+  }
+  const auto fourth = varietas::factor(pow(x, 4) - pow(y, 4));
+  EXPECT_TRUE(same_factors_multivariate(fourth, {{x - y, 1}, {x + y, 1}, {x * x + y * y, 1}}));
+  const auto sixth = varietas::factor(pow(x, 6) - pow(y, 4));
+  EXPECT_TRUE(
+      same_factors_multivariate(sixth, {{pow(x, 3) - pow(y, 2), 1}, {pow(x, 3) + pow(y, 2), 1}}));
+}
+
+// The boundary of the workspace of a planar arm with links 2 and 1 is the
+// pair of circles of radii 3 and 1, and its implicit equation is their
+// product.
+TEST(Factor, TheWorkspaceBoundaryOfAPlanarArmIsTwoCircles) {
+  const bpoly x = bpoly::variable(0);
+  const bpoly y = bpoly::variable(1);
+  const bpoly r2 = x * x + y * y;
+  const bpoly outer = r2 - bpoly::constant(rational(9));
+  const bpoly inner = r2 - bpoly::constant(rational(1));
+  const bpoly f = bpoly::constant(make_rational(1, 4)) * outer * inner;
+  const auto factors = varietas::factor(f);
+  EXPECT_EQ(factors.unit, make_rational(1, 4));
+  EXPECT_TRUE(same_factors_multivariate(factors, {{outer, 1}, {inner, 1}}));
+}
+
+// a x_k + b with a and b coprime and free of x_k is irreducible, whatever a
+// and b are. Products of three, each of degree one in a different variable,
+// have to come apart into exactly those, with multiplicities and a content.
+TEST(Factor, ProductsOfPolynomialsLinearInOneVariable) {
+  std::mt19937 rng(41);
+  const tpoly one = tpoly::constant(rational(1));
+  for (int trial = 0; trial < 20; ++trial) {
+    std::vector<std::pair<tpoly, unsigned>> expected;
+    tpoly f = tpoly::constant(make_rational(-3, 7));
+    for (std::size_t k = 0; k < 3; ++k) {
+      tpoly a;
+      tpoly b;
+      // Coefficients free of x_k, coprime, and b nonzero, or the factor would
+      // be x_k times a.
+      do {
+        a = random_trivariate(rng, 2, 3);
+        b = random_trivariate(rng, 2, 4);
+        std::vector<tpoly::term> keep_a;
+        std::vector<tpoly::term> keep_b;
+        for (const auto& t : a.terms()) {
+          if (t.mon[k] == 0) {
+            keep_a.push_back(t);
+          }
+        }
+        for (const auto& t : b.terms()) {
+          if (t.mon[k] == 0) {
+            keep_b.push_back(t);
+          }
+        }
+        a = tpoly(std::move(keep_a));
+        b = tpoly(std::move(keep_b));
+      } while (a.is_zero() || b.is_zero() || varietas::modular_gcd(a, b).degree() != 0);
+      const tpoly g = a * tpoly::variable(k) + b;
+      const unsigned multiplicity = (trial + static_cast<int>(k)) % 3 == 0 ? 2u : 1u;
+      for (unsigned i = 0; i < multiplicity; ++i) {
+        f = f * g;
+      }
+      expected.emplace_back(g, multiplicity);
+    }
+    f = f * (tpoly::variable(1) * tpoly::variable(1) + one);
+    expected.emplace_back(tpoly::variable(1) * tpoly::variable(1) + one, 1u);
+    const auto factors = varietas::factor(f);
+    EXPECT_EQ(expand(factors), f) << "trial " << trial;
+    expect_well_formed(factors);
+    // Two of the factors may coincide up to a constant, which merges them.
+    std::vector<std::pair<tpoly, unsigned>> merged;
+    for (const auto& [g, m] : expected) {
+      auto it = std::find_if(merged.begin(), merged.end(),
+                             [&](const auto& e) { return e.first.monic() == g.monic(); });
+      if (it == merged.end()) {
+        merged.emplace_back(g, m);
+      } else {
+        it->second += m;
+      }
+    }
+    EXPECT_TRUE(same_factors_multivariate(factors, merged)) << "trial " << trial;
+  }
+}
+
+// Every leading coefficient vanishes at the origin, so the point the lifting
+// runs at has to be somewhere else and the factors moved back from it.
+TEST(Factor, TheOriginDoesNotQualify) {
+  const tpoly x = tpoly::variable(0);
+  const tpoly y = tpoly::variable(1);
+  const tpoly z = tpoly::variable(2);
+  const tpoly one = tpoly::constant(rational(1));
+  const tpoly g = x * y + z;
+  const tpoly h = x * z * z + y * y + one;
+  const tpoly k = y * z * x * x + x + z;
+  const auto factors = varietas::factor(g * h * k);
+  EXPECT_TRUE(same_factors_multivariate(factors, {{g, 1}, {h, 1}, {k, 1}}));
+}
+
+// At y = 0, x^2 - y^3 - 1 is x^2 - 1 and splits, though the polynomial does
+// not, so with the point forced to the origin the leading coefficient cannot
+// be imposed on a division into halves and the factors have to be lifted as
+// power series and recombined. The search for a point would have avoided
+// this; the test takes the decision away from it.
+TEST(Factor, RecombinationWhenThePointSplitsAnIrreducibleFactor) {
+  using varietas::factor_detail::lift_and_recombine;
+  const bpoly x = bpoly::variable(0);
+  const bpoly y = bpoly::variable(1);
+  const bpoly one = bpoly::constant(rational(1));
+  const bpoly two = bpoly::constant(rational(2));
+  const bpoly g = x * x - y * y * y - one;
+  const bpoly h = (y + one) * x - y - two;
+
+  const auto before = varietas::factor_counters();
+  const auto alone = lift_and_recombine(g, 0, {x - one, x + one});
+  ASSERT_EQ(alone.size(), 1u);
+  EXPECT_EQ(alone.front().monic(), g.monic());
+
+  // f(x, 0) = (x - 1)(x + 1)(x - 2): three factors, two true ones.
+  const auto both = lift_and_recombine(g * h, 0, {x - one, x + one, x - two});
+  ASSERT_EQ(both.size(), 2u);
+  const bool order = both[0].monic() == g.monic();
+  EXPECT_EQ(both[order ? 0 : 1].monic(), g.monic());
+  EXPECT_EQ(both[order ? 1 : 0].monic(), h.monic());
+  const auto after = varietas::factor_counters();
+  EXPECT_GE(after.series_lifts - before.series_lifts, 2u);
+}
+
+// Nothing to lift: a content with respect to the main variable, a power of a
+// variable, and a unit, around one irreducible factor.
+TEST(Factor, ContentsPowersAndUnits) {
+  const tpoly x = tpoly::variable(0);
+  const tpoly y = tpoly::variable(1);
+  const tpoly z = tpoly::variable(2);
+  const tpoly one = tpoly::constant(rational(1));
+  const tpoly f = tpoly::constant(make_rational(5, 2)) * z * z * z * (y * y - one) *
+                  (y * y - one) * (x * x + y * z + one);
+  const auto factors = varietas::factor(f);
+  EXPECT_EQ(factors.unit, make_rational(5, 2));
+  EXPECT_TRUE(same_factors_multivariate(
+      factors, {{z, 3}, {y - one, 2}, {y + one, 2}, {x * x + y * z + one, 1}}));
+  EXPECT_EQ(expand(factors), f);
 }
 
 }  // namespace

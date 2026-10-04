@@ -2,6 +2,7 @@
 #define VARIETAS_CODEGEN_FACTOR_HPP
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -21,15 +22,15 @@
 
 namespace varietas {
 
-// Factorisation over Q, the first part of it: squarefree decomposition in any
-// number of variables, and complete factorisation into irreducibles in one.
+// Factorisation over Q into irreducibles, in any number of variables.
 //
 // What split_along lacks is the ability to choose its own h, and the
 // irreducible factors of a polynomial are exactly the hypersurfaces a
 // decomposition would split along. Multivariate factorisation is reached
 // through the univariate one, by specialising all but one variable, factoring
-// what is left and lifting the factors back, so the univariate algorithm is
-// where it has to start, and this is it.
+// what is left and lifting the factors back, and the three stages below are
+// those: the squarefree decomposition, the univariate factorisation, and the
+// lifting.
 //
 // The squarefree decomposition is Yun's algorithm, which needs nothing but
 // derivatives and gcds and so works in every number of variables at once: in
@@ -54,8 +55,40 @@ namespace varietas {
 // product of their 1-norms is at most the bound B, and since p^l > 2B that
 // inequality forces g h to equal lc(f) f over Z, not merely modulo p^l. Nothing
 // in the answer is believed on the strength of an image. The construction
-// throughout is the one in chapters 14 and 15 of von zur Gathen and Gerhard,
-// Modern Computer Algebra.
+// is the one in chapters 14 and 15 of von zur Gathen and Gerhard, Modern
+// Computer Algebra.
+//
+// The multivariate factorisation is the same construction one level up, with
+// the ideal of a point in place of the prime. A main variable x is chosen, the
+// others are moved so that a point at which f(x, a) keeps its degree and stays
+// squarefree sits at the origin, f(x, 0) is factored by the univariate
+// algorithm, and the factors are lifted by Hensel's lemma to power series in
+// the other variables, one total degree at a time.
+//
+// What makes the multivariate case hard is the leading coefficient in x,
+// which is a polynomial in the other variables and has to be shared out among
+// the factors before they can be lifted. Wang's algorithm shares it out by
+// factoring it first and reading the shares off the univariate factors at a
+// point chosen for the purpose. Here it is not shared out at all. The
+// univariate factors are divided into two groups, and both products are given
+// the whole leading coefficient l: if the groups correspond to factors a and
+// b of f, then l f is the product of (l / lc(a)) a and (l / lc(b)) b, two
+// polynomials whose leading coefficients are known exactly, and they lift
+// without any choice to make. The primitive part of the first is a, and it is
+// believed only when it divides f. Each group is then factored again inside
+// its own factor, whose leading coefficient is its own share of l, so nothing
+// lifted is ever larger than l f. The price is lifting to the degree of l f
+// rather than of f; in return there is nothing to get wrong.
+//
+// The division into groups fails when the point splits a true factor, so that
+// its univariate image falls into both groups. For that case f / l, which is
+// monic in x over power series since l does not vanish at the origin, is
+// lifted as a product of all the monic univariate factors at once, and the
+// true factors are recovered by trying subsets in increasing size, each
+// candidate l times a product, truncated, and accepted only if its primitive
+// part divides what is left of f. The point is chosen, of a few that qualify,
+// to give the fewest univariate factors, which is usually the number of true
+// ones, and then the division into groups is all that happens.
 //
 // Factors are monic under Order, the normalisation the gcds use, and the unit
 // carries the leading coefficient.
@@ -69,6 +102,13 @@ struct factor_statistics {
   std::size_t true_factors = 0;
   std::size_t subsets = 0;          // candidates through the norm test
   std::size_t precision_bits = 0;   // the largest p^l lifted to
+
+  std::size_t points = 0;           // evaluation points at which a count was taken
+  std::size_t lifted_factors = 0;   // univariate factors lifted, all calls
+  std::size_t lifted_degree = 0;    // the largest total degree lifted to
+  std::size_t trial_divisions = 0;  // multivariate candidates tried
+  std::size_t polynomial_lifts = 0;  // divisions into two groups that lifted
+  std::size_t series_lifts = 0;      // liftings that fell back to power series
 };
 
 inline factor_statistics& factor_counters() {
@@ -676,8 +716,8 @@ factorisation<polynomial<rational, N, Order>> squarefree_decomposition(
 // The factorisation into irreducibles over Q of a nonzero f involving at most
 // one of the N variables. The factors are monic and distinct, ordered by
 // multiplicity and then by degree, and the unit is the leading coefficient of
-// f. A polynomial in more than one variable is a precondition violation, not
-// a case: that is the multivariate factorisation this one will be lifted into.
+// f. A polynomial in more than one variable is a precondition violation;
+// factor takes those, and calls this for the univariate images it lifts.
 template <std::size_t N, class Order>
 factorisation<polynomial<rational, N, Order>> factor_univariate(
     const polynomial<rational, N, Order>& f) {
@@ -717,6 +757,721 @@ factorisation<polynomial<rational, N, Order>> factor_univariate(
         }
       }
       out.factors.push_back({poly(std::move(terms)).monic(), multiplicity});
+    }
+  }
+  std::stable_sort(out.factors.begin(), out.factors.end(), [](const auto& a, const auto& b) {
+    if (a.multiplicity != b.multiplicity) {
+      return a.multiplicity < b.multiplicity;
+    }
+    return a.base.degree() < b.base.degree();
+  });
+  return out;
+}
+
+namespace factor_detail {
+
+// Univariate polynomials over Q, coefficients in increasing degree, no
+// trailing zeros: the factors at the point, and the corrections that lift them.
+using qpoly = std::vector<rational>;
+
+inline void trim(qpoly& a) {
+  while (!a.empty() && sgn(a.back()) == 0) {
+    a.pop_back();
+  }
+}
+
+inline int degree(const qpoly& a) { return static_cast<int>(a.size()) - 1; }
+
+inline qpoly subtract(qpoly a, const qpoly& b) {
+  if (a.size() < b.size()) {
+    a.resize(b.size(), rational(0));
+  }
+  for (std::size_t i = 0; i < b.size(); ++i) {
+    a[i] -= b[i];
+  }
+  trim(a);
+  return a;
+}
+
+inline qpoly multiply(const qpoly& a, const qpoly& b) {
+  if (a.empty() || b.empty()) {
+    return {};
+  }
+  qpoly r(a.size() + b.size() - 1, rational(0));
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    for (std::size_t j = 0; j < b.size(); ++j) {
+      r[i + j] += a[i] * b[j];
+    }
+  }
+  trim(r);
+  return r;
+}
+
+inline std::pair<qpoly, qpoly> divide(qpoly a, const qpoly& b) {
+  VARIETAS_ASSERT(!b.empty());
+  if (a.size() < b.size()) {
+    return {qpoly{}, std::move(a)};
+  }
+  qpoly q(a.size() - b.size() + 1, rational(0));
+  for (std::size_t shift = q.size(); shift-- > 0;) {
+    const rational factor = a[shift + b.size() - 1] / b.back();
+    q[shift] = factor;
+    if (sgn(factor) != 0) {
+      for (std::size_t i = 0; i < b.size(); ++i) {
+        a[i + shift] -= factor * b[i];
+      }
+    }
+  }
+  a.resize(b.size() - 1);
+  trim(a);
+  trim(q);
+  return {std::move(q), std::move(a)};
+}
+
+inline qpoly remainder(qpoly a, const qpoly& b) { return divide(std::move(a), b).second; }
+
+// s with s a = 1 modulo b, deg s < deg b, for a and b coprime.
+inline qpoly inverse_mod(const qpoly& a, const qpoly& b) {
+  qpoly r0 = remainder(a, b);
+  qpoly r1 = b;
+  qpoly s0{rational(1)};
+  qpoly s1;
+  while (!r1.empty()) {
+    auto [q, r] = divide(r0, r1);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+    qpoly s2 = subtract(s0, multiply(q, s1));
+    s0 = std::move(s1);
+    s1 = std::move(s2);
+  }
+  VARIETAS_ASSERT(degree(r0) == 0);
+  for (rational& c : s0) {
+    c /= r0.front();
+  }
+  return remainder(std::move(s0), b);
+}
+
+// The polynomial in the variable v alone, densely.
+template <std::size_t N, class Order>
+qpoly dense_in(const polynomial<rational, N, Order>& p, std::size_t v) {
+  qpoly a(static_cast<std::size_t>(std::max(detail::degree_in(p, v), 0)) + 1, rational(0));
+  for (const auto& t : p.terms()) {
+    VARIETAS_ASSERT(t.mon.degree() == t.mon[v]);
+    a[t.mon[v]] = t.coeff;
+  }
+  trim(a);
+  return a;
+}
+
+// a(x_v) times the monomial whose exponents are `at`, with that of x_v ignored.
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> sparse_in(const qpoly& a, std::size_t v,
+                                         std::array<typename monomial<N>::exponent_type, N> at) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<typename poly::term> terms;
+  for (std::size_t k = 0; k < a.size(); ++k) {
+    if (sgn(a[k]) != 0) {
+      at[v] = static_cast<typename monomial<N>::exponent_type>(k);
+      terms.push_back({monomial<N>(at), a[k]});
+    }
+  }
+  return poly(std::move(terms));
+}
+
+// The total degree in every variable but v, which is the degree of the power
+// series the lifting works in.
+template <std::size_t N>
+unsigned degree_off(const monomial<N>& m, std::size_t v) {
+  return static_cast<unsigned>(m.degree() - m[v]);
+}
+
+template <std::size_t N, class Order>
+unsigned degree_off(const polynomial<rational, N, Order>& p, std::size_t v) {
+  unsigned d = 0;
+  for (const auto& t : p.terms()) {
+    d = std::max(d, degree_off(t.mon, v));
+  }
+  return d;
+}
+
+// The terms of degree at most m off v, and the product truncated there
+// without forming the terms it would discard.
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> truncate(const polynomial<rational, N, Order>& p, std::size_t v,
+                                        unsigned m) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<typename poly::term> terms;
+  for (const auto& t : p.terms()) {
+    if (degree_off(t.mon, v) <= m) {
+      terms.push_back(t);
+    }
+  }
+  return poly(std::move(terms));
+}
+
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> multiply_truncated(const polynomial<rational, N, Order>& a,
+                                                  const polynomial<rational, N, Order>& b,
+                                                  std::size_t v, unsigned m) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<typename poly::term> terms;
+  for (const auto& s : a.terms()) {
+    const unsigned ds = degree_off(s.mon, v);
+    if (ds > m) {
+      continue;
+    }
+    for (const auto& t : b.terms()) {
+      if (ds + degree_off(t.mon, v) <= m) {
+        terms.push_back({s.mon * t.mon, s.coeff * t.coeff});
+      }
+    }
+  }
+  return poly(std::move(terms));
+}
+
+// p with x_j replaced by x_j + a.
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> shift(const polynomial<rational, N, Order>& p, std::size_t j,
+                                     const rational& a) {
+  using poly = polynomial<rational, N, Order>;
+  if (sgn(a) == 0) {
+    return p;
+  }
+  std::vector<typename poly::term> terms;
+  std::vector<rational> powers{rational(1)};
+  mpz_class binomial;
+  for (const auto& t : p.terms()) {
+    const unsigned e = t.mon[j];
+    while (powers.size() <= e) {
+      powers.push_back(powers.back() * a);
+    }
+    auto exponents = t.mon.exponents();
+    for (unsigned k = 0; k <= e; ++k) {
+      mpz_bin_uiui(binomial.get_mpz_t(), e, k);
+      exponents[j] = static_cast<typename monomial<N>::exponent_type>(k);
+      terms.push_back({monomial<N>(exponents), t.coeff * rational(binomial) * powers[e - k]});
+    }
+  }
+  return poly(std::move(terms));
+}
+
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> shift_all(polynomial<rational, N, Order> p,
+                                         const std::array<rational, N>& point, bool back = false) {
+  for (std::size_t j = 0; j < N; ++j) {
+    p = shift(p, j, back ? rational(-point[j]) : point[j]);
+  }
+  return p;
+}
+
+// The quotient a / b if b divides a, decided over Z, where a failed division
+// is found at the first quotient coefficient that is not an integer or the
+// first head the divisor's leading monomial does not divide, rather than after
+// the whole remainder has been worked out.
+template <std::size_t N, class Order>
+bool divides(const polynomial<rational, N, Order>& b, const polynomial<rational, N, Order>& a,
+             polynomial<rational, N, Order>& quotient) {
+  using poly = polynomial<rational, N, Order>;
+  const auto A = md::primitive_integer(a);
+  const auto B = md::primitive_integer(b);
+  std::vector<std::pair<monomial<N>, mpz_class>> q;
+  if (!md::divide_integer<N, Order>(A.terms, B.terms, q)) {
+    return false;
+  }
+  const rational scale = A.content / B.content;
+  std::vector<typename poly::term> terms;
+  terms.reserve(q.size());
+  for (const auto& [m, c] : q) {
+    terms.push_back({m, scale * rational(c)});
+  }
+  quotient = poly(std::move(terms));
+  return true;
+}
+
+// s_i with the sum of s_i times the product of the other factors equal to
+// one, so that a correction e splits as the sum of (s_i e mod f_i) times the
+// product of the factors other than f_i.
+inline std::vector<qpoly> partial_fractions(const std::vector<qpoly>& base) {
+  const std::size_t r = base.size();
+  std::vector<qpoly> s(r);
+  for (std::size_t i = 0; i < r; ++i) {
+    qpoly others{rational(1)};
+    for (std::size_t j = 0; j < r; ++j) {
+      if (j != i) {
+        others = remainder(multiply(others, base[j]), base[i]);
+      }
+    }
+    s[i] = inverse_mod(others, base[i]);
+  }
+  return s;
+}
+
+// A polynomial or power series split into its homogeneous components off
+// x_v, component d holding the terms of degree d, to degree `bound`.
+template <std::size_t N, class Order>
+std::vector<polynomial<rational, N, Order>> components(const polynomial<rational, N, Order>& p,
+                                                       std::size_t v, unsigned bound) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<std::vector<typename poly::term>> parts(bound + 1);
+  for (const auto& t : p.terms()) {
+    const unsigned d = degree_off(t.mon, v);
+    if (d <= bound) {
+      parts[d].push_back(t);
+    }
+  }
+  std::vector<poly> out;
+  out.reserve(parts.size());
+  for (auto& terms : parts) {
+    out.emplace_back(std::move(terms));
+  }
+  return out;
+}
+
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> join(const std::vector<polynomial<rational, N, Order>>& parts) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<typename poly::term> terms;
+  for (const poly& part : parts) {
+    terms.insert(terms.end(), part.terms().begin(), part.terms().end());
+  }
+  return poly(std::move(terms));
+}
+
+// Component m of the product of two graded series.
+template <std::size_t N, class Order>
+polynomial<rational, N, Order> convolve(const std::vector<polynomial<rational, N, Order>>& a,
+                                        const std::vector<polynomial<rational, N, Order>>& b,
+                                        unsigned m) {
+  using poly = polynomial<rational, N, Order>;
+  std::vector<typename poly::term> terms;
+  for (unsigned d = 0; d <= m; ++d) {
+    for (const auto& s : a[d].terms()) {
+      for (const auto& t : b[m - d].terms()) {
+        terms.push_back({s.mon * t.mon, s.coeff * t.coeff});
+      }
+    }
+  }
+  return poly(std::move(terms));
+}
+
+// Linear lifting, one total degree at a time, of graded factors whose product
+// agrees with the target in degree zero and whose leading coefficients in x
+// are already what they will be. At degree m the error is homogeneous of
+// degree m, and each of its coefficients, a polynomial in x of lower degree
+// than the target, is shared out among the factors: scaled by `scale`, the
+// inverse of the constant the product of the factors carries at the origin
+// over that of the monic ones, it splits by the partial fractions over the
+// monic factors at the origin.
+//
+// The products of the first j factors are kept by component, and each
+// component is formed once. A correction is homogeneous of degree m, so it
+// moves component m of a product by itself times the degree-zero parts of the
+// other factors and nothing else, and that is how the kept products follow
+// it. Forming the product afresh at every degree would cost the bound times
+// as much, and the product is the largest thing in the computation: with the
+// leading coefficient imposed on every factor it is l^(r - 1) f.
+template <std::size_t N, class Order>
+void lift_graded(const std::vector<polynomial<rational, N, Order>>& target,
+                 std::vector<std::vector<polynomial<rational, N, Order>>>& factors,
+                 const std::vector<qpoly>& base, const std::vector<qpoly>& s,
+                 const rational& scale, std::size_t v, unsigned bound) {
+  using poly = polynomial<rational, N, Order>;
+  const std::size_t r = factors.size();
+
+  // ones[j][i]: the product of the degree-zero parts of the factors up to j,
+  // factor i left out.
+  std::vector<std::vector<poly>> ones(r, std::vector<poly>(r));
+  for (std::size_t j = 0; j < r; ++j) {
+    for (std::size_t i = 0; i <= j; ++i) {
+      poly product = poly::constant(rational(1));
+      for (std::size_t k = 0; k <= j; ++k) {
+        if (k != i) {
+          product = product * factors[k][0];
+        }
+      }
+      ones[j][i] = std::move(product);
+    }
+  }
+
+  std::vector<std::vector<poly>> partial(r);
+  partial[0] = factors[0];
+  for (std::size_t j = 1; j < r; ++j) {
+    partial[j].resize(bound + 1);
+    partial[j][0] = partial[j - 1][0] * factors[j][0];
+  }
+
+  for (unsigned m = 1; m <= bound; ++m) {
+    for (std::size_t j = 1; j < r; ++j) {
+      partial[j][m] = convolve(partial[j - 1], factors[j], m);
+    }
+    const poly error = target[m] - partial[r - 1][m];
+
+    std::map<std::array<typename monomial<N>::exponent_type, N>, qpoly> by_monomial;
+    for (const auto& t : error.terms()) {
+      auto key = t.mon.exponents();
+      key[v] = 0;
+      qpoly& e = by_monomial[key];
+      if (e.size() <= t.mon[v]) {
+        e.resize(t.mon[v] + 1u, rational(0));
+      }
+      e[t.mon[v]] = t.coeff * scale;
+    }
+    std::vector<std::vector<typename poly::term>> corrections(r);
+    for (auto& [at, e] : by_monomial) {
+      trim(e);
+      for (std::size_t i = 0; i < r; ++i) {
+        const poly delta = sparse_in<N, Order>(remainder(multiply(s[i], e), base[i]), v, at);
+        corrections[i].insert(corrections[i].end(), delta.terms().begin(), delta.terms().end());
+      }
+    }
+    std::vector<poly> delta;
+    delta.reserve(r);
+    for (std::size_t i = 0; i < r; ++i) {
+      delta.emplace_back(std::move(corrections[i]));
+      factors[i][m] += delta[i];
+    }
+    partial[0][m] = factors[0][m];
+    for (std::size_t j = 1; j + 1 < r; ++j) {
+      for (std::size_t i = 0; i <= j; ++i) {
+        partial[j][m] += delta[i] * ones[j][i];
+      }
+    }
+  }
+}
+
+// Two factors with the leading coefficient imposed, for the case that the
+// univariate factors a0 and b0 at the origin correspond to factors a and b of
+// f, which a good point makes the usual case. Then l f is the product of
+// (l / lc(a)) a and (l / lc(b)) b, each with leading coefficient l exactly and
+// equal at the origin to l(0) a0 and l(0) b0, so the leading coefficients can
+// be imposed before lifting rather than divided out, and the lifting goes to
+// the degree of those products with nothing in it a power series. Whether the
+// case holds is learnt at the end, by whether the primitive part of the first
+// divides f. If it does, the quotient is the second.
+template <std::size_t N, class Order>
+bool lift_with_leading_coefficient(const polynomial<rational, N, Order>& f, std::size_t v,
+                                   const qpoly& a0, const qpoly& b0,
+                                   polynomial<rational, N, Order>& a,
+                                   polynomial<rational, N, Order>& b) {
+  using poly = polynomial<rational, N, Order>;
+  auto& counters = factor_counters();
+
+  const poly l = detail::leading_coefficient_in(f, v);
+  const rational l0 = l.coefficient_of(monomial<N>::one());
+  const unsigned bound = degree_off(f, v) + degree_off(l, v);
+  counters.lifted_degree = std::max<std::size_t>(counters.lifted_degree, bound);
+
+  const std::vector<poly> lead = components(l, v, bound);
+  const std::vector<poly> plain = components(f, v, bound);
+  std::vector<poly> target(bound + 1);
+  for (unsigned m = 0; m <= bound; ++m) {
+    target[m] = convolve(lead, plain, m);
+  }
+
+  // l x^d + l(0) (f_i - x^d): l(0) f_i in degree zero, and the rest of l
+  // times x^d above it.
+  const std::vector<qpoly> base{a0, b0};
+  std::vector<std::vector<poly>> graded;
+  const std::array<typename monomial<N>::exponent_type, N> origin{};
+  for (const qpoly& g : base) {
+    std::vector<poly> factor(bound + 1);
+    factor[0] = sparse_in<N, Order>(g, v, origin) * l0;
+    const poly power =
+        poly::variable(v, static_cast<typename monomial<N>::exponent_type>(degree(g)));
+    for (unsigned d = 1; d <= bound; ++d) {
+      factor[d] = lead[d] * power;
+    }
+    graded.push_back(std::move(factor));
+  }
+  lift_graded(target, graded, base, partial_fractions(base), rational(1) / l0, v, bound);
+
+  const poly lifted = join(graded.front());
+  poly candidate = detail::divide_exact(lifted, content_in(lifted, v));
+  ++counters.trial_divisions;
+  if (detail::degree_in(candidate, v) != degree(a0) ||
+      degree_off(candidate, v) > degree_off(f, v) || !divides(candidate, f, b)) {
+    return false;
+  }
+  a = std::move(candidate);
+  return true;
+}
+
+// All the univariate factors lifted at once as power series, and the true
+// factors recovered by recombination, for when the factors at the origin do
+// not correspond one to one with the true factors and no division into two
+// groups lifts. A true factor g, made to have the leading coefficient l of f,
+// is (l / lc(g)) g, of degree at most deg l + deg f off x, and over power
+// series it is l times the product of some of the monic factors of f / l.
+template <std::size_t N, class Order>
+void lift_series_and_recombine(const polynomial<rational, N, Order>& f, std::size_t v,
+                               const std::vector<qpoly>& base,
+                               std::vector<polynomial<rational, N, Order>>& out) {
+  using poly = polynomial<rational, N, Order>;
+  auto& counters = factor_counters();
+  ++counters.series_lifts;
+
+  const poly l = detail::leading_coefficient_in(f, v);
+  const unsigned bound = degree_off(f, v) + degree_off(l, v);
+  counters.lifted_degree = std::max<std::size_t>(counters.lifted_degree, bound);
+
+  // 1 / l by the recurrence l(0) i_m = -(l_1 i_(m-1) + ... + l_m i_0), and
+  // f / l from it.
+  const std::vector<poly> lead = components(l, v, bound);
+  const std::vector<poly> numerator = components(f, v, bound);
+  const rational l0 = lead[0].coefficient_of(monomial<N>::one());
+  std::vector<poly> inverse(bound + 1);
+  inverse[0] = poly::constant(rational(1) / l0);
+  for (unsigned m = 1; m <= bound; ++m) {
+    inverse[m] = convolve(lead, inverse, m) * rational(-rational(1) / l0);
+  }
+  std::vector<poly> monic(bound + 1);
+  for (unsigned m = 0; m <= bound; ++m) {
+    monic[m] = convolve(numerator, inverse, m);
+  }
+
+  std::vector<std::vector<poly>> graded;
+  const std::array<typename monomial<N>::exponent_type, N> origin{};
+  for (const qpoly& g : base) {
+    std::vector<poly> factor(bound + 1);
+    factor[0] = sparse_in<N, Order>(g, v, origin);
+    graded.push_back(std::move(factor));
+  }
+  lift_graded(monic, graded, base, partial_fractions(base), rational(1), v, bound);
+  std::vector<poly> lifted;
+  for (const auto& factor : graded) {
+    lifted.push_back(join(factor));
+  }
+
+  // Subsets in increasing size. A subset is a candidate when l times its
+  // product, truncated, has a primitive part that divides what is left of f;
+  // a factor found removes its members, and when no subset of up to half of
+  // the rest works, the rest is irreducible.
+  const unsigned degree_bound = degree_off(f, v);
+  poly rest = f;
+  std::size_t size = 1;
+  while (2 * size <= lifted.size()) {
+    bool found = false;
+    std::vector<std::size_t> index(size);
+    std::iota(index.begin(), index.end(), std::size_t{0});
+    do {
+      poly candidate = detail::leading_coefficient_in(rest, v);
+      for (std::size_t i : index) {
+        candidate = multiply_truncated(candidate, lifted[i], v, bound);
+      }
+      candidate = detail::divide_exact(candidate, content_in(candidate, v));
+      if (degree_off(candidate, v) > degree_bound) {
+        continue;
+      }
+      ++counters.trial_divisions;
+      poly quotient;
+      if (divides(candidate, rest, quotient)) {
+        out.push_back(std::move(candidate));
+        rest = std::move(quotient);
+        for (std::size_t k = size; k-- > 0;) {
+          lifted.erase(lifted.begin() + static_cast<std::ptrdiff_t>(index[k]));
+        }
+        found = true;
+        break;
+      }
+    } while (next_combination(index, lifted.size()));
+    if (!found) {
+      ++size;
+    }
+  }
+  out.push_back(std::move(rest));
+}
+
+// The univariate factors split into two halves, the two products lifted with
+// the leading coefficient imposed, and each half factored again inside its
+// own primitive part, whose leading coefficient is its own share of l. Imposing
+// l on all r factors at once would lift l^(r - 1) f; the halves never lift
+// more than l f, and the pieces below them less. A division that fails to lift
+// leaves that piece to the power series.
+template <std::size_t N, class Order>
+void split_and_lift(const polynomial<rational, N, Order>& f, std::size_t v,
+                    const std::vector<qpoly>& base,
+                    std::vector<polynomial<rational, N, Order>>& out) {
+  using poly = polynomial<rational, N, Order>;
+  if (base.size() == 1) {
+    out.push_back(f);
+    return;
+  }
+  const auto half = static_cast<std::ptrdiff_t>(base.size() / 2);
+  const std::vector<qpoly> first(base.begin(), base.begin() + half);
+  const std::vector<qpoly> second(base.begin() + half, base.end());
+  qpoly a0{rational(1)};
+  for (const qpoly& g : first) {
+    a0 = multiply(a0, g);
+  }
+  qpoly b0{rational(1)};
+  for (const qpoly& g : second) {
+    b0 = multiply(b0, g);
+  }
+  poly a;
+  poly b;
+  if (!lift_with_leading_coefficient(f, v, a0, b0, a, b)) {
+    lift_series_and_recombine(f, v, base, out);
+    return;
+  }
+  ++factor_counters().polynomial_lifts;
+  split_and_lift(a, v, first, out);
+  split_and_lift(b, v, second, out);
+}
+
+// The factorisation of f, primitive and squarefree in x_v and with f(x, 0) of
+// the same degree in x and squarefree, given the monic factors of f(x, 0). The
+// factors returned are primitive in x_v and their product is f up to a
+// constant.
+template <std::size_t N, class Order>
+std::vector<polynomial<rational, N, Order>> lift_and_recombine(
+    const polynomial<rational, N, Order>& f, std::size_t v,
+    const std::vector<polynomial<rational, N, Order>>& at_origin) {
+  using poly = polynomial<rational, N, Order>;
+  if (at_origin.size() <= 1) {
+    return {f};
+  }
+  factor_counters().lifted_factors += at_origin.size();
+  std::vector<qpoly> base;
+  for (const poly& g : at_origin) {
+    base.push_back(dense_in(g, v));
+    VARIETAS_ASSERT(base.back().back() == 1);
+  }
+  std::vector<poly> out;
+  split_and_lift(f, v, base, out);
+  return out;
+}
+
+// The irreducible factors of f, squarefree and primitive in x_v.
+template <std::size_t N, class Order>
+std::vector<polynomial<rational, N, Order>> factor_primitive(const polynomial<rational, N, Order>& f,
+                                                             std::size_t v) {
+  using poly = polynomial<rational, N, Order>;
+  auto& counters = factor_counters();
+
+  std::vector<std::size_t> others;
+  for (std::size_t j = 0; j < N; ++j) {
+    if (j != v && detail::degree_in(f, j) > 0) {
+      others.push_back(j);
+    }
+  }
+  if (others.empty()) {
+    std::vector<poly> out;
+    for (auto& [g, multiplicity] : factor_univariate(f).factors) {
+      VARIETAS_ASSERT(multiplicity == 1);
+      out.push_back(std::move(g));
+    }
+    return out;
+  }
+
+  // The origin first, since it keeps f sparse, then small random points over
+  // a range that widens as points are refused. A point qualifies when f(x, a)
+  // keeps its degree in x and stays squarefree; of the first three that do,
+  // the one with the fewest factors is kept.
+  const int degree = detail::degree_in(f, v);
+  constexpr std::size_t candidates = 3;
+  std::mt19937 rng(static_cast<std::mt19937::result_type>(f.size() * 7919 + v));
+  std::array<rational, N> best_point;
+  poly best_shifted;
+  std::vector<poly> best_factors;
+  std::size_t accepted = 0;
+  for (std::size_t attempt = 0; accepted < candidates; ++attempt) {
+    std::array<rational, N> point;
+    for (rational& a : point) {
+      a = 0;
+    }
+    if (attempt > 0) {
+      const int range = 1 + static_cast<int>(attempt / 4);
+      std::uniform_int_distribution<int> coordinate(-range, range);
+      for (std::size_t j : others) {
+        point[j] = coordinate(rng);
+      }
+    }
+    poly shifted = shift_all(f, point);
+    const poly image = truncate(shifted, v, 0);
+    if (detail::degree_in(image, v) != degree) {
+      continue;
+    }
+    const auto univariate = factor_univariate(image);
+    if (std::any_of(univariate.factors.begin(), univariate.factors.end(),
+                    [](const auto& g) { return g.multiplicity != 1; })) {
+      continue;
+    }
+    ++accepted;
+    ++counters.points;
+    if (accepted == 1 || univariate.factors.size() < best_factors.size()) {
+      best_point = point;
+      best_shifted = std::move(shifted);
+      best_factors.clear();
+      for (const auto& g : univariate.factors) {
+        best_factors.push_back(g.base);
+      }
+    }
+    // One factor at a point that keeps the degree is a proof of irreducibility,
+    // since a factorisation of f would survive the specialisation.
+    if (best_factors.size() == 1) {
+      return {f};
+    }
+  }
+
+  std::vector<poly> out;
+  for (const poly& g : lift_and_recombine(best_shifted, v, best_factors)) {
+    out.push_back(shift_all(g, best_point, true));
+  }
+  return out;
+}
+
+// The irreducible factors of a squarefree f. The content with respect to a
+// main variable is factored with one variable fewer, and the primitive part by
+// lifting. The main variable is one in which f has a constant leading
+// coefficient if there is one, since then there is nothing to share out and
+// the lifted factors are polynomials from the start, and of those, or of all
+// if there is none, one of least degree, since that is the degree of the
+// univariate image and bounds the factors the recombination has to search.
+template <std::size_t N, class Order>
+void factor_squarefree(const polynomial<rational, N, Order>& f,
+                       std::vector<polynomial<rational, N, Order>>& out) {
+  if (f.degree() == 0) {
+    return;
+  }
+  std::size_t v = N;
+  bool constant_lead = false;
+  for (std::size_t j = 0; j < N; ++j) {
+    const int d = detail::degree_in(f, j);
+    if (d <= 0) {
+      continue;
+    }
+    const bool constant = detail::leading_coefficient_in(f, j).degree() == 0;
+    if (v == N || (constant && !constant_lead) ||
+        (constant == constant_lead && d < detail::degree_in(f, v))) {
+      v = j;
+      constant_lead = constant;
+    }
+  }
+  const auto c = content_in(f, v);
+  factor_squarefree(c, out);
+  for (auto& g : factor_primitive(detail::divide_exact(f, c), v)) {
+    out.push_back(g.monic());
+  }
+}
+
+}  // namespace factor_detail
+
+// The factorisation into irreducibles over Q of a nonzero f in any number of
+// variables. The factors are monic under Order and distinct, ordered by
+// multiplicity and then by total degree, and the unit is the leading
+// coefficient of f.
+template <std::size_t N, class Order>
+factorisation<polynomial<rational, N, Order>> factor(const polynomial<rational, N, Order>& f) {
+  using poly = polynomial<rational, N, Order>;
+  VARIETAS_ASSERT(!f.is_zero());
+  const auto squarefree = squarefree_decomposition(f);
+  factorisation<poly> out;
+  out.unit = squarefree.unit;
+  for (const auto& [g, multiplicity] : squarefree.factors) {
+    std::vector<poly> irreducible;
+    factor_detail::factor_squarefree(g, irreducible);
+    for (auto& q : irreducible) {
+      out.factors.push_back({std::move(q), multiplicity});
     }
   }
   std::stable_sort(out.factors.begin(), out.factors.end(), [](const auto& a, const auto& b) {

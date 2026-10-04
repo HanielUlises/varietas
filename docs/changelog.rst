@@ -30,6 +30,13 @@ joints, which is every arm the counting admits. See ``doc/parametric_cost.pdf``.
   recombination whose acceptance test is exact rather than a trial. It agrees
   with SymPy on three hundred random products, and finds the polynomials of
   Swinnerton-Dyer irreducible.
+* ``factor``, in any number of variables. The univariate image at a point is
+  lifted by Hensel's lemma with the leading coefficient imposed on both halves
+  of each division into two groups, and every factor is accepted only when it
+  divides, exactly over :math:`\mathbb{Z}`. A point that splits a true factor
+  falls back to power series and recombination. It agrees with SymPy on six
+  hundred random products in two and three variables, and factors products of
+  about 1800 terms in six variables in a second or two.
 
 .. rubric:: Inverse kinematics
 

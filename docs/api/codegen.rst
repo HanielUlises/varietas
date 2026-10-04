@@ -129,6 +129,34 @@ Factorisation
 
    A polynomial in more than one variable is a precondition violation.
 
+.. cpp:function:: template<std::size_t N, class Order> \
+                  factorisation<polynomial<rational, N, Order>> \
+                  factor(const polynomial<rational, N, Order>& f)
+
+   The factorisation into irreducibles over :math:`\Q` in **any number of
+   variables**, the factors monic and ordered by multiplicity and then degree.
+
+   Each squarefree part has its content in a main variable :math:`x` factored
+   with one variable fewer. :math:`x` is a variable in which the leading
+   coefficient is constant if there is one, and of least degree otherwise. The
+   primitive part is factored at a point: the other variables are moved so that
+   a point at which the image keeps its degree and stays squarefree sits at the
+   origin, and of the first three such points the one whose image has the fewest
+   univariate factors is kept. A single factor there proves irreducibility.
+
+   The univariate factors are split into two groups and both products lifted by
+   Hensel's lemma, one total degree at a time, with the whole leading
+   coefficient :math:`l` imposed on each, which makes :math:`l f` their product
+   and leaves nothing to choose. The primitive part of a lifted group is
+   accepted only if it divides :math:`f` over :math:`\mathbb{Z}`, and each group
+   is then factored again inside its own factor. When a group fails to divide,
+   the point has split a true factor, and the piece falls back to lifting
+   :math:`f / l` as power series and recombining subsets by trial division.
+
+   Leading coefficients are imposed rather than shared out as in Wang's
+   algorithm, which costs lifting to the degree of :math:`l f` rather than of
+   :math:`f`. Counters are in ``factor_counters()``.
+
 Reconstruction
 ==============
 

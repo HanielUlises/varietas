@@ -52,7 +52,9 @@ refuses, the last being the largest part, and deliberately.
    * - Newton refinement in generated solvers
      - complete
    * - Factorisation over :math:`\Q`
-     - begun: squarefree in any number of variables, irreducible in one
+     - complete, any number of variables
+   * - Decomposition along the factors
+     - not begun
 
 The unfinished row is :doc:`roadmap`.
 

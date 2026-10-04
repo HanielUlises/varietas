@@ -121,8 +121,9 @@ What is not claimed
 
 A primary decomposition. :cpp:func:`varietas::split_along` is exact and
 exhaustive, but the caller chooses :math:`h`, and an algorithm that finds its own
-splittings needs multivariate factorisation over :math:`\Q`, a project of its
-own, begun with one variable and not yet carried to several (:doc:`../roadmap`).
+splittings needs multivariate factorisation over :math:`\Q`, which
+:cpp:func:`varietas::factor` now provides, and an algorithm that splits along
+the factors it finds, which is not yet written (:doc:`../roadmap`).
 
 What the library offers is the ideal, its dimension, its image in the workspace,
 and the ability to separate a branch on a divisor the geometry suggests.
