@@ -65,6 +65,8 @@ def _launch(context, *args, **kwargs):
                     "urdf": urdf_path,
                     "refused_urdf": refused_path,
                     "period": LaunchConfiguration("period"),
+                    "labels": LaunchConfiguration("labels"),
+                    "trace": LaunchConfiguration("trace"),
                 }
             ],
         ),
@@ -92,6 +94,11 @@ def generate_launch_description():
                 ),
             ),
             DeclareLaunchArgument("period", default_value="24.0"),
+            # labels:=false leaves the text to captions burnt in afterwards, and
+            # trace:=/path/file.csv writes what they are set from; see
+            # tools/figures/record_branches.sh.
+            DeclareLaunchArgument("labels", default_value="true"),
+            DeclareLaunchArgument("trace", default_value=""),
             OpaqueFunction(function=_launch),
         ]
     )

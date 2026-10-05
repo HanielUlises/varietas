@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <memory>
 #include <string>
 #include <vector>
@@ -120,6 +121,8 @@ class branch_node : public rclcpp::Node {
   branch_node() : rclcpp::Node("varietas_branches") {
     const std::string urdf_path = declare_parameter<std::string>("urdf", "");
     period_ = declare_parameter<double>("period", 20.0);
+    labels_ = declare_parameter<bool>("labels", true);
+    const std::string trace_path = declare_parameter<std::string>("trace", "");
 
     urdf::Model model;
     if (urdf_path.empty() || !model.initFile(urdf_path)) {
@@ -166,13 +169,64 @@ class branch_node : public rclcpp::Node {
     markers_ = create_publisher<visualization_msgs::msg::MarkerArray>("varietas_markers", 10);
 
     setup_refused_arm();
+    open_trace(trace_path);
 
     timer_ = create_wall_timer(kTick, [this] { tick(); });
     report_timer_ = create_wall_timer(2s, [this] { report(); });
     start_ = now();
   }
 
+  ~branch_node() override {
+    if (trace_ != nullptr) {
+      std::fclose(trace_);
+    }
+  }
+
  private:
+  // The labels, for a recording that captions itself afterwards.
+  //
+  // RViz cannot set text: its text markers draw a space as a gap some eight
+  // characters wide, which is why the labels below are written with
+  // underscores (see wrap). A recording does better by turning them off and
+  // burning captions into the frames with a real typeface, and this trace is
+  // what it captions from: the facts the labels state, written by the node
+  // that computed them, the world points the labels stand at, and the count
+  // at every tick against the wall clock, which is what the recording is
+  // timed by. Nothing in the captions is typed by hand, so they cannot say
+  // something the node did not.
+  void open_trace(const std::string& path) {
+    if (path.empty()) {
+      return;
+    }
+    trace_ = std::fopen(path.c_str(), "w");
+    if (trace_ == nullptr) {
+      RCLCPP_WARN(get_logger(), "could not open trace '%s'", path.c_str());
+      return;
+    }
+    const auto anchor = [](const std::array<double, 3>& p) {
+      return std::to_string(p[0]) + "," + std::to_string(p[1]) + "," + std::to_string(p[2]);
+    };
+    std::fprintf(trace_, "# solved_name=%s\n", solved_name_.c_str());
+    std::fprintf(trace_, "# solved_joints=%zu\n", solver::num_joints);
+    std::fprintf(trace_, "# max_configurations=%d\n", kMaxBranches);
+    std::fprintf(trace_, "# solved_anchor=%s\n", anchor(verdict_anchor()).c_str());
+    if (!refused_reason_.empty()) {
+      std::fprintf(trace_, "# refused_name=%s\n", refused_name_.c_str());
+      std::fprintf(trace_, "# refused_joints=%zu\n", refused_joints_);
+      std::fprintf(trace_, "# refused_reason=%s\n", refused_reason_.c_str());
+      std::fprintf(trace_, "# refused_anchor=%s\n", anchor(refused_anchor()).c_str());
+    }
+    std::fprintf(trace_, "wall,found\n");
+    std::fflush(trace_);
+  }
+
+  // Where the two labels stand, in the root frame.
+  std::array<double, 3> verdict_anchor() const { return {0.0, 0.0, label_height_}; }
+  std::array<double, 3> refused_anchor() const {
+    return {refused_offset_.size() > 0 ? refused_offset_[0] : 0.0,
+            refused_offset_.size() > 1 ? refused_offset_[1] : -2.9, 1.52};
+  }
+
   // The other half of the story: a real robot, and what varietas says about it.
   //
   // The verdict is computed rather than written down. The iiwa is imported by
@@ -342,6 +396,13 @@ class branch_node : public rclcpp::Node {
     last_count_ = found;
     last_state_ = state;
     ++ticks_;
+    if (trace_ != nullptr) {
+      const double wall =
+          std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch())
+              .count();
+      std::fprintf(trace_, "%.4f,%d\n", wall, found);
+      std::fflush(trace_);
+    }
     if (found < 0) {
       ++refusals_;
     } else {
@@ -498,9 +559,11 @@ class branch_node : public rclcpp::Node {
     }
     array.markers.push_back(path);
 
-    array.markers.push_back(verdict_label(found, stamp));
-    if (!refused_reason_.empty()) {
-      array.markers.push_back(refused_label(stamp));
+    if (labels_) {
+      array.markers.push_back(verdict_label(found, stamp));
+      if (!refused_reason_.empty()) {
+        array.markers.push_back(refused_label(stamp));
+      }
     }
 
     markers_->publish(array);
@@ -547,9 +610,9 @@ class branch_node : public rclcpp::Node {
   // prose arrives with its words scattered across the frame and unreadable.
   // The marker message has no field for it -- MovableText::setSpaceWidth is
   // not reachable through visualization_msgs -- so the text cannot contain a
-  // space. Underscores are what is left, and they are not out of place here,
-  // since both arms are named in the picture by their URDF identifiers, which
-  // are written that way already.
+  // space. Underscores are what is left in RViz itself; the recording turns the
+  // labels off and captions the frames instead (open_trace), where a space is a
+  // space.
   //
   // What matters is that the wrapping and the substitution are typographic
   // only: every word of the library's own sentence survives them in order, so
@@ -601,7 +664,10 @@ class branch_node : public rclcpp::Node {
                                                 const rclcpp::Time& stamp) const {
     auto m = base_marker("label", 0, stamp);
     m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-    m.pose.position.z = label_height_;
+    const auto at = verdict_anchor();
+    m.pose.position.x = at[0];
+    m.pose.position.y = at[1];
+    m.pose.position.z = at[2];
     m.scale.z = 0.17;
     m.color.r = m.color.g = m.color.b = 0.93;
     m.color.a = 0.95;
@@ -620,9 +686,10 @@ class branch_node : public rclcpp::Node {
   visualization_msgs::msg::Marker refused_label(const rclcpp::Time& stamp) const {
     auto m = base_marker("refused", 0, stamp);
     m.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-    m.pose.position.x = refused_offset_.size() > 0 ? refused_offset_[0] : 0.0;
-    m.pose.position.y = refused_offset_.size() > 1 ? refused_offset_[1] : -2.9;
-    m.pose.position.z = 1.52;
+    const auto at = refused_anchor();
+    m.pose.position.x = at[0];
+    m.pose.position.y = at[1];
+    m.pose.position.z = at[2];
     m.scale.z = 0.145;
     m.color.r = 0.96;
     m.color.g = 0.62;
@@ -707,6 +774,8 @@ class branch_node : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::TimerBase::SharedPtr report_timer_;
   rclcpp::Time start_;
+  bool labels_ = true;
+  std::FILE* trace_ = nullptr;
 };
 
 int main(int argc, char** argv) {
