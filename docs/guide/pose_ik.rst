@@ -25,7 +25,9 @@ things changed that.
 (:cpp:func:`split_pose_residuals`): the first half of the joints on one side,
 the inverse of the second half on the other, which is again a chain. The
 saturated ideal is the same, and on six joints a basis over :math:`\F_p`
-costs a second or two rather than ten or sixty.
+costs a second or two rather than ten or sixty. (Buchberger over :math:`\Q`
+does worse with them, so ``--buchberger`` keeps the equations of the whole
+chain.)
 
 **The basis over** :math:`\Q` **is lifted from its images modulo primes**
 (:cpp:func:`lifted_pose_ideal_generators`), which carry one machine word per

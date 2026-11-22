@@ -1,8 +1,8 @@
 // The pose ideal split at the middle of the chain, and lifted from Z/p.
 //
 // Three claims. The split equations saturate to the same ideal as the
-// equations of the whole chain, so pose_ideal_generators returns what it
-// returned before. The lifted basis is Buchberger's wherever Buchberger
+// equations of the whole chain, so the lifted path, which uses them, answers
+// the same question. The lifted basis is Buchberger's wherever Buchberger
 // finishes. And on six joints, where Buchberger over Q does not, the lifted
 // basis is right where it can be checked exactly: a configuration with
 // rational half-angle tangents is a common zero of every element, over Q, and
@@ -37,7 +37,8 @@ void split_agrees_with_the_whole_chain(const varietas::chain<Coeff>& robot,
   const auto target = map.evaluate(configuration);
   const auto whole = varietas::kinematic_ideal_generators<N, grevlex>(
       robot, varietas::pose_residuals(map, target));
-  const auto split = varietas::pose_ideal_generators<N, grevlex>(robot, target);
+  const auto split = varietas::kinematic_ideal_generators<N, grevlex>(
+      robot, varietas::split_pose_residuals<N, grevlex>(robot, target));
   EXPECT_EQ(split, whole);
   EXPECT_FALSE(varietas::is_unit_ideal(split));
 }

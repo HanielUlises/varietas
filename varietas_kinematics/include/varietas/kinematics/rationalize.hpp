@@ -356,8 +356,14 @@ std::vector<polynomial<Coeff, N, Order>> kinematic_ideal_generators(
 // ring, so the two saturations agree, and so do their reduced bases: this
 // changes the cost and nothing else, and the tests compare the two.
 //
-// What it changes the cost by is the point. On a six-joint arm of the usual
-// shape, one basis over Z/p takes about a second rather than twelve.
+// What it changes the cost by depends on who completes the basis. F4 over Z/p
+// gains by orders of magnitude: one basis of the industrial six-joint arm takes
+// 2.6 s rather than 58, and the lifted basis over Q
+// (varietas/ik/lifted_ideal.hpp) is built from such images. Buchberger over Q
+// loses: on the same arm cut to four joints it takes 1.2 s rather than 0.5,
+// and at five joints it does not finish in five minutes where the whole-chain
+// equations take 68 s. So pose_ideal_generators keeps the whole-chain equations
+// and the lifted path uses these.
 template <std::size_t N, class Order, class Coeff>
 std::vector<polynomial<Coeff, N, Order>> split_pose_residuals(
     const chain<Coeff>& robot, const rigid_transform<Coeff>& target) {
@@ -427,14 +433,16 @@ std::vector<polynomial<Coeff, N, Order>> split_pose_residuals(
   return residuals;
 }
 
-// Generators of the inverse kinematics ideal at a full pose, from the split
-// equations above.
+// Generators of the inverse kinematics ideal at a full pose, from the
+// equations of the whole chain, which are the cheaper ones for Buchberger; see
+// split_pose_residuals for the ones that are cheaper over Z/p.
 template <std::size_t N, class Order, class Coeff>
 std::vector<polynomial<Coeff, N, Order>> pose_ideal_generators(
     const chain<Coeff>& robot, const rigid_transform<Coeff>& target,
     buchberger_statistics* statistics = nullptr) {
-  return kinematic_ideal_generators<N, Order>(
-      robot, split_pose_residuals<N, Order>(robot, target), statistics);
+  const auto map = rational_forward_kinematics<N, Order>(robot);
+  return kinematic_ideal_generators<N, Order>(robot, pose_residuals(map, target),
+                                              statistics);
 }
 
 // Generators of the inverse kinematics ideal at a tool position.

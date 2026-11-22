@@ -34,9 +34,10 @@ Unreleased
 
 * ``split_pose_residuals``, the pose equations with the chain split at its
   middle, the second half inverted into a chain of its own. The saturated
-  ideal is the same, so ``pose_ideal_generators``, which now uses them,
-  returns what it did; one basis of the industrial six-joint arm over
-  :math:`\F_p` takes 2.6 s rather than 58.
+  ideal is the same. One basis of the industrial six-joint arm over
+  :math:`\F_p` takes 2.6 s with them rather than 58, so the lifted path uses
+  them; Buchberger over :math:`\Q` is slower with them, so
+  ``pose_ideal_generators`` keeps the whole-chain equations.
 * ``lifted_pose_ideal_generators`` and its kin in
   ``varietas/ik/lifted_ideal.hpp``, the fixed-pose ideals lifted rather than
   computed over :math:`\Q`. ``urdf_solve`` uses them, and ``--buchberger``

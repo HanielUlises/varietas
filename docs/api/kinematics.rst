@@ -139,9 +139,12 @@ Half-angle rationalisation
    side a product of half the joints, the inverse of a joint being a joint
    turning or sliding the other way. Saturated, they give **the same ideal** as
    :cpp:func:`pose_residuals`, since the two sets of residuals differ by an
-   invertible matrix once the half-angle denominators are inverted, and they
-   are far cheaper to complete: on the industrial six-joint arm, one basis over
-   :math:`\F_p` takes 2.6 s rather than 58. ``pose_ideal_generators`` uses them.
+   invertible matrix once the half-angle denominators are inverted. F4 over
+   :math:`\F_p` completes them far more cheaply, one basis of the industrial
+   six-joint arm taking 2.6 s rather than 58, and the lifted path uses them.
+   Buchberger over :math:`\Q` does worse with them, 1.2 s rather than 0.5 on
+   the same arm cut to four joints and more than five minutes rather than 68 s
+   at five, so ``pose_ideal_generators`` keeps the whole-chain equations.
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
                   std::vector<polynomial<Coeff, N, Order>> position_residuals(...)
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
