@@ -145,4 +145,10 @@ struct coefficient_traits<residue> {
 
 }  // namespace varietas
 
+// Gröbner bases over Z/p are computed by F4, and the specialisation that says
+// so has to be visible wherever residue is, or two translation units could
+// complete the same basis by different algorithms. Included last, since it
+// needs the type above.
+#include "varietas/codegen/f4.hpp"
+
 #endif

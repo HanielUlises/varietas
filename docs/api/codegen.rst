@@ -197,6 +197,21 @@ Reconstruction
    run over it. A rational whose denominator the prime divides has no image,
    and constructing one sets a flag the caller checks.
 
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<residue, N, Order>> \
+                  f4::basis(const std::vector<polynomial<residue, N, Order>>& generators, \
+                            buchberger_statistics* stats = nullptr)
+
+   ``varietas/codegen/f4.hpp``. Faugère's F4 over the prime currently selected:
+   the pairs of least sugar degree all at once, their reducers collected by
+   symbolic preprocessing, and the lot row-reduced as one sparse matrix whose
+   columns are the monomials in decreasing order, a row operation being a loop
+   over machine words. Pairs are pruned by Gebauer and Möller. Returns a
+   Gröbner basis, not reduced, or :math:`\{1\}` for the unit ideal;
+   ``groebner_basis`` over ``residue`` calls it and reduces the result, so the
+   answer is the one Buchberger gives. On the saturated ideal of a 3R arm at a
+   pose it is about sixteen times faster.
+
 .. cpp:function:: template<std::size_t P> \
                   bool reconstruction::reconstruct(const black_box<P>& box, \
                                                    const prime_hook& prepare, \

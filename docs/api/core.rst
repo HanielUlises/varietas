@@ -167,8 +167,16 @@ Gröbner bases
                   std::vector<polynomial<Coeff, N, Order>> \
                   groebner_basis(std::vector<polynomial<Coeff, N, Order>> generators)
 
-   Buchberger, minimalised and fully reduced: the **unique** reduced Gröbner
-   basis for the order.
+   Completed by the coefficient type's :cpp:struct:`groebner_engine`, then
+   minimalised and fully reduced: the **unique** reduced Gröbner basis for the
+   order, whichever algorithm completed it.
+
+.. cpp:struct:: template<class Coeff> groebner_engine
+
+   How bases over ``Coeff`` are completed: Buchberger, unless the coefficient
+   type specialises it. :cpp:class:`residue` does, with F4
+   (:doc:`codegen`). The specialisation is declared beside the type, so that
+   every translation unit that sees one sees the other.
 
 .. cpp:function:: template<class Coeff, std::size_t N, class Order> \
                   bool is_member(const polynomial<Coeff, N, Order>& f, \

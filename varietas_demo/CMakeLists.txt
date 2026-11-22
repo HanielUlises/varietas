@@ -46,7 +46,7 @@ add_dependencies(branch_node branch_header_target)
 
 # The solve-all demonstration draws an arm the decoupling refuses, so its
 # solver is the full one over Q(x, y, z), reconstructed from fixed poses. That
-# takes about half a minute and is paid here, once, rather than by anyone who
+# takes about twenty seconds and is paid here, once, rather than by anyone who
 # runs the demonstration. find_package(Eigen3) is for the iteration the node
 # sets beside the generated solver; the generated header needs it anyway.
 find_package(Eigen3 REQUIRED)

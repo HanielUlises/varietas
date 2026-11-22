@@ -2,6 +2,26 @@
 Changelog
 =========
 
+Unreleased
+==========
+
+.. rubric:: Gröbner bases
+
+* ``f4::basis``, Faugère's F4 over :math:`\F_p`: every pending pair of the
+  lowest sugar degree reduced at once as the rows of one sparse matrix, after a
+  symbolic preprocessing that collects every reducer they call on, with the
+  pairs pruned by the criteria of Gebauer and Möller. It returns the same
+  reduced basis as Buchberger, which the tests check on random systems under
+  grevlex, lex and the saturation order, and on the saturated ideal of an arm.
+* ``groebner_engine``, the hook by which a coefficient type chooses how its
+  bases are completed. ``residue`` chooses F4, so ``groebner_basis`` over
+  :math:`\F_p`, and with it every sample the reconstruction takes, runs F4
+  without a caller changing anything.
+* The fixed-pose basis the reconstruction samples costs about a millisecond on
+  the arm with three pairwise skew axes, against 15 ms by Buchberger, and that
+  arm reconstructs in 18 s rather than 41 s; the demonstration's arm in 0.6 s
+  rather than 2.4 s. The emitted solvers are identical, byte for byte.
+
 0.2.0
 =====
 

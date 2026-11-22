@@ -4,7 +4,7 @@
 // refuses it and the symbolic solve over Q(x, y, z) does not finish, so this
 // runs the reconstruction from fixed poses, the path `urdf_codegen
 // --reconstruct` takes, and emits the full three-parameter solver. It takes
-// about half a minute, which the build pays once so that no caller does.
+// about twenty seconds, which the build pays once so that no caller does.
 //
 // What the reconstruction found out about itself is written into the header
 // too, as a struct of constants after the solver: how long it took, how many

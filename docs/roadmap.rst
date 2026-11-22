@@ -38,18 +38,32 @@ about :math:`z` that is the whole plane :math:`y = 0`
 alongside the first, with the runtime choosing whichever chart is further from
 its poles.
 
-A faster fixed-pose basis over a prime field
-============================================
+A fixed-pose basis over Q by way of the primes
+==============================================
 
-**Why.** Reconstruction spends most of its time in the black box, one
-Gröbner basis per sample, about 17 ms each on the arm with its axes in general
-position, which is 60% of the 47 s that arm takes.
+**Why.** The fixed-pose basis over :math:`\F_p` is F4 now (:doc:`api/codegen`),
+about a millisecond a sample on the arm with its axes in general position
+against 15 ms before, and the reconstruction of that arm went from 41 s to
+18 s. What is left is mostly the exact check: three fixed-pose bases over
+:math:`\Q` at dyadic poses, about four seconds each, by Buchberger, through
+the coefficient swell the primes avoid. The same computation is the whole of
+the fixed-pose path (:doc:`guide/pose_ik`), which is why that path stops at
+five joints.
 
-**What is needed.** A completion algorithm of the F4 family, which reduces
-many pairs at once by row reduction over :math:`\F_p`, where a row operation is
-a vector of machine words. Since the samples share their shape, the sequence of
-reductions from one sample could also be replayed on the next without the
-pair selection that found it.
+**What is needed.** The basis over :math:`\Q` from its images: F4 modulo
+several primes, the images joined by the Chinese remainder theorem and read
+back by rational reconstruction, primes whose leading monomials disagree with
+the majority discarded as unlucky, and the result certified at the end, by
+checking that it lies in the ideal and that its S-pairs reduce to zero over
+:math:`\Q`, or by a final prime it was not built from where certainty is not
+needed. The reconstruction already does this for rational functions; here the
+unknowns are the coefficients of one basis.
+
+**Replaying the trace.** The samples of one reconstruction share their shape,
+so the matrices F4 builds for one pose could be rebuilt for the next with new
+coefficients and without the pair selection, the symbolic preprocessing, or
+the rows that reduced to zero. With the sampling now a twelfth of the run this
+is worth less than it was, and it waits for the arms where it is not.
 
 Irreducible components
 ======================

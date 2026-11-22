@@ -15,6 +15,8 @@ refuses, the last being the largest part, and deliberately.
      - complete
    * - Division, Buchberger, reduced bases, membership
      - complete
+   * - F4 over :math:`\F_p`
+     - complete, agrees with Buchberger
    * - Dimension, saturation, elimination
      - complete
    * - Quotient algebra, action matrices, spectral solving
@@ -138,23 +140,23 @@ the way.
    * - Anthropomorphic 3R
      - :math:`\Q(x,y,z)`
      - ~20 s
-     - 0.25 s
+     - 0.09 s
    * - Base off its own axis (no sweep)
      - :math:`\Q(x,y,z)`
      - ~35 s
-     - 0.25 s
+     - 0.09 s
    * - Elbow displaced sideways (no sweep)
      - :math:`\Q(x,y,z)`
      - not in 54 min, 29 GB
-     - 0.55 s
+     - 0.18 s
    * - Shoulder displaced (the demonstration arm)
      - :math:`\Q(x,y,z)`
      - not after 60 min
-     - 2.5 s
+     - 0.63 s
    * - Three pairwise skew axes (no sweep)
      - :math:`\Q(x,y,z)`
      - not after 60 min
-     - 47 s
+     - 18 s
 
 The 3R arm at a fixed pose returns a basis of six elements and
 :math:`\dim_k A = 4`, exactly the four branches such an arm is known to have.
