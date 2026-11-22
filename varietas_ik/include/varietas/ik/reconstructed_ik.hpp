@@ -6,6 +6,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "varietas/codegen/parametric_solution.hpp"
@@ -19,6 +20,7 @@
 #include "varietas/core/order/order_id.hpp"
 #include "varietas/core/quotient/quotient_basis.hpp"
 #include "varietas/ik/cast_chain.hpp"
+#include "varietas/ik/lifted_ideal.hpp"
 #include "varietas/ik/parametric_ik.hpp"
 #include "varietas/kinematics/chain.hpp"
 #include "varietas/kinematics/rationalize.hpp"
@@ -46,6 +48,17 @@
 // fixed-pose basis is computed over Q there and its action matrices compared
 // with the reconstructed ones evaluated at the same pose. A disagreement
 // anywhere is reported as a failure rather than returned.
+//
+// The basis at a check pose is lifted from Z/p by default
+// (varietas/ik/lifted_ideal.hpp), which is checked over Q to contain the true
+// ideal and is equal to it with high probability, and which on the arm with
+// three pairwise skew axes takes a hundredth of a second where Buchberger over Q
+// took four. The two sources of the comparison are independent: the
+// reconstruction samples random poses over Z/p, and the lifting computes at
+// the check pose over primes of its own, so a wrong answer has to be wrong in
+// the same way at the same pose by two routes. Passing
+// buchberger_checks = true computes the check bases by Buchberger instead, which
+// makes the comparison exact at the cost of the four seconds.
 namespace varietas {
 namespace ik {
 
@@ -53,6 +66,7 @@ struct reconstruction_report {
   reconstruction::statistics sampling;
   std::size_t exact_checks = 0;  // rational poses the result was checked at
   bool checks_passed = false;
+  bool checks_lifted = false;  // the check bases lifted from Z/p, not by Buchberger
 };
 
 namespace detail {
@@ -67,11 +81,14 @@ struct pose_solution {
   std::vector<Coeff> values;
 };
 
+// Over Q the basis is lifted from Z/p unless `buchberger` asks otherwise; over
+// Z/p it is F4's, there being nothing to lift.
 template <std::size_t N, std::size_t P, class Coeff>
 bool solve_at_pose(const chain<Coeff>& robot,
                    const rational_transform<Coeff, N, grevlex>& map,
                    const std::array<std::size_t, P>& coordinates,
-                   const std::array<Coeff, P>& pose, pose_solution<N, Coeff>& out) {
+                   const std::array<Coeff, P>& pose, pose_solution<N, Coeff>& out,
+                   bool buchberger = false) {
   using poly = polynomial<Coeff, N, grevlex>;
   using traits = coefficient_traits<Coeff>;
   const poly denominator = map.denominator();
@@ -80,7 +97,14 @@ bool solve_at_pose(const chain<Coeff>& robot,
   for (std::size_t k = 0; k < P; ++k) {
     residuals.push_back(map.translation(coordinates[k]) - denominator * poly::constant(pose[k]));
   }
-  const auto basis = kinematic_ideal_generators<N, grevlex>(robot, residuals);
+  std::vector<poly> basis;
+  if constexpr (std::is_same_v<Coeff, rational>) {
+    basis = buchberger ? kinematic_ideal_generators<N, grevlex>(robot, residuals)
+                       : lifted_kinematic_ideal_generators<N, grevlex>(robot, residuals);
+  } else {
+    (void)buchberger;
+    basis = kinematic_ideal_generators<N, grevlex>(robot, residuals);
+  }
   out.quotient = standard_monomials(basis);
   if (!out.quotient.is_zero_dimensional || out.quotient.dimension() == 0) {
     return false;
@@ -114,7 +138,8 @@ template <std::size_t N, std::size_t P>
 parametric_ik_result<N, P> reconstructed_position_ik(const chain<rational>& robot,
                                                      const std::array<std::size_t, P>& coordinates,
                                                      reconstruction_report* report = nullptr,
-                                                     std::size_t exact_checks = 2) {
+                                                     std::size_t exact_checks = 2,
+                                                     bool buchberger_checks = false) {
   static_assert(P >= 1 && P <= 3, "a tool position has three coordinates");
   using field = rational_function<P>;
 
@@ -180,7 +205,8 @@ parametric_ik_result<N, P> reconstructed_position_ik(const chain<rational>& robo
   for (int i = 0; i < 3; ++i) {
     exact_poses.push_back(random_rational_pose());
     detail::pose_solution<N, rational> sample;
-    if (!detail::solve_at_pose<N, P>(exact, exact_map, coordinates, exact_poses.back(), sample)) {
+    if (!detail::solve_at_pose<N, P>(exact, exact_map, coordinates, exact_poses.back(), sample,
+                                     buchberger_checks)) {
       sample.quotient.monomials.clear();
     }
     exact_samples.push_back(std::move(sample));
@@ -237,11 +263,13 @@ parametric_ik_result<N, P> reconstructed_position_ik(const chain<rational>& robo
   // more were asked for.
   rep.checks_passed = true;
   rep.exact_checks = 0;
+  rep.checks_lifted = !buchberger_checks;
   for (std::size_t c = 0; c < exact_checks; ++c) {
     if (c >= exact_samples.size()) {
       exact_poses.push_back(random_rational_pose());
       detail::pose_solution<N, rational> sample;
-      detail::solve_at_pose<N, P>(exact, exact_map, coordinates, exact_poses.back(), sample);
+      detail::solve_at_pose<N, P>(exact, exact_map, coordinates, exact_poses.back(), sample,
+                                  buchberger_checks);
       exact_samples.push_back(std::move(sample));
     }
     const auto& sample = exact_samples[c];

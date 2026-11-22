@@ -84,7 +84,7 @@ solver at all.
 
    ros2 run varietas_urdf urdf_solve <file.urdf> --xyz X Y Z \
        [--rpy R P Y | --quat X Y Z W] \
-       [--tip L] [--root L] [--position-only] [--denominator D]
+       [--tip L] [--root L] [--position-only] [--denominator D] [--buchberger]
 
 .. list-table::
    :header-rows: 1
@@ -103,8 +103,12 @@ solver at all.
    * - ``--denominator D``
      - Denominator bound for snapping the target onto a nearby exact pose.
        Default :math:`10^6`.
+   * - ``--buchberger``
+     - Compute the basis by Buchberger over :math:`\Q`, exactly, rather than
+       lifting it from :math:`\F_p`. Slower by orders of magnitude, and on six
+       joints not observed to finish.
 
-Up to five joints in practice. See :doc:`pose_ik`.
+Up to six joints. See :doc:`pose_ik`.
 
 The demonstration
 =================

@@ -2,6 +2,7 @@
 //
 // Usage: urdf_solve <file.urdf> --xyz X Y Z [--rpy R P Y | --quat X Y Z W]
 //                   [--tip L] [--root L] [--position-only] [--denominator D]
+//                   [--buchberger]
 //
 // This is the other half of what the library can do, and the half the emitter
 // cannot reach. urdf_codegen adjoins the target to the coefficient field so
@@ -12,6 +13,12 @@
 // is a constant, the field is Q, and the twelve equations of a full pose are
 // no harder for Buchberger than the three of a position.
 //
+// The basis over Q is lifted from its images modulo primes
+// (varietas/ik/lifted_ideal.hpp), checked over Q to contain the true ideal and
+// equal to it with high probability; that is what lets a six-joint arm finish,
+// in seconds. --buchberger computes it exactly instead, as before, which on six
+// joints means not finishing.
+//
 // The pose has to be exact, and that is not a formality. A target assembled by
 // rounding sines and cosines into rationals has denominators near 2^52, and
 // Buchberger over coefficients of that size does not finish: measured, not
@@ -19,6 +26,7 @@
 // URDF's own geometry is, with the deviation reported rather than hidden.
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -31,6 +39,7 @@
 #include "varietas/core/order/grevlex.hpp"
 #include "varietas/core/quotient/quotient_basis.hpp"
 #include "varietas/core/solve/spectral.hpp"
+#include "varietas/ik/lifted_ideal.hpp"
 #include "varietas/kinematics/evaluate.hpp"
 #include "varietas/kinematics/rationalize.hpp"
 #include "varietas/urdf/rational_approximation.hpp"
@@ -48,6 +57,7 @@ struct options {
   double xyz[3] = {0.0, 0.0, 0.0};
   double quat[4] = {0.0, 0.0, 0.0, 1.0};  // x, y, z, w
   bool position_only = false;
+  bool buchberger = false;
   long denominator = 1000000;
 };
 
@@ -105,6 +115,8 @@ bool parse(int argc, char** argv, options& out) {
       out.root = argv[++i];
     } else if (arg == "--position-only") {
       out.position_only = true;
+    } else if (arg == "--buchberger") {
+      out.buchberger = true;
     } else if (arg == "--denominator") {
       out.denominator = static_cast<long>(number("--denominator"));
     } else if (!arg.empty() && arg[0] == '-') {
@@ -127,17 +139,39 @@ int run(const varietas::chain<rational>& robot,
         const varietas::rigid_transform<rational>& target, const options& opts) {
   using poly = varietas::polynomial<rational, N, grevlex>;
 
-  if (N >= 6 && !opts.position_only) {
+  if (N >= 6 && !opts.position_only && opts.buchberger) {
     std::fprintf(stderr,
-                 "warning: a six-joint full pose has not been observed to finish here; five "
-                 "joints takes seconds and six did not complete in eight minutes. Interrupt "
-                 "if it runs away.\n");
+                 "warning: a six-joint full pose by Buchberger over Q has not been observed to "
+                 "finish; without --buchberger it takes seconds. Interrupt if it runs away.\n");
   }
 
-  const std::vector<poly> generators =
-      opts.position_only
-          ? varietas::position_ideal_generators<N, grevlex>(robot, target.translation())
-          : varietas::pose_ideal_generators<N, grevlex>(robot, target);
+  std::vector<poly> generators;
+  varietas::modular::statistics lifting;
+  const auto started = std::chrono::steady_clock::now();
+  if (opts.buchberger) {
+    generators = opts.position_only
+                     ? varietas::position_ideal_generators<N, grevlex>(robot, target.translation())
+                     : varietas::pose_ideal_generators<N, grevlex>(robot, target);
+  } else {
+    generators = opts.position_only
+                     ? varietas::ik::lifted_position_ideal_generators<N, grevlex>(
+                           robot, target.translation(), &lifting)
+                     : varietas::ik::lifted_pose_ideal_generators<N, grevlex>(robot, target,
+                                                                              &lifting);
+  }
+  const double seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+  if (opts.buchberger) {
+    std::printf("basis             Buchberger over Q, %.2f s\n", seconds);
+  } else if (lifting.lifted) {
+    std::printf("basis             lifted from %zu primes, coefficients to %zu bits, checked over "
+                "Q, %.2f s\n",
+                lifting.primes, lifting.coefficient_bits, seconds);
+  } else {
+    std::printf("basis             Buchberger over Q, the lifted one being uncheckable here, "
+                "%.2f s\n",
+                seconds);
+  }
 
   const auto quotient = varietas::standard_monomials(generators);
   if (!quotient.is_zero_dimensional) {
@@ -208,7 +242,8 @@ int main(int argc, char** argv) {
   if (!parse(argc, argv, opts)) {
     std::fprintf(stderr,
                  "usage: %s <file.urdf> --xyz X Y Z [--rpy R P Y | --quat X Y Z W]\n"
-                 "          [--tip L] [--root L] [--position-only] [--denominator D]\n",
+                 "          [--tip L] [--root L] [--position-only] [--denominator D]\n"
+                 "          [--buchberger]\n",
                  argv[0]);
     return 2;
   }

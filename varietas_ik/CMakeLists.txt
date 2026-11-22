@@ -33,6 +33,12 @@ if(BUILD_TESTING)
   target_link_libraries(test_reconstructed_ik ${PROJECT_NAME})
   target_include_directories(test_reconstructed_ik PRIVATE test)
 
+  # A six-joint arm at a full pose, lifted from Z/p: seconds here, longer on a
+  # runner with fewer cores and the assertions on.
+  ament_add_gtest(test_lifted_ideal test/test_lifted_ideal.cpp TIMEOUT 600)
+  target_link_libraries(test_lifted_ideal ${PROJECT_NAME})
+  target_include_directories(test_lifted_ideal PRIVATE test)
+
   ament_add_gtest(test_decoupled_ik test/test_decoupled_ik.cpp TIMEOUT 600)
   target_link_libraries(test_decoupled_ik ${PROJECT_NAME})
   target_include_directories(test_decoupled_ik PRIVATE test)

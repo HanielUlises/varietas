@@ -131,6 +131,18 @@ Half-angle rationalisation
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
                   std::vector<polynomial<Coeff, N, Order>> pose_residuals(...)
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
+                  std::vector<polynomial<Coeff, N, Order>> split_pose_residuals(const chain<Coeff>& robot, \
+                                                                                const rigid_transform<Coeff>& target)
+
+   The pose equations with the chain split at its middle,
+   :math:`J_1 \cdots J_k = T\,\mathrm{tool}^{-1} J_N^{-1} \cdots J_{k+1}^{-1}`, each
+   side a product of half the joints, the inverse of a joint being a joint
+   turning or sliding the other way. Saturated, they give **the same ideal** as
+   :cpp:func:`pose_residuals`, since the two sets of residuals differ by an
+   invertible matrix once the half-angle denominators are inverted, and they
+   are far cheaper to complete: on the industrial six-joint arm, one basis over
+   :math:`\F_p` takes 2.6 s rather than 58. ``pose_ideal_generators`` uses them.
+.. cpp:function:: template<std::size_t N, class Order, class Coeff> \
                   std::vector<polynomial<Coeff, N, Order>> position_residuals(...)
 .. cpp:function:: template<std::size_t N, class Order, class Coeff> \
                   std::vector<polynomial<Coeff, N, Order>> half_angle_multipliers(const chain<Coeff>& robot)

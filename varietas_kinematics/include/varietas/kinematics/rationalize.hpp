@@ -333,14 +333,108 @@ std::vector<polynomial<Coeff, N, Order>> kinematic_ideal_generators(
   return saturate_by_product(residuals, multipliers, statistics);
 }
 
-// Generators of the inverse kinematics ideal at a full pose.
+// The pose equations with the chain split at its middle.
+//
+// pose_residuals clears the denominators of the whole chain at once, so every
+// residual has degree two in every joint variable and total degree 2N, and on
+// six joints that is twelve polynomials of degree twelve and hundreds of
+// terms. Moving the second half of the chain to the other side,
+//
+//     J_1 ··· J_k = T · tool^-1 · J_N^-1 ··· J_{k+1}^-1,
+//
+// leaves each side a product of half the joints. The inverse of a joint is a
+// joint as well, turning or sliding the other way along the same axis with the
+// placement undone after it rather than before, so the right-hand side is
+// another chain and needs no division. The residuals are its entries cleared
+// of the two half-chain denominators.
+//
+// The saturated ideal is the same. Write F for the forward map, L and B for its
+// halves, so F = L B. Over the ring with every 1 + t_i^2 inverted, B is
+// invertible, and the entries of L - T B^-1 = (F - T) B^-1 and of F - T
+// generate the same ideal, each matrix being the other times an invertible
+// one. Saturating by the product of the 1 + t_i^2 is contracting from that
+// ring, so the two saturations agree, and so do their reduced bases: this
+// changes the cost and nothing else, and the tests compare the two.
+//
+// What it changes the cost by is the point. On a six-joint arm of the usual
+// shape, one basis over Z/p takes about a second rather than twelve.
+template <std::size_t N, class Order, class Coeff>
+std::vector<polynomial<Coeff, N, Order>> split_pose_residuals(
+    const chain<Coeff>& robot, const rigid_transform<Coeff>& target) {
+  using transform = rational_transform<Coeff, N, Order>;
+  using poly = polynomial<Coeff, N, Order>;
+  VARIETAS_ASSERT(robot.degrees_of_freedom() == N);
+
+  const auto motion = [](const joint<Coeff>& j, const vector3<Coeff>& axis, std::size_t k) {
+    switch (j.type) {
+      case joint_type::revolute:
+        return transform::revolute(axis, k);
+      case joint_type::prismatic:
+        return transform::prismatic(axis, k);
+      case joint_type::fixed:
+        break;
+    }
+    return transform::identity();
+  };
+
+  // The first joint of the second half, counted among all joints, and the
+  // variable it moves.
+  const std::size_t split = (N + 1) / 2;
+  const auto& joints = robot.joints();
+  std::size_t first_right = joints.size();
+  std::size_t actuated = 0;
+  for (std::size_t i = 0; i < joints.size(); ++i) {
+    if (joints[i].is_actuated()) {
+      if (actuated == split) {
+        first_right = i;
+        break;
+      }
+      ++actuated;
+    }
+  }
+
+  transform left;
+  std::size_t variable = 0;
+  for (std::size_t i = 0; i < first_right; ++i) {
+    left = left * transform::constant(joints[i].origin);
+    if (joints[i].is_actuated()) {
+      left = left * motion(joints[i], joints[i].axis, variable++);
+    }
+  }
+  transform right = transform::constant(target * robot.tool().inverse());
+  std::size_t last = N;
+  for (std::size_t i = joints.size(); i > first_right; --i) {
+    const joint<Coeff>& j = joints[i - 1];
+    if (j.is_actuated()) {
+      right = right * motion(j, coefficient_traits<Coeff>::negate(coefficient_traits<Coeff>::one()) *
+                                    j.axis,
+                             --last);
+    }
+    right = right * transform::constant(j.origin.inverse());
+  }
+  VARIETAS_ASSERT(last == variable);
+
+  const poly dl = left.denominator();
+  const poly dr = right.denominator();
+  std::vector<poly> residuals;
+  residuals.reserve(12);
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      residuals.push_back(left.rotation(i, j) * dr - right.rotation(i, j) * dl);
+    }
+    residuals.push_back(left.translation(i) * dr - right.translation(i) * dl);
+  }
+  return residuals;
+}
+
+// Generators of the inverse kinematics ideal at a full pose, from the split
+// equations above.
 template <std::size_t N, class Order, class Coeff>
 std::vector<polynomial<Coeff, N, Order>> pose_ideal_generators(
     const chain<Coeff>& robot, const rigid_transform<Coeff>& target,
     buchberger_statistics* statistics = nullptr) {
-  const auto map = rational_forward_kinematics<N, Order>(robot);
-  return kinematic_ideal_generators<N, Order>(robot, pose_residuals(map, target),
-                                              statistics);
+  return kinematic_ideal_generators<N, Order>(
+      robot, split_pose_residuals<N, Order>(robot, target), statistics);
 }
 
 // Generators of the inverse kinematics ideal at a tool position.

@@ -58,6 +58,22 @@ struct monomial_hash {
   }
 };
 
+// A divisibility mask: for each variable a few bits, bit k set when the
+// exponent exceeds k. If a divides b every bit of a's mask is set in b's, so a
+// mask with a bit b's lacks rejects a divisor in one instruction, which is
+// most of the questions the symbolic preprocessing asks.
+template <std::size_t N>
+std::uint64_t divisibility_mask(const monomial<N>& m) noexcept {
+  constexpr std::size_t per = N == 0 ? 1 : (64 / N < 1 ? 1 : 64 / N);
+  constexpr std::size_t bits = per > 8 ? 8 : per;
+  std::uint64_t mask = 0;
+  for (std::size_t v = 0; v < N && v * bits < 64; ++v) {
+    const std::size_t e = m[v] < bits ? m[v] : bits;
+    mask |= ((std::uint64_t{1} << e) - 1) << (v * bits);
+  }
+  return mask;
+}
+
 // A basis element, monic, its terms in decreasing order.
 template <std::size_t N>
 struct element {
@@ -234,20 +250,25 @@ class engine {
         e.redundant = true;
       }
     }
+    active_.erase(std::remove_if(active_.begin(), active_.end(),
+                                 [&](const active_element& a) { return basis_[a.index].redundant; }),
+                  active_.end());
+    active_.push_back(active_element{hi, divisibility_mask(lh), h.monomials.size()});
     basis_.push_back(std::move(h));
   }
 
   // A basis element whose leading monomial divides m, the shortest of them.
   std::int64_t reducer_for(const mono& m) const {
+    const std::uint64_t mask = divisibility_mask(m);
     std::int64_t best = -1;
-    for (std::size_t g = 0; g < basis_.size(); ++g) {
-      const element<N>& e = basis_[g];
-      if (e.redundant || !mono::divides(e.leading(), m)) {
+    std::size_t shortest = 0;
+    for (const active_element& a : active_) {
+      if ((a.mask & ~mask) != 0 || (best >= 0 && a.length >= shortest) ||
+          !mono::divides(basis_[a.index].leading(), m)) {
         continue;
       }
-      if (best < 0 || e.monomials.size() < basis_[static_cast<std::size_t>(best)].monomials.size()) {
-        best = static_cast<std::int64_t>(g);
-      }
+      best = static_cast<std::int64_t>(a.index);
+      shortest = a.length;
     }
     return best;
   }
@@ -267,6 +288,7 @@ class engine {
 
     // Rows: both halves of every selected pair, each multiple once.
     std::vector<row_spec<N>> specs;
+    std::vector<std::vector<std::uint32_t>> row_columns;  // in first-seen numbering
     std::vector<bool> is_reducer;
     std::unordered_set<row_spec<N>, row_spec_hash<N>> seen;
     std::unordered_map<mono, std::uint32_t, monomial_hash<N>> column_of;
@@ -290,9 +312,12 @@ class engine {
       }
       specs.push_back(spec);
       is_reducer.push_back(reducer);
+      std::vector<std::uint32_t> ids;
+      ids.reserve(basis_[g].monomials.size());
       for (const mono& m : basis_[g].monomials) {
-        add_monomial(m * u);
+        ids.push_back(add_monomial(m * u));
       }
+      row_columns.push_back(std::move(ids));
     };
 
     for (const critical_pair<N>& c : selected) {
@@ -336,12 +361,11 @@ class engine {
     // come out already increasing.
     std::vector<sparse_row> rows(specs.size());
     for (std::size_t r = 0; r < specs.size(); ++r) {
-      const element<N>& e = basis_[specs[r].element];
       sparse_row& row = rows[r];
-      row.columns.reserve(e.monomials.size());
-      row.values = e.coefficients;
-      for (const mono& m : e.monomials) {
-        row.columns.push_back(position[column_of.at(m * specs[r].multiplier)]);
+      row.values = basis_[specs[r].element].coefficients;
+      row.columns = std::move(row_columns[r]);
+      for (std::uint32_t& c : row.columns) {
+        c = position[c];
       }
     }
 
@@ -440,9 +464,18 @@ class engine {
     return true;
   }
 
+  // The elements not made redundant, with what the search for a reducer needs
+  // of each, kept together so that the search walks one array.
+  struct active_element {
+    std::uint32_t index;
+    std::uint64_t mask;
+    std::size_t length;
+  };
+
   word p_;
   buchberger_statistics* statistics_;
   std::vector<element<N>> basis_;
+  std::vector<active_element> active_;
   std::vector<critical_pair<N>> pairs_;
 };
 

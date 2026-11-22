@@ -21,6 +21,32 @@ Unreleased
   the arm with three pairwise skew axes, against 15 ms by Buchberger, and that
   arm reconstructs in 18 s rather than 41 s; the demonstration's arm in 0.6 s
   rather than 2.4 s. The emitted solvers are identical, byte for byte.
+* ``modular::groebner_basis`` and ``modular::saturate_by_product``, bases over
+  :math:`\Q` lifted from their F4 images modulo primes, computed four at a
+  time: grouped by leading monomials, joined by the Chinese remainder theorem,
+  read back by rational reconstruction, confirmed by a further prime, and
+  checked over :math:`\Q` to be a Gröbner basis of an ideal containing the
+  true one, a saturation by also showing the multiplier a unit on the finite
+  quotient. That the ideal is no larger is not checked and holds with high
+  probability. What cannot be checked is computed by Buchberger.
+
+.. rubric:: Inverse kinematics
+
+* ``split_pose_residuals``, the pose equations with the chain split at its
+  middle, the second half inverted into a chain of its own. The saturated
+  ideal is the same, so ``pose_ideal_generators``, which now uses them,
+  returns what it did; one basis of the industrial six-joint arm over
+  :math:`\F_p` takes 2.6 s rather than 58.
+* ``lifted_pose_ideal_generators`` and its kin in
+  ``varietas/ik/lifted_ideal.hpp``, the fixed-pose ideals lifted rather than
+  computed over :math:`\Q`. ``urdf_solve`` uses them, and ``--buchberger``
+  restores the exact route. **Six joints at a full pose finish**: the industrial
+  arm in 20 to 30 s, a skewed wrist in about 9, an arm of the Universal Robots
+  shape, with no spherical wrist, in about 16, each with its eight solutions.
+  Five joints take 29 ms rather than 68 s.
+* ``reconstructed_position_ik`` checks against lifted bases unless
+  ``buchberger_checks`` is set, and the arm with three pairwise skew axes
+  reconstructs in 6.6 s rather than 18.
 
 0.2.0
 =====

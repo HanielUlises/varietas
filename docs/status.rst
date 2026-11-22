@@ -17,6 +17,8 @@ refuses, the last being the largest part, and deliberately.
      - complete
    * - F4 over :math:`\F_p`
      - complete, agrees with Buchberger
+   * - Bases over :math:`\Q` lifted from :math:`\F_p`
+     - complete, checked to contain the true ideal
    * - Dimension, saturation, elimination
      - complete
    * - Quotient algebra, action matrices, spectral solving
@@ -46,7 +48,7 @@ refuses, the last being the largest part, and deliberately.
    * - MoveIt kinematics plugin
      - complete, six joints with a spherical wrist
    * - Pose inverse kinematics at a given target
-     - complete, to five joints
+     - complete, to six joints
    * - Modular gcd over :math:`\Q(\p)`
      - complete, certified
    * - Parametric solve reconstructed from fixed poses
@@ -140,23 +142,23 @@ the way.
    * - Anthropomorphic 3R
      - :math:`\Q(x,y,z)`
      - ~20 s
-     - 0.09 s
+     - 0.06 s
    * - Base off its own axis (no sweep)
      - :math:`\Q(x,y,z)`
      - ~35 s
-     - 0.09 s
+     - 0.06 s
    * - Elbow displaced sideways (no sweep)
      - :math:`\Q(x,y,z)`
      - not in 54 min, 29 GB
-     - 0.18 s
+     - 0.05 s
    * - Shoulder displaced (the demonstration arm)
      - :math:`\Q(x,y,z)`
      - not after 60 min
-     - 0.63 s
+     - 0.28 s
    * - Three pairwise skew axes (no sweep)
      - :math:`\Q(x,y,z)`
      - not after 60 min
-     - 18 s
+     - 6.6 s
 
 The 3R arm at a fixed pose returns a basis of six elements and
 :math:`\dim_k A = 4`, exactly the four branches such an arm is known to have.
@@ -194,8 +196,10 @@ The action matrices the solve would produce have entries of fourteen terms at mo
 The reconstruction (:cpp:func:`varietas::ik::reconstructed_position_ik`) never
 forms the intermediate functions. It solves the arm at many poses over prime
 fields and recovers each matrix entry from its values; the table above is the
-result. It has no final exact test, so it is **checked exactly** at rational
-poses instead, and where both finish the two agree entry for entry. The
+result. It has no final exact test, so it is **checked** at rational poses
+instead, against a fixed-pose basis over :math:`\Q` lifted from
+:math:`\F_p`, or computed by Buchberger when ``buchberger_checks`` asks for an
+exact comparison, and where both finish the two agree entry for entry. The
 symbolic solve stays the default of ``urdf_codegen`` because it is certified;
 ``--reconstruct`` is the route for the arms it cannot reach.
 
@@ -229,5 +233,7 @@ three reasons applies.
 The fixed-pose path
 ===================
 
-Five joints is where it stops being interactive and six is where it stops; see
+Six joints at a full pose take tens of seconds, by a basis over :math:`\Q`
+lifted from :math:`\F_p` from equations split at the middle of the chain;
+by Buchberger over :math:`\Q` they had not finished in eight minutes. See
 :doc:`guide/pose_ik` for the timings.

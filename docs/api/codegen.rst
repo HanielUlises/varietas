@@ -212,6 +212,47 @@ Reconstruction
    answer is the one Buchberger gives. On the saturated ideal of a 3R arm at a
    pose it is about sixteen times faster.
 
+Bases over Q from Z/p
+=====================
+
+``varietas/codegen/modular_groebner.hpp``
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<rational, N, Order>> \
+                  modular::groebner_basis(const std::vector<polynomial<rational, N, Order>>& generators, \
+                                          modular::statistics* stats = nullptr, \
+                                          const modular::options& options = {})
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<rational, N, Order>> \
+                  modular::saturate_by_product(const std::vector<polynomial<rational, N, Order>>& generators, \
+                                               const std::vector<polynomial<rational, N, Order>>& multipliers, \
+                                               modular::statistics* stats = nullptr, \
+                                               const modular::options& options = {})
+
+   The reduced basis over :math:`\Q`, of an ideal or of its saturation by the
+   product of the multipliers, recovered from the reduced bases modulo primes:
+   the images grouped by their leading monomials, the largest group joined by
+   the Chinese remainder theorem and read back by rational reconstruction, and
+   a candidate accepted once the next prime of its group agrees with it and it
+   passes a check over :math:`\Q`. Several images are computed at once,
+   ``options.threads`` of them, half the hardware threads and at most four by
+   default, and the answer does not depend on how many.
+
+   **The check is exact in one direction.** Every S-pair of the candidate
+   :math:`G` reduces to zero over :math:`\Q` and every generator reduces to
+   zero modulo :math:`G`, so :math:`G` is a Gröbner basis of an ideal
+   containing the true one; for a saturation, the product is also shown to be
+   a unit modulo :math:`\langle G \rangle`, which a zero-dimensional quotient
+   decides by a determinant nonzero modulo a prime, so that
+   :math:`\langle G \rangle` contains the saturation too. That
+   :math:`\langle G \rangle` is no larger is not checked, and holds unless
+   every prime of the majority was unlucky in the same way: right with high
+   probability, as the reconstruction is. A saturation that is not
+   zero-dimensional cannot be checked this way and is computed by Buchberger,
+   as is anything that runs out of primes, so the result is never worse than
+   the exact computation, and ``statistics::lifted`` says which route was taken.
+   ``varietas::groebner_basis`` over :math:`\Q` is Buchberger and unchanged.
+
 .. cpp:function:: template<std::size_t P> \
                   bool reconstruction::reconstruct(const black_box<P>& box, \
                                                    const prime_hook& prepare, \

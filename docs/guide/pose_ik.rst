@@ -17,26 +17,51 @@ and ``varietas_kinematics`` has posed them since the beginning.
 What it costs
 =============
 
-The growth is steep, and it is the whole story. On a chain of unit links, a full
-pose takes
+Buchberger over :math:`\Q` grows steeply with the number of joints, and on a
+chain of unit links it had produced nothing after eight minutes at six. Two
+things changed that.
+
+**The equations are split at the middle of the chain**
+(:cpp:func:`split_pose_residuals`): the first half of the joints on one side,
+the inverse of the second half on the other, which is again a chain. The
+saturated ideal is the same, and on six joints a basis over :math:`\F_p`
+costs a second or two rather than ten or sixty.
+
+**The basis over** :math:`\Q` **is lifted from its images modulo primes**
+(:cpp:func:`lifted_pose_ideal_generators`), which carry one machine word per
+coefficient where Buchberger over :math:`\Q` carries the swell. It is
+checked over :math:`\Q` to be a Gröbner basis of an ideal containing the
+true one, and is equal to it with high probability; ``--buchberger`` computes
+it exactly instead, at the old cost.
+
+On the industrial arm of the tests, cut after its first three, four and five
+joints and complete at six, at the pose of a rational configuration:
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 70
+   :widths: 16 42 42
 
    * - Joints
-     - Time for a full pose
+     - Buchberger over :math:`\Q`, whole chain
+     - Lifted, split chain
    * - 3
-     - about 10 ms
+     - 4 ms
+     - 2 ms
    * - 4
-     - about a sixth of a second
+     - 0.52 s
+     - 5 ms
    * - 5
-     - about 9 seconds
+     - 68 s
+     - 29 ms
    * - 6
-     - nothing after eight minutes
+     - not observed to finish
+     - 20 to 30 s, eight solutions
 
-**Five joints is where this stops being interactive, and six is where it
-stops.**
+At six joints the time is the images: nineteen primes for coefficients of
+262 bits, each image one F4 run of a few seconds, four at a time. A six-joint
+arm without a spherical wrist is no harder here than one with: an arm of the
+Universal Robots shape takes about sixteen seconds and has its eight
+solutions too.
 
 The pose has to be exact
 ========================

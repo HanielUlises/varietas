@@ -120,7 +120,8 @@ Reconstructed inverse kinematics
                   reconstructed_position_ik(const chain<rational>& robot, \
                                             const std::array<std::size_t, P>& coordinates, \
                                             reconstruction_report* report = nullptr, \
-                                            std::size_t exact_checks = 2)
+                                            std::size_t exact_checks = 2, \
+                                            bool buchberger_checks = false)
 
    The same result as :cpp:func:`parametric_position_ik`, computed without a
    Gröbner basis over :math:`\Q(\p)`. The arm is solved at many poses over prime
@@ -133,10 +134,46 @@ Reconstructed inverse kinematics
    a refusal rather than returned. On the arms where the symbolic solve
    finishes, the two agree entry for entry.
 
+   The basis at a check pose is lifted from :math:`\F_p`
+   (:cpp:func:`lifted_kinematic_ideal_generators`), which is checked over
+   :math:`\Q` to contain the true ideal and equals it with high probability;
+   the reconstruction and the lifting draw on independent samples and primes.
+   ``buchberger_checks = true`` computes the check bases by Buchberger instead,
+   which makes the comparison exact and, on the arm with three pairwise skew
+   axes, costs four seconds a pose. ``reconstruction_report::checks_lifted``
+   says which was done.
+
    Use it for three-joint arms with offsets, where the symbolic solve drowns in
-   intermediate expressions. The demonstration's arm reconstructs in about three
-   seconds, where the symbolic solve had not finished after twenty-seven
-   minutes.
+   intermediate expressions. The demonstration's arm reconstructs in under a
+   third of a second, where the symbolic solve had not finished after
+   twenty-seven minutes.
+
+Lifted fixed-pose ideals
+========================
+
+``varietas/ik/lifted_ideal.hpp``
+
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<rational, N, Order>> \
+                  lifted_kinematic_ideal_generators(const chain<rational>& robot, \
+                                                    const std::vector<polynomial<rational, N, Order>>& residuals, \
+                                                    modular::statistics* stats = nullptr, \
+                                                    const modular::options& options = {})
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<rational, N, Order>> \
+                  lifted_pose_ideal_generators(const chain<rational>& robot, \
+                                               const rigid_transform<rational>& target, ...)
+.. cpp:function:: template<std::size_t N, class Order> \
+                  std::vector<polynomial<rational, N, Order>> \
+                  lifted_position_ideal_generators(const chain<rational>& robot, \
+                                                   const vector3<rational>& target, ...)
+
+   The kinematic ideals of :doc:`kinematics` at a fixed target, the same
+   reduced bases, lifted from :math:`\F_p` by
+   :cpp:func:`modular::saturate_by_product` rather than computed by Buchberger
+   over :math:`\Q`. This is what solves a six-joint arm at a full pose, which
+   Buchberger over :math:`\Q` did not finish in eight minutes, in seconds.
+   ``urdf_solve`` uses them unless given ``--buchberger``.
 
 .. cpp:struct:: sweep_frame
 

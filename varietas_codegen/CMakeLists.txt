@@ -3,6 +3,8 @@ project(varietas_codegen)
 
 find_package(ament_cmake REQUIRED)
 find_package(varietas_core REQUIRED)
+# The lifting of a basis over Q computes its images modulo several primes at once.
+find_package(Threads REQUIRED)
 
 # GMP ships no config file and no reliable .pc, so it is located by hand. Both
 # the C library and the C++ wrapper are needed: mpq_class lives in gmpxx.
@@ -24,6 +26,7 @@ target_include_directories(${PROJECT_NAME} INTERFACE
   ${GMPXX_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} INTERFACE
   varietas_core::varietas_core
+  Threads::Threads
   ${GMPXX_LIBRARY}
   ${GMP_LIBRARY})
 
@@ -31,7 +34,7 @@ install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}_export)
 
 ament_export_targets(${PROJECT_NAME}_export HAS_LIBRARY_TARGET)
-ament_export_dependencies(varietas_core)
+ament_export_dependencies(varietas_core Threads)
 ament_export_include_directories(${GMPXX_INCLUDE_DIR})
 ament_export_libraries(${GMPXX_LIBRARY} ${GMP_LIBRARY})
 
@@ -55,6 +58,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_f4 test/test_f4.cpp)
   target_link_libraries(test_f4 ${PROJECT_NAME})
+
+  ament_add_gtest(test_modular_groebner test/test_modular_groebner.cpp)
+  target_link_libraries(test_modular_groebner ${PROJECT_NAME})
 
   ament_add_gtest(test_reconstruct test/test_reconstruct.cpp)
   target_link_libraries(test_reconstruct ${PROJECT_NAME})

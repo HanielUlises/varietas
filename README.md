@@ -346,6 +346,7 @@ Two negative results are worth as much as the positive one.
 | Monomials, polynomials, orders | complete |
 | Division, Buchberger, reduced bases, membership | complete |
 | F4 over $\mathbb{F}_p$ | complete, agrees with Buchberger |
+| Bases over $\mathbb{Q}$ lifted from $\mathbb{F}_p$ | complete, checked to contain the true ideal |
 | Dimension, saturation, elimination | complete |
 | Quotient algebra, action matrices, spectral solving | complete |
 | Exact rationals over GMP | complete |
@@ -431,7 +432,7 @@ Nor is accuracy the trade. The eigenvalue method recovers each point from an eig
 
 Orientation cannot be adjoined. A general pose is six parameters, since twelve matrix entries are not independent and a general point of $\mathbb{A}^{12}$ is not a rigid motion at all, and a position, three parameters, is what the parametric path reaches. So there is no parametric solver for a full pose, and none is claimed. Giving up the parameters is what buys orientation back, because with the target a constant of $\mathbb{Q}$ rather than a parameter of $\mathbb{Q}(\boldsymbol{p})$, the twelve equations of a pose are no harder for Buchberger than the three of a position, and `varietas_kinematics` has posed them since the beginning. `urdf_solve` is that path as a command.
 
-It is worth stating what it costs, because the growth is steep and it is the whole story: on a chain of unit links, a full pose takes about ten milliseconds at three joints, a sixth of a second at four, nine seconds at five, and had produced nothing after eight minutes at six. Five joints is where this stops being interactive, and six is where it stops.
+It is worth stating what it cost, because the growth was steep: by Buchberger over $\mathbb{Q}$, a chain of unit links took about ten milliseconds at three joints, a sixth of a second at four, nine seconds at five, and had produced nothing after eight minutes at six. Two changes reach six. The pose equations are split at the middle of the chain, the inverse of the second half being again a chain, which gives the same saturated ideal from equations far cheaper to complete. And the basis over $\mathbb{Q}$ is lifted from its F4 images modulo primes, joined by the Chinese remainder theorem, read back by rational reconstruction, and checked over $\mathbb{Q}$ to be a Gröbner basis of an ideal containing the true one; that it is no larger holds with high probability, and `--buchberger` computes it exactly instead. On the industrial arm of the tests a full pose takes 29 ms at five joints against 68 s, and 20 to 30 s at six, with its eight solutions; an arm of the Universal Robots shape, with no spherical wrist, about sixteen.
 
 The pose has to be exact, and that is not a formality either. A target assembled by rounding sines and cosines into rationals carries denominators near $2^{52}$, and a run over coefficients that size does not finish. The first attempt at a six-joint pose here failed that way before it failed for any interesting reason. So the target is snapped onto a nearby exact pose by the same quaternion argument the URDF front end uses, and the deviation is reported rather than hidden. Right angles survive that snapping exactly, which is what makes it usable rather than merely defensible.
 
